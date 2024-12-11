@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LoginPage } from './pages/LoginPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { MainLayout } from './components/layout/MainLayout'
+import { PhotosOverview } from './features/photos/PhotosOverview'
 
 const queryClient = new QueryClient()
 
@@ -19,7 +20,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" />
   }
 
-  return <MainLayout>{children}</MainLayout>
+  return children
 }
 
 function App() {
@@ -34,11 +35,11 @@ function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute>
-                    <div className="text-gray-800 dark:text-white">
-                      Dashboard komt hier
-                    </div>
-                  </ProtectedRoute>
+                  <MainLayout>
+                    <ProtectedRoute>
+                      <PhotosOverview />
+                    </ProtectedRoute>
+                  </MainLayout>
                 }
               />
             </Routes>
