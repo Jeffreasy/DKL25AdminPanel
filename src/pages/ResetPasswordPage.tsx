@@ -1,26 +1,36 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase/supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import { updatePassword } from '../features/auth/resetPassword'
 
 export function ResetPasswordPage() {
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (password !== confirmPassword) {
+      setError('Wachtwoorden komen niet overeen')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Wachtwoord moet minimaal 6 karakters lang zijn')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      })
-
+      const { error } = await updatePassword(password)
       if (error) throw error
-
-      // Als het wachtwoord succesvol is gewijzigd, redirect naar login
+      
+      // Success! Redirect naar login
+      alert('Wachtwoord succesvol gewijzigd!')
       navigate('/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
@@ -34,19 +44,31 @@ export function ResetPasswordPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Stel je nieuwe wachtwoord in
+            Nieuw wachtwoord instellen
           </h2>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
-          <div>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Nieuw wachtwoord"
-            />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Nieuw wachtwoord"
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Bevestig wachtwoord"
+              />
+            </div>
           </div>
 
           {error && (
