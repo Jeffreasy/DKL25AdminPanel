@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LoginPage } from './pages/LoginPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { MainLayout } from './components/layout/MainLayout'
-import { PhotosOverview } from './features/photos/PhotosOverview'
+import { DashboardPage } from './pages/DashboardPage'
+import { PhotoManagementPage } from './pages/PhotoManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -37,7 +38,17 @@ function App() {
                 element={
                   <MainLayout>
                     <ProtectedRoute>
-                      <PhotosOverview />
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/photos"
+                element={
+                  <MainLayout>
+                    <ProtectedRoute>
+                      <PhotoManagementPage />
                     </ProtectedRoute>
                   </MainLayout>
                 }
