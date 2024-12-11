@@ -3,7 +3,8 @@ import { useAuth } from '../../features/auth/AuthContext'
 
 const navigationItems = [
   { label: 'Dashboard', path: '/' },
-  { label: 'Foto Beheer', path: '/photos' }
+  { label: 'Foto Beheer', path: '/photos' },
+  { label: 'Video Beheer', path: '/videos' }
 ]
 
 export function MainLayout({ children }: { children: React.ReactNode }) {

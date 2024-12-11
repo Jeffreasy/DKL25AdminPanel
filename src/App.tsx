@@ -7,6 +7,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { MainLayout } from './components/layout/MainLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { PhotoManagementPage } from './pages/PhotoManagementPage'
+import { VideoManagementPage } from './pages/VideoManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -49,6 +50,16 @@ function App() {
                   <MainLayout>
                     <ProtectedRoute>
                       <PhotoManagementPage />
+                    </ProtectedRoute>
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/videos"
+                element={
+                  <MainLayout>
+                    <ProtectedRoute>
+                      <VideoManagementPage />
                     </ProtectedRoute>
                   </MainLayout>
                 }
