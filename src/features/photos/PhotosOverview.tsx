@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase/supabaseClient'
 import { Photo } from '../../types/photo'
 import {
@@ -18,18 +18,20 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useDropzone } from 'react-dropzone'
+import { BulkUploadButton } from './components/BulkUploadButton'
 
 function SortablePhoto({ 
   photo, 
   index, 
   isSelected,
-  onSelect 
+  onSelect,
+  onPreview
 }: { 
   photo: Photo
   index: number
   isSelected: boolean
   onSelect: (id: string, event: React.MouseEvent) => void
+  onPreview: (photo: Photo) => void
 }) {
   const {
     attributes,
@@ -53,9 +55,9 @@ function SortablePhoto({
       ref={setNodeRef}
       style={style}
       className={`
-        bg-white rounded-lg shadow-sm 
+        bg-white dark:bg-gray-800 rounded-lg shadow-sm 
         transition-all duration-200
-        ${isDragging ? 'shadow-xl scale-[1.02]' : 'hover:shadow-md'}
+        ${isDragging ? 'shadow-xl scale-[1.02] bg-gray-50 dark:bg-gray-700' : 'hover:shadow-md'}
         ${isSelected ? 'ring-2 ring-indigo-500' : ''}
       `}
     >
@@ -63,135 +65,65 @@ function SortablePhoto({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab mr-4 text-gray-400 hover:text-gray-600"
+          className="flex items-center justify-center w-8 h-8 rounded-lg cursor-grab 
+            hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mr-3
+            text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          title="Versleep om volgorde aan te passen"
         >
-          ⋮⋮
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+          </svg>
         </div>
         <div className="mr-4">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(photo.id, e as any)}
-            className="h-4 w-4 text-indigo-600 rounded border-gray-300"
+            className="w-4 h-4 text-indigo-600 rounded border-gray-300 
+              focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700
+              dark:checked:bg-indigo-600 transition-colors"
           />
         </div>
-        <div className="flex-shrink-0 w-48 h-32 overflow-hidden rounded">
+        <div className="relative flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden group">
           <img 
             src={photo.url} 
             alt={altText} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-200
+              group-hover:scale-105"
           />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 
+            transition-opacity duration-200" />
         </div>
         <div className="ml-4 flex-grow">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">
-              Positie: {index + 1}
-            </span>
-            <span className="text-sm text-gray-500">
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Positie {index + 1}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {new Date(photo.updated_at).toLocaleDateString('nl-NL')}
+              </span>
+            </div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {altText}
             </span>
           </div>
         </div>
+        <button
+          onClick={() => onPreview(photo)}
+          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
+            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
+            transition-colors"
+          title="Bekijk foto"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </button>
       </div>
-    </div>
-  )
-}
-
-function PhotoUpload({ onUploadComplete }: { onUploadComplete: () => void }) {
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setUploading(true)
-    setUploadError(null)
-
-    try {
-      // Haal het huidige hoogste order_number op
-      const { data: photos } = await supabase
-        .from('photos')
-        .select('order_number')
-        .order('order_number', { ascending: false })
-        .limit(1)
-
-      const startOrderNumber = (photos?.[0]?.order_number || 0) + 1
-
-      // Upload elke foto
-      for (let i = 0; i < acceptedFiles.length; i++) {
-        const file = acceptedFiles[i]
-        
-        // Specificeer het volledige pad inclusief folders
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('upload_preset', 'dkl25_photos')
-
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          {
-            method: 'POST',
-            body: formData,
-          }
-        )
-
-        const data = await response.json()
-
-        if (!response.ok) throw new Error(data.message)
-
-        // Voeg de foto toe aan de database
-        const { error: dbError } = await supabase
-          .from('photos')
-          .insert({
-            url: data.secure_url,
-            alt: `DKL 2024 foto ${startOrderNumber + i}`,
-            order_number: startOrderNumber + i,
-          })
-
-        if (dbError) throw dbError
-      }
-
-      onUploadComplete()
-    } catch (err) {
-      console.error('Upload error:', err)
-      setUploadError(err instanceof Error ? err.message : 'Er is een fout opgetreden bij het uploaden')
-    } finally {
-      setUploading(false)
-    }
-  }, [onUploadComplete])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
-    },
-    multiple: true
-  })
-
-  return (
-    <div
-      {...getRootProps()}
-      className={`
-        border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-        transition-colors duration-200
-        ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-gray-400'}
-        ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
-      `}
-    >
-      <input {...getInputProps()} />
-      {uploading ? (
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mb-2"></div>
-          <p>Bezig met uploaden...</p>
-        </div>
-      ) : isDragActive ? (
-        <p>Sleep de foto's hier...</p>
-      ) : (
-        <div>
-          <p className="text-gray-600">Sleep foto's hierheen of klik om te selecteren</p>
-          <p className="text-sm text-gray-500 mt-1">JPG, PNG of WebP</p>
-        </div>
-      )}
-      {uploadError && (
-        <p className="text-red-500 mt-2">{uploadError}</p>
-      )}
     </div>
   )
 }
@@ -416,70 +348,102 @@ export function PhotosOverview() {
   )
 
   return (
-    <div className="max-w-7xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Foto Beheer</h2>
-        <div className="flex items-center space-x-4">
-          {selectedPhotos.size > 0 ? (
-            <>
-              <span className="text-sm text-gray-500">
-                {selectedPhotos.size} foto's geselecteerd
-              </span>
-              <button
-                onClick={deselectAll}
-                className="text-sm text-gray-600 hover:text-gray-800"
-              >
-                Deselecteer alles
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                Verwijder geselecteerde
-              </button>
-            </>
-          ) : (
-            <>
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      {/* Header Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+              Foto Beheer
+            </h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Beheer de foto's voor de DKL25 website
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {selectedPhotos.size > 0 ? (
+              <>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {selectedPhotos.size} foto's geselecteerd
+                  </span>
+                  <button
+                    onClick={deselectAll}
+                    className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    Deselecteer alles
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  >
+                    Verwijder geselecteerde
+                  </button>
+                </div>
+              </>
+            ) : (
               <button
                 onClick={selectAll}
-                className="text-sm text-gray-600 hover:text-gray-800"
+                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 Selecteer alles
               </button>
-              <div className="text-sm text-gray-500">
-                Versleep foto's om de volgorde aan te passen
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="mb-8">
-        <PhotoUpload onUploadComplete={fetchPhotos} />
+      {/* Upload Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+          Foto's Uploaden
+        </h3>
+        <BulkUploadButton onUploadComplete={fetchPhotos} />
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={photos.map(p => p.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="flex flex-col space-y-4">
-            {photos.map((photo, index) => (
-              <SortablePhoto 
-                key={photo.id} 
-                photo={photo} 
-                index={index} 
-                isSelected={selectedPhotos.has(photo.id)} 
-                onSelect={toggleSelection}
-              />
-            ))}
+      {/* Photos Grid Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-white">
+            Foto Overzicht
+          </h3>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Versleep foto's om de volgorde aan te passen
           </div>
-        </SortableContext>
-      </DndContext>
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={photos.map(p => p.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {photos.map((photo, index) => (
+                <SortablePhoto 
+                  key={photo.id} 
+                  photo={photo} 
+                  index={index} 
+                  isSelected={selectedPhotos.has(photo.id)} 
+                  onSelect={toggleSelection}
+                  onPreview={setSelectedPhoto}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        {photos.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">
+              Nog geen foto's geüpload
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Preview Modal */}
       {selectedPhoto && (
