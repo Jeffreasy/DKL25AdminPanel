@@ -42,6 +42,7 @@ function App() {
                   </MainLayout>
                 }
               />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AuthProvider>
         </BrowserRouter>
