@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User, AuthError, Session } from '@supabase/supabase-js'
+import { User, AuthError } from '@supabase/supabase-js'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase/supabaseClient'
 
@@ -26,13 +26,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        await supabase.auth.startAutoRefresh()
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Auth session error:', error)
+          await supabase.auth.refreshSession()
+          setLoading(false)
+          return
+        }
+
+        console.log('Session check:', session ? 'Active session' : 'No session')
         setUser(session?.user ?? null)
         
-        if (session?.user && location.pathname === '/login') {
-          navigate('/')
-        } else if (!session?.user && location.pathname !== '/login' && location.pathname !== '/reset-password') {
-          navigate('/login')
+        if (!session?.user && location.pathname !== '/login' && location.pathname !== '/reset-password') {
+          console.log('No session, redirecting to login')
+          navigate('/login', { replace: true })
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
@@ -44,16 +53,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: string, session: Session | null) => {
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
         setUser(session?.user ?? null)
         
-        if (!session?.user && location.pathname !== '/login' && location.pathname !== '/reset-password') {
-          navigate('/login')
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out, redirecting to login')
+          navigate('/login', { replace: true })
+        } else if (event === 'SIGNED_IN' && location.pathname === '/login') {
+          console.log('User signed in, redirecting to dashboard')
+          navigate('/', { replace: true })
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      supabase.auth.stopAutoRefresh()
+    }
   }, [navigate, location.pathname])
 
   const signIn = async (email: string, password: string) => {

@@ -4,7 +4,7 @@ import { sendPasswordResetEmail } from '../features/auth/resetPassword'
 import { useNavigate } from 'react-router-dom'
 
 export function LoginPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -12,11 +12,11 @@ export function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
-  const { signIn } = useAuth()
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/')
+      console.log('User is authenticated, redirecting to dashboard')
+      navigate('/', { replace: true })
     }
   }, [user, authLoading, navigate])
 
@@ -26,8 +26,12 @@ export function LoginPage() {
     setError(null)
 
     try {
+      console.log('Attempting login for:', email)
       const { error: signInError } = await signIn(email, password)
-      if (signInError) throw signInError
+      if (signInError) {
+        console.error('Login error:', signInError)
+        throw signInError
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
     } finally {
