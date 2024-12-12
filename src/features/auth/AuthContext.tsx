@@ -24,20 +24,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-      
-      if (session?.user && location.pathname === '/login') {
-        navigate('/')
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+        
+        if (session?.user && location.pathname === '/login') {
+          navigate('/')
+        } else if (!session?.user && location.pathname !== '/login' && location.pathname !== '/reset-password') {
+          navigate('/login')
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        setLoading(false)
       }
-    })
+    }
+
+    initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: string, session: Session | null) => {
         setUser(session?.user ?? null)
-        setLoading(false)
-
+        
         if (!session?.user && location.pathname !== '/login' && location.pathname !== '/reset-password') {
           navigate('/login')
         }
@@ -45,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [navigate, location])
+  }, [navigate, location.pathname])
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

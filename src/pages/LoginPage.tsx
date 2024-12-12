@@ -1,19 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../features/auth/AuthContext'
 import { sendPasswordResetEmail } from '../features/auth/resetPassword'
+import { useNavigate } from 'react-router-dom'
 
 export function LoginPage() {
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const { signIn } = useAuth()
 
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/')
+    }
+  }, [user, authLoading, navigate])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsSubmitting(true)
     setError(null)
 
     try {
@@ -22,7 +31,7 @@ export function LoginPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -90,10 +99,10 @@ export function LoginPage() {
           <div className="flex flex-col space-y-4">
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {loading ? 'Bezig met inloggen...' : 'Login'}
+              {isSubmitting ? 'Bezig met inloggen...' : 'Login'}
             </button>
 
             <button
