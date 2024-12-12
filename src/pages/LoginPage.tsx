@@ -27,7 +27,8 @@ export function LoginPage() {
 
     try {
       console.log('Attempting login for:', email)
-      const { error: signInError } = await signIn(email, password)
+      const normalizedEmail = email.toLowerCase().trim()
+      const { error: signInError } = await signIn(normalizedEmail, password)
       if (signInError) {
         console.error('Login error:', signInError)
         throw signInError

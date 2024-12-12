@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase/supabaseClient'
 
 export const sendPasswordResetEmail = async (email: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: `${import.meta.env.VITE_APP_URL}/reset-password`
   })
   return { error }
 }

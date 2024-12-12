@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const APP_URL = import.meta.env.VITE_APP_URL
+
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -74,16 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [navigate, location.pathname])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    
-    if (!error) {
-      navigate('/')
-    }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (!error) {
+        console.log('Sign in successful, redirecting to:', `${APP_URL}/`)
+        navigate('/')
+      }
 
-    return { error }
+      return { error }
+    } catch (err) {
+      console.error('Sign in error:', err)
+      return { error: err as AuthError }
+    }
   }
 
   const signOut = async () => {
