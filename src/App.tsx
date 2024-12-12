@@ -8,6 +8,7 @@ import { MainLayout } from './components/layout/MainLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { PhotoManagementPage } from './pages/PhotoManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
+import { PartnerManagementPage } from './pages/PartnerManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -60,6 +61,16 @@ function App() {
                   <MainLayout>
                     <ProtectedRoute>
                       <VideoManagementPage />
+                    </ProtectedRoute>
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/partners"
+                element={
+                  <MainLayout>
+                    <ProtectedRoute>
+                      <PartnerManagementPage />
                     </ProtectedRoute>
                   </MainLayout>
                 }
