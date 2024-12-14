@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PhotoManagementPage } from './pages/PhotoManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
+import { TitleSectionManagementPage } from './pages/TitleSectionManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -71,6 +72,16 @@ function App() {
                   <MainLayout>
                     <ProtectedRoute>
                       <PartnerManagementPage />
+                    </ProtectedRoute>
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/title-section"
+                element={
+                  <MainLayout>
+                    <ProtectedRoute>
+                      <TitleSectionManagementPage />
                     </ProtectedRoute>
                   </MainLayout>
                 }

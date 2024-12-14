@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthContext'
+import { HomeIcon, PhotoIcon, VideoCameraIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
 const navigationItems = [
-  { label: 'Dashboard', path: '/' },
-  { label: 'Foto Beheer', path: '/photos' },
-  { label: 'Video Beheer', path: '/videos' },
-  { label: 'Partners', path: '/partners' }
+  { label: 'Dashboard', path: '/', icon: HomeIcon },
+  { label: 'Foto\'s', path: '/photos', icon: PhotoIcon },
+  { label: 'Video\'s', path: '/videos', icon: VideoCameraIcon },
+  { label: 'Partners', path: '/partners', icon: UserGroupIcon },
+  { label: 'Titel Sectie', path: '/title-section', icon: DocumentTextIcon },
 ]
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
