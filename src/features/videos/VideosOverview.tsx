@@ -33,7 +33,7 @@ function SortableVideo({
   video: Video
   index: number
   isSelected: boolean
-  onSelect: (id: string, event: React.MouseEvent) => void
+  onSelect: (id: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => void
   onPreview: (video: Video) => void
   onEdit: (video: Video) => void
   onToggleVisibility: (video: Video) => void
@@ -83,7 +83,7 @@ function SortableVideo({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => onSelect(video.id, e as any)}
+            onChange={(e) => onSelect(video.id, e)}
             className="w-4 h-4 text-indigo-600 rounded border-gray-300 
               focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700
               dark:checked:bg-indigo-600 transition-colors"
@@ -216,36 +216,20 @@ export function VideosOverview() {
       const newVideos = arrayMove(videos, oldIndex, newIndex)
       setVideos(newVideos)
 
-      // Update de order numbers
-      const updates = newVideos.map((video, index) => ({
-        id: video.id,
-        order_number: index + 1,
-        videoId: video.videoId,
-        url: video.url,
-        title: video.title,
-        description: video.description,
-        updated_at: new Date().toISOString()
-      }))
+      // Update de volgorde via de specifieke stored procedure
+      const { error } = await supabase.rpc('reorder_videos', {
+        video_ids: newVideos.map(v => v.id)
+      })
 
-      const { error } = await supabase
-        .from('videos')
-        .upsert(updates, { 
-          onConflict: 'id'
-        })
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw new Error(`Database update failed: ${error.message}`)
-      }
-
-    } catch (err) {
-      console.error('Error in handleDragEnd:', err)
-      setError('Fout bij het updaten van de volgorde. Probeer het opnieuw.')
+      if (error) throw error
+    } catch (error) {
+      console.error('Drag error:', error)
+      setError('Fout bij het updaten van de volgorde')
       await fetchVideos()
     }
   }
 
-  const toggleSelection = (videoId: string, event: React.MouseEvent) => {
+  const toggleSelection = (videoId: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => {
     event.stopPropagation()
     const newSelection = new Set(selectedVideos)
     if (newSelection.has(videoId)) {
@@ -281,7 +265,8 @@ export function VideosOverview() {
 
       await fetchVideos()
       setSelectedVideos(new Set())
-    } catch (err) {
+    } catch (error) {
+      console.error('Delete error:', error)
       setError('Fout bij het verwijderen van video\'s')
     }
   }
@@ -320,7 +305,8 @@ export function VideosOverview() {
           ? { ...v, visible: !v.visible }
           : v
       ))
-    } catch (err) {
+    } catch (error) {
+      console.error('Visibility toggle error:', error)
       setError('Fout bij het wijzigen van de zichtbaarheid')
     }
   }

@@ -37,7 +37,7 @@ function SortablePartner({
   partner: PartnerRow
   index: number
   isSelected: boolean
-  onSelect: (id: string, event: React.MouseEvent) => void
+  onSelect: (id: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => void
   onEdit: (partner: PartnerRow) => void
   onToggleVisibility: (partner: PartnerRow) => void
 }) {
@@ -88,7 +88,7 @@ function SortablePartner({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => onSelect(partner.id, e as any)}
+            onChange={(e) => onSelect(partner.id, e)}
             className="w-4 h-4 text-indigo-600 rounded border-gray-300 
               focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700
               dark:checked:bg-indigo-600 transition-colors"
@@ -217,29 +217,24 @@ export function PartnersOverview() {
       const oldIndex = partners.findIndex(partner => partner.id === active.id)
       const newIndex = partners.findIndex(partner => partner.id === over.id)
 
+      // Optimistic update voor de UI
       const newPartners = arrayMove(partners, oldIndex, newIndex)
       setPartners(newPartners)
 
-      const updates = newPartners.map((partner, index) => ({
-        id: partner.id,
-        order_number: index + 1,
-        updated_at: new Date().toISOString()
-      }))
-
-      const { error } = await supabase
-        .from('partners')
-        .upsert(updates, { 
-          onConflict: 'id'
-        })
+      // Update de volgorde via de specifieke stored procedure
+      const { error } = await supabase.rpc('reorder_partners', {
+        partner_ids: newPartners.map(p => p.id)
+      })
 
       if (error) throw error
-    } catch (err) {
+    } catch (error) {
+      console.error('Drag error:', error)
       setError('Fout bij het updaten van de volgorde')
       await fetchPartners()
     }
   }
 
-  const toggleSelection = (partnerId: string, event: React.MouseEvent) => {
+  const toggleSelection = (partnerId: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => {
     event.stopPropagation()
     const newSelection = new Set(selectedPartners)
     if (newSelection.has(partnerId)) {
@@ -275,7 +270,8 @@ export function PartnersOverview() {
 
       await fetchPartners()
       setSelectedPartners(new Set())
-    } catch (err) {
+    } catch (error) {
+      console.error('Delete error:', error)
       setError('Fout bij het verwijderen van partners')
     }
   }
@@ -313,7 +309,8 @@ export function PartnersOverview() {
           ? { ...p, visible: !p.visible }
           : p
       ))
-    } catch (err) {
+    } catch (error) {
+      console.error('Visibility toggle error:', error)
       setError('Fout bij het wijzigen van de zichtbaarheid')
     }
   }

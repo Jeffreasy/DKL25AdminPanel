@@ -19,19 +19,24 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { BulkUploadButton } from './components/BulkUploadButton'
+import { PhotoForm } from './components/PhotoForm'
 
 function SortablePhoto({ 
   photo, 
   index, 
   isSelected,
   onSelect,
-  onPreview
+  onPreview,
+  onEdit,
+  onToggleVisibility
 }: { 
   photo: Photo
   index: number
   isSelected: boolean
-  onSelect: (id: string, event: React.MouseEvent) => void
+  onSelect: (id: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => void
   onPreview: (photo: Photo) => void
+  onEdit: (photo: Photo) => void
+  onToggleVisibility: (photo: Photo) => void
 }) {
   const {
     attributes,
@@ -78,7 +83,7 @@ function SortablePhoto({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => onSelect(photo.id, e as any)}
+            onChange={(e) => onSelect(photo.id, e)}
             className="w-4 h-4 text-indigo-600 rounded border-gray-300 
               focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700
               dark:checked:bg-indigo-600 transition-colors"
@@ -88,9 +93,16 @@ function SortablePhoto({
           <img 
             src={photo.url} 
             alt={altText} 
-            className="w-full h-full object-cover transition-transform duration-200
-              group-hover:scale-105"
+            className={`w-full h-full object-cover transition-transform duration-200
+              group-hover:scale-105 ${!photo.visible ? 'opacity-50' : ''}`}
           />
+          {!photo.visible && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+              <span className="text-white text-sm font-medium px-2 py-1 rounded bg-black bg-opacity-50">
+                Verborgen
+              </span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 
             transition-opacity duration-200" />
         </div>
@@ -110,6 +122,18 @@ function SortablePhoto({
           </div>
         </div>
         <button
+          onClick={() => onEdit(photo)}
+          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
+            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
+            transition-colors"
+          title="Foto bewerken"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+        <button
           onClick={() => onPreview(photo)}
           className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
             dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
@@ -123,6 +147,23 @@ function SortablePhoto({
               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         </button>
+        <button
+          onClick={() => onToggleVisibility(photo)}
+          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
+            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
+            transition-colors"
+          title={photo.visible ? "Foto verbergen" : "Foto zichtbaar maken"}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {photo.visible ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            )}
+          </svg>
+        </button>
       </div>
     </div>
   )
@@ -134,6 +175,8 @@ export function PhotosOverview() {
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [showForm, setShowForm] = useState(false)
+  const [editingPhoto, setEditingPhoto] = useState<Photo | undefined>(undefined)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -174,31 +217,15 @@ export function PhotosOverview() {
       const newPhotos = arrayMove(photos, oldIndex, newIndex)
       setPhotos(newPhotos)
 
-      // Bereid de updates voor met nieuwe order numbers en alt text
-      const updates = newPhotos.map((photo, index) => ({
-        id: photo.id,
-        order_number: index + 1,
-        url: photo.url,
-        alt: `DKL 2024 foto ${index + 1}`,
-        created_at: photo.created_at,
-        updated_at: new Date().toISOString()
-      }))
+      // Update de volgorde via de specifieke stored procedure
+      const { error } = await supabase.rpc('reorder_photos', {
+        photo_ids: newPhotos.map(p => p.id)
+      })
 
-      // Voer de update uit
-      const { error } = await supabase
-        .from('photos')
-        .upsert(updates, { 
-          onConflict: 'id'
-        })
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw new Error(`Database update failed: ${error.message}`)
-      }
-
-    } catch (err) {
-      console.error('Error in handleDragEnd:', err)
-      setError('Fout bij het updaten van de volgorde. Probeer het opnieuw.')
+      if (error) throw error
+    } catch (error) {
+      console.error('Drag error:', error)
+      setError('Fout bij het updaten van de volgorde')
       await fetchPhotos()
     }
   }
@@ -293,7 +320,7 @@ export function PhotosOverview() {
     )
   }
 
-  const toggleSelection = (photoId: string, event: React.MouseEvent) => {
+  const toggleSelection = (photoId: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => {
     event.stopPropagation() // Voorkom dat de preview modal opent
     const newSelection = new Set(selectedPhotos)
     if (newSelection.has(photoId)) {
@@ -330,8 +357,50 @@ export function PhotosOverview() {
       // Refresh de lijst en clear selectie
       await fetchPhotos()
       setSelectedPhotos(new Set())
-    } catch (err) {
+    } catch (error) {
+      console.error('Delete error:', error)
       setError('Fout bij het verwijderen van foto\'s')
+    }
+  }
+
+  const handleEdit = (photo: Photo) => {
+    setEditingPhoto(photo)
+    setShowForm(true)
+  }
+
+  const handleFormComplete = () => {
+    setShowForm(false)
+    setEditingPhoto(undefined)
+    fetchPhotos()
+  }
+
+  const handleToggleVisibility = async (photo: Photo) => {
+    try {
+      // Log de huidige status
+      console.log('Toggling visibility for photo:', photo.id, 'Current visible:', photo.visible)
+
+      const { error } = await supabase
+        .from('photos')
+        .update({ 
+          visible: !photo.visible,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', photo.id)
+
+      if (error) throw error
+
+      // Update local state
+      setPhotos(photos.map(p => 
+        p.id === photo.id 
+          ? { ...p, visible: !p.visible }
+          : p
+      ))
+
+      // Log de nieuwe status
+      console.log('Visibility toggled successfully')
+    } catch (error) {
+      console.error('Visibility toggle error:', error)
+      setError('Fout bij het wijzigen van de zichtbaarheid')
     }
   }
 
@@ -393,6 +462,15 @@ export function PhotosOverview() {
         </div>
       </div>
 
+      {/* Forms & Modals */}
+      {showForm && (
+        <PhotoForm
+          photo={editingPhoto}
+          onComplete={handleFormComplete}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
+
       {/* Upload Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
@@ -430,6 +508,8 @@ export function PhotosOverview() {
                   isSelected={selectedPhotos.has(photo.id)} 
                   onSelect={toggleSelection}
                   onPreview={setSelectedPhoto}
+                  onEdit={handleEdit}
+                  onToggleVisibility={handleToggleVisibility}
                 />
               ))}
             </div>
