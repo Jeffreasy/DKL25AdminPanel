@@ -11,7 +11,7 @@ interface VideoFormProps {
 export function VideoForm({ video, onComplete, onCancel }: VideoFormProps) {
   const [title, setTitle] = useState(video?.title || '')
   const [description, setDescription] = useState(video?.description || '')
-  const [videoId, setVideoId] = useState(video?.videoId || '')
+  const [videoId, setVideoId] = useState(video?.video_id || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,7 +48,7 @@ export function VideoForm({ video, onComplete, onCancel }: VideoFormProps) {
           id: video?.id,
           title,
           description,
-          videoId,
+          video_id: videoId,
           url,
           visible: true,
           order_number,
