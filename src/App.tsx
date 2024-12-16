@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PhotoManagementPage } from './pages/PhotoManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
+import { AlbumManagementPage } from './pages/AlbumManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -32,51 +33,27 @@ function App() {
       <MantineProvider>
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route
-                path="/"
-                element={
-                  <MainLayout>
+            <div className="min-h-screen bg-gray-50">
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
                     <ProtectedRoute>
-                      <DashboardPage />
+                      <MainLayout />
                     </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/photos"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <PhotoManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/videos"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <VideoManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/partners"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <PartnerManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                  }
+                >
+                  <Route index element={<DashboardPage />} />
+                  <Route path="partners" element={<PartnerManagementPage />} />
+                  <Route path="photos" element={<PhotoManagementPage />} />
+                  <Route path="albums" element={<AlbumManagementPage />} />
+                  <Route path="videos" element={<VideoManagementPage />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </div>
           </AuthProvider>
         </BrowserRouter>
       </MantineProvider>

@@ -1,19 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../../types/supabase'
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase environment variables')
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,
-      storageKey: 'dkl25-admin-auth',
-      storage: window.localStorage,
-      detectSessionInUrl: true,
-      flowType: 'pkce'
-    }
-  }
-) 
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey) 

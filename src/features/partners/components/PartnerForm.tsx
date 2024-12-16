@@ -1,71 +1,131 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../../../lib/supabase/supabaseClient'
-import { PartnerRow, PartnerTier } from '../../../types/partner'
+import { ErrorText, SmallText } from '../../../components/typography'
+import type { Database, CustomFileOptions } from '../../../types/supabase'
+
+type Partner = Database['public']['Tables']['partners']['Row']
+type PartnerInsert = Database['public']['Tables']['partners']['Insert']
 
 interface PartnerFormProps {
-  partner?: PartnerRow
+  partner?: Partner
   onComplete: () => void
   onCancel: () => void
 }
 
-const TIER_OPTIONS: { value: PartnerTier; label: string }[] = [
-  { value: 'bronze', label: 'Bronze' },
-  { value: 'silver', label: 'Silver' },
-  { value: 'gold', label: 'Gold' }
-]
-
 export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps) {
   const [name, setName] = useState(partner?.name || '')
   const [description, setDescription] = useState(partner?.description || '')
-  const [logo, setLogo] = useState(partner?.logo || '')
   const [website, setWebsite] = useState(partner?.website || '')
-  const [since, setSince] = useState(partner?.since || new Date().getFullYear().toString())
-  const [tier, setTier] = useState<PartnerTier>(partner?.tier || 'bronze')
-  const [loading, setLoading] = useState(false)
+  const [tier, setTier] = useState<Partner['tier']>(partner?.tier || 'bronze')
+  const [logo, setLogo] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(partner?.logo || null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Valideer bestandsgrootte (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Logo mag niet groter zijn dan 2MB')
+      return
+    }
+
+    // Valideer bestandstype
+    if (!file.type.startsWith('image/')) {
+      setError('Alleen afbeeldingsbestanden zijn toegestaan')
+      return
+    }
+
+    setLogo(file)
+    setError(null)
+
+    // Maak preview URL
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsSubmitting(true)
     setError(null)
+    setUploadProgress(0)
 
     try {
-      // Validatie
-      if (!name || !logo) {
-        throw new Error('Vul alle verplichte velden in')
+      let logoPath = partner?.logo || ''
+
+      if (logo) {
+        const fileExt = logo.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `partner-logos/${fileName}`
+
+        const uploadOptions: CustomFileOptions = {
+          cacheControl: '3600',
+          upsert: false,
+          onUploadProgress: (progress) => {
+            const percentage = (progress.loaded / progress.total) * 100
+            setUploadProgress(Math.round(percentage))
+          },
+        }
+
+        const { error: uploadError } = await supabase.storage
+          .from('partners')
+          .upload(filePath, logo, uploadOptions)
+
+        if (uploadError) throw uploadError
+
+        // Haal direct de publieke URL op
+        const { data: { publicUrl } } = supabase.storage
+          .from('partners')
+          .getPublicUrl(filePath)
+
+        // Sla de volledige URL op in de database
+        logoPath = publicUrl
+
+        // Verwijder oude logo als die bestaat
+        if (partner?.logo) {
+          const oldPath = new URL(partner.logo).pathname.split('/').pop()
+          if (oldPath) {
+            await supabase.storage
+              .from('partners')
+              .remove([`partner-logos/${oldPath}`])
+          }
+        }
       }
 
-      // Valideer website URL als die is ingevuld
-      if (website && !website.match(/^https?:\/\/.+/)) {
-        throw new Error('Voer een geldige website URL in (begin met http:// of https://)')
-      }
-
-      // Bepaal order_number voor nieuwe partners
-      let order_number = partner?.order_number
-      if (!order_number) {
+      let orderNumber = partner?.order_number || 0
+      if (!partner?.order_number) {
         const { data: partners } = await supabase
           .from('partners')
           .select('order_number')
           .order('order_number', { ascending: false })
           .limit(1)
         
-        order_number = (partners?.[0]?.order_number || 0) + 1
+        orderNumber = ((partners?.[0]?.order_number || 0) + 1)
       }
 
-      // Update of insert partner
+      const partnerData: PartnerInsert = {
+        name,
+        description,
+        logo: logoPath,
+        website,
+        since: new Date().toISOString().split('T')[0],
+        tier,
+        visible: true,
+        order_number: orderNumber,
+      }
+
       const { error: dbError } = await supabase
         .from('partners')
         .upsert({
           id: partner?.id,
-          name,
-          description,
-          logo,
-          website: website || null,
-          since,
-          tier,
-          visible: true,
-          order_number,
-          updated_at: new Date().toISOString()
+          ...partnerData,
         })
 
       if (dbError) throw dbError
@@ -75,161 +135,164 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
       console.error('Form error:', err)
       setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
+      setUploadProgress(0)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full"
-        onClick={e => e.stopPropagation()}
-      >
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 border-b dark:border-gray-700">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              {partner ? 'Partner Bewerken' : 'Nieuwe Partner'}
-            </h3>
-          </div>
-
-          <div className="p-4 space-y-4">
-            {/* Name Input */}
-            <div>
-              <label 
-                htmlFor="name" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Naam *
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                required
-              />
-            </div>
-
-            {/* Description Input */}
-            <div>
-              <label 
-                htmlFor="description" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Beschrijving
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-              />
-            </div>
-
-            {/* Logo URL Input */}
-            <div>
-              <label 
-                htmlFor="logo" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Logo URL *
-              </label>
-              <input
-                type="url"
-                id="logo"
-                value={logo}
-                onChange={(e) => setLogo(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                required
-              />
-            </div>
-
-            {/* Website Input */}
-            <div>
-              <label 
-                htmlFor="website" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Website
-              </label>
-              <input
-                type="url"
-                id="website"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                placeholder="https://"
-              />
-            </div>
-
-            {/* Since Input */}
-            <div>
-              <label 
-                htmlFor="since" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Partner sinds
-              </label>
-              <input
-                type="text"
-                id="since"
-                value={since}
-                onChange={(e) => setSince(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                placeholder={new Date().getFullYear().toString()}
-              />
-            </div>
-
-            {/* Tier Select */}
-            <div>
-              <label 
-                htmlFor="tier" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Niveau
-              </label>
-              <select
-                id="tier"
-                value={tier}
-                onChange={(e) => setTier(e.target.value as PartnerTier)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-              >
-                {TIER_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {error && (
-              <div className="text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 border-t dark:border-gray-700 flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
-              disabled={loading}
-            >
-              Annuleren
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? 'Bezig...' : partner ? 'Opslaan' : 'Toevoegen'}
-            </button>
-          </div>
-        </form>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          Naam *
+        </label>
+        <input
+          type="text"
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="mt-1 input-primary"
+          required
+        />
       </div>
-    </div>
+
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          Beschrijving
+        </label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="mt-1 input-primary"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="website" className="block text-sm font-medium text-gray-700">
+          Website
+        </label>
+        <input
+          type="url"
+          id="website"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          className="mt-1 input-primary"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label htmlFor="tier" className="block text-sm font-medium text-gray-700">
+          Niveau *
+        </label>
+        <select
+          id="tier"
+          value={tier}
+          onChange={(e) => setTier(e.target.value as Partner['tier'])}
+          className="mt-1 input-primary"
+          required
+        >
+          <option value="bronze">Bronze</option>
+          <option value="silver">Silver</option>
+          <option value="gold">Gold</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Logo
+        </label>
+        <div className="mt-1 space-y-2">
+          {/* Preview */}
+          {previewUrl && (
+            <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={previewUrl}
+                alt="Logo preview"
+                className="w-full h-full object-contain p-2"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewUrl(null)
+                  setLogo(null)
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = ''
+                  }
+                }}
+                className="absolute top-2 right-2 p-1 bg-red-100 rounded-full text-red-600 hover:bg-red-200"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Upload input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            id="logo"
+            accept="image/*"
+            onChange={handleLogoChange}
+            className="block w-full text-sm text-gray-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-full file:border-0
+              file:text-sm file:font-semibold
+              file:bg-primary-50 file:text-primary-700
+              hover:file:bg-primary-100"
+          />
+          <SmallText>
+            Maximaal 2MB, alleen afbeeldingen toegestaan
+          </SmallText>
+        </div>
+      </div>
+
+      {/* Upload progress */}
+      {uploadProgress > 0 && uploadProgress < 100 && (
+        <div className="relative pt-1">
+          <div className="overflow-hidden h-2 text-xs flex rounded bg-primary-100">
+            <div
+              style={{ width: `${uploadProgress}%` }}
+              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-500 transition-all duration-300"
+            />
+          </div>
+          <SmallText className="mt-1">
+            Uploading... {uploadProgress}%
+          </SmallText>
+        </div>
+      )}
+
+      {error && <ErrorText>{error}</ErrorText>}
+
+      <div className="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800"
+          disabled={isSubmitting}
+        >
+          Annuleren
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="btn-primary"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Bezig...
+            </div>
+          ) : partner ? 'Opslaan' : 'Toevoegen'}
+        </button>
+      </div>
+    </form>
   )
 } 

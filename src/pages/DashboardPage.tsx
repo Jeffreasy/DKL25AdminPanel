@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase/supabaseClient'
+import { H1, SmallText, ErrorText } from '../components/typography'
+import { FilterableList } from '../components/FilterableList'
+import { MessageItem } from '../components/MessageItem'
+import { StatisticsGrid } from '../components/StatisticsGrid'
+import { RegistrationItem } from '../components/RegistrationItem'
 
 interface ContactMessage {
   id: string
@@ -27,24 +32,12 @@ interface Inschrijving {
 
 type TabType = 'berichten' | 'inschrijvingen'
 
-interface OndersteuningDetail {
-  naam: string
-  bijzonderheden: string
-  email: string
-  telefoon: string | null
-  rol: string
-  afstand: string
-}
-
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('berichten')
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [inschrijvingen, setInschrijvingen] = useState<Inschrijving[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [selectedType, setSelectedType] = useState<'Ja' | 'Anders' | null>(null)
-  const [detailsData, setDetailsData] = useState<OndersteuningDetail[]>([])
 
   useEffect(() => {
     if (activeTab === 'berichten') {
@@ -129,375 +122,168 @@ export function DashboardPage() {
     }
   }
 
-  const handleShowDetails = (type: 'Ja' | 'Anders') => {
-    const details = inschrijvingen
-      .filter(i => i.ondersteuning === type && i.bijzonderheden)
-      .map(i => ({
-        naam: i.naam,
-        bijzonderheden: i.bijzonderheden,
-        email: i.email,
-        telefoon: i.telefoon,
-        rol: i.rol,
-        afstand: i.afstand
-      }))
-    
-    setDetailsData(details)
-    setSelectedType(type)
-    setShowDetailsModal(true)
-  }
+  const calculateStats = () => ({
+    totaal: inschrijvingen.length,
+    status: {
+      pending: inschrijvingen.filter(i => i.status === 'pending').length,
+      approved: inschrijvingen.filter(i => i.status === 'approved').length,
+      rejected: inschrijvingen.filter(i => i.status === 'rejected').length
+    },
+    rollen: {
+      Deelnemer: inschrijvingen.filter(i => i.rol === 'Deelnemer').length,
+      Begeleider: inschrijvingen.filter(i => i.rol === 'Begeleider').length,
+      Vrijwilliger: inschrijvingen.filter(i => i.rol === 'Vrijwilliger').length
+    },
+    afstanden: {
+      '2.5 KM': inschrijvingen.filter(i => i.afstand === '2.5 KM').length,
+      '6 KM': inschrijvingen.filter(i => i.afstand === '6 KM').length,
+      '10 KM': inschrijvingen.filter(i => i.afstand === '10 KM').length,
+      '15 KM': inschrijvingen.filter(i => i.afstand === '15 KM').length
+    },
+    ondersteuning: {
+      Ja: inschrijvingen.filter(i => i.ondersteuning === 'Ja').length,
+      Nee: inschrijvingen.filter(i => i.ondersteuning === 'Nee').length,
+      Anders: inschrijvingen.filter(i => i.ondersteuning === 'Anders').length
+    }
+  })
+
+  const stats = calculateStats()
 
   const MessagesTab = () => (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-gray-500">
-          {messages.filter(m => m.status === 'ongelezen').length} ongelezen berichten
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
-          {error}
-        </div>
+    <FilterableList
+      title="Berichten"
+      table="contact_berichten"
+      queryKey="messages"
+      filters={{ gearchiveerd: false }}
+      sortOptions={[
+        { label: 'Nieuwste eerst', value: { column: 'aangemaakt_op', ascending: false } },
+        { label: 'Oudste eerst', value: { column: 'aangemaakt_op', ascending: true } }
+      ]}
+      renderItem={(message) => (
+        <MessageItem
+          message={message as ContactMessage}
+          onToggleRead={toggleMessageRead}
+        />
       )}
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="divide-y divide-gray-200">
-          {messages.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              Geen contactberichten gevonden
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div 
-                key={message.id}
-                className={`p-6 ${message.status === 'gelezen' ? 'bg-gray-50' : 'bg-white'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {message.naam}
-                    </h3>
-                    <div className="mt-1 text-sm text-gray-500">
-                      {message.email} {message.telefoon && `• ${message.telefoon}`}
-                    </div>
-                    <div className="mt-2 text-sm text-gray-700">
-                      {message.bericht}
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      {new Date(message.aangemaakt_op).toLocaleString('nl-NL')}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleMessageRead(message.id, message.status)}
-                    className={`ml-4 px-3 py-1 rounded-full text-sm font-medium ${
-                      message.status === 'gelezen'
-                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                    }`}
-                  >
-                    {message.status === 'gelezen' ? 'Gelezen' : 'Markeer als gelezen'}
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+    />
   )
 
   const InschrijvingenTab = () => {
-    const stats = {
-      totaal: inschrijvingen.length,
-      status: {
-        pending: inschrijvingen.filter(i => i.status === 'pending').length,
-        approved: inschrijvingen.filter(i => i.status === 'approved').length,
-        rejected: inschrijvingen.filter(i => i.status === 'rejected').length
-      },
-      rollen: {
-        Deelnemer: inschrijvingen.filter(i => i.rol === 'Deelnemer').length,
-        Begeleider: inschrijvingen.filter(i => i.rol === 'Begeleider').length,
-        Vrijwilliger: inschrijvingen.filter(i => i.rol === 'Vrijwilliger').length
-      },
-      afstanden: {
-        '2.5 KM': inschrijvingen.filter(i => i.afstand === '2.5 KM').length,
-        '6 KM': inschrijvingen.filter(i => i.afstand === '6 KM').length,
-        '10 KM': inschrijvingen.filter(i => i.afstand === '10 KM').length,
-        '15 KM': inschrijvingen.filter(i => i.afstand === '15 KM').length
-      },
-      ondersteuning: {
-        Ja: inschrijvingen.filter(i => i.ondersteuning === 'Ja').length,
-        Nee: inschrijvingen.filter(i => i.ondersteuning === 'Nee').length,
-        Anders: inschrijvingen.filter(i => i.ondersteuning === 'Anders').length
-      }
-    }
-
     return (
-      <div>
-        {/* Statistieken Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">Status</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-yellow-600">Nieuw</span>
-                <span className="font-medium">{stats.status.pending}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-green-600">Goedgekeurd</span>
-                <span className="font-medium">{stats.status.approved}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-red-600">Afgewezen</span>
-                <span className="font-medium">{stats.status.rejected}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">Rollen</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span>Deelnemers</span>
-                <span className="font-medium">{stats.rollen.Deelnemer}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Begeleiders</span>
-                <span className="font-medium">{stats.rollen.Begeleider}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Vrijwilligers</span>
-                <span className="font-medium">{stats.rollen.Vrijwilliger}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">Afstanden</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span>2.5 KM</span>
-                <span className="font-medium">{stats.afstanden['2.5 KM']}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>6 KM</span>
-                <span className="font-medium">{stats.afstanden['6 KM']}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>10 KM</span>
-                <span className="font-medium">{stats.afstanden['10 KM']}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>15 KM</span>
-                <span className="font-medium">{stats.afstanden['15 KM']}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">Ondersteuning</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => handleShowDetails('Ja')}
-                className="w-full flex justify-between items-center p-2 hover:bg-gray-50 rounded transition-colors"
-              >
-                <span>Nodig</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{stats.ondersteuning.Ja}</span>
-                  {stats.ondersteuning.Ja > 0 && (
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  )}
-                </div>
-              </button>
-              
-              <div className="flex justify-between items-center p-2">
-                <span>Niet nodig</span>
-                <span className="font-medium">{stats.ondersteuning.Nee}</span>
-              </div>
-
-              <button
-                onClick={() => handleShowDetails('Anders')}
-                className="w-full flex justify-between items-center p-2 hover:bg-gray-50 rounded transition-colors"
-              >
-                <span>Anders</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{stats.ondersteuning.Anders}</span>
-                  {stats.ondersteuning.Anders > 0 && (
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  )}
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Details Modal */}
-        {showDetailsModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-lg font-medium">
-                  Details {selectedType === 'Ja' ? 'Ondersteuning Nodig' : 'Andere Ondersteuning'}
-                </h3>
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="p-4 overflow-y-auto max-h-[calc(80vh-8rem)]">
-                <div className="space-y-4">
-                  {detailsData.map((detail, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">{detail.naam}</h4>
-                        <span className="text-sm text-gray-500">{detail.rol}</span>
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        {detail.email} {detail.telefoon && `• ${detail.telefoon}`}
-                      </div>
-                      <div className="text-sm mb-2">
-                        <span className="font-medium">Afstand:</span> {detail.afstand}
-                      </div>
-                      <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                        {detail.bijzonderheden}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-sm text-gray-500">
-            {inschrijvingen.filter(i => i.status === 'pending').length} nieuwe inschrijvingen
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="divide-y divide-gray-200">
-            {inschrijvingen.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                Geen inschrijvingen gevonden
-              </div>
-            ) : (
-              inschrijvingen.map((inschrijving) => (
-                <div 
-                  key={inschrijving.id}
-                  className={`p-6 ${
-                    inschrijving.status === 'pending' 
-                      ? 'bg-yellow-50' 
-                      : inschrijving.status === 'approved'
-                      ? 'bg-green-50'
-                      : 'bg-red-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {inschrijving.naam}
-                      </h3>
-                      <div className="mt-1 text-sm text-gray-500">
-                        {inschrijving.email} {inschrijving.telefoon && `• ${inschrijving.telefoon}`}
-                      </div>
-                      <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Rol:</span> {inschrijving.rol}
-                        </div>
-                        <div>
-                          <span className="font-medium">Afstand:</span> {inschrijving.afstand}
-                        </div>
-                        <div>
-                          <span className="font-medium">Ondersteuning:</span> {inschrijving.ondersteuning}
-                        </div>
-                      </div>
-                      {inschrijving.bijzonderheden && (
-                        <div className="mt-2 text-sm text-gray-700">
-                          <span className="font-medium">Bijzonderheden:</span> {inschrijving.bijzonderheden}
-                        </div>
-                      )}
-                      <div className="mt-2 text-xs text-gray-500">
-                        {new Date(inschrijving.created_at).toLocaleString('nl-NL')}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {inschrijving.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => updateInschrijvingStatus(inschrijving.id, 'approved')}
-                            className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium hover:bg-green-200"
-                          >
-                            Goedkeuren
-                          </button>
-                          <button
-                            onClick={() => updateInschrijvingStatus(inschrijving.id, 'rejected')}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium hover:bg-red-200"
-                          >
-                            Afwijzen
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      <>
+        <StatisticsGrid stats={stats} />
+        <FilterableList
+          title="Inschrijvingen"
+          table="inschrijvingen"
+          queryKey="registrations"
+          sortOptions={[
+            { label: 'Nieuwste eerst', value: { column: 'created_at', ascending: false } },
+            { label: 'Oudste eerst', value: { column: 'created_at', ascending: true } }
+          ]}
+          renderItem={(registration) => (
+            <RegistrationItem
+              registration={registration as Inschrijving}
+              onStatusUpdate={updateInschrijvingStatus}
+            />
+          )}
+        />
+      </>
     )
   }
 
-  if (loading) return <div className="flex justify-center p-8">Laden...</div>
-
   return (
-    <div className="max-w-7xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
+    <div className="space-y-6">
+      {/* Header met tabs */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <H1 className="mb-1">Dashboard</H1>
+          <SmallText>
+            Beheer berichten en inschrijvingen
+          </SmallText>
+        </div>
+        
+        {/* Tabs - nu meer zichtbaar en klikbaar */}
+        <div className="border-b border-gray-200">
+          <nav className="px-4 sm:px-6 flex space-x-8">
+            <button
+              onClick={() => setActiveTab('berichten')}
+              className={`py-4 px-1 relative inline-flex items-center gap-2 ${
+                activeTab === 'berichten'
+                  ? 'border-b-2 border-indigo-500'
+                  : 'border-b-2 border-transparent'
+              }`}
+            >
+              <span className={`text-sm font-medium ${
+                activeTab === 'berichten'
+                  ? 'text-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+                Berichten
+              </span>
+              {messages.filter(m => m.status === 'ongelezen').length > 0 && (
+                <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs">
+                  {messages.filter(m => m.status === 'ongelezen').length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('inschrijvingen')}
+              className={`py-4 px-1 relative inline-flex items-center gap-2 ${
+                activeTab === 'inschrijvingen'
+                  ? 'border-b-2 border-indigo-500'
+                  : 'border-b-2 border-transparent'
+              }`}
+            >
+              <span className={`text-sm font-medium ${
+                activeTab === 'inschrijvingen'
+                  ? 'text-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+                Inschrijvingen
+              </span>
+              {inschrijvingen.filter(i => i.status === 'pending').length > 0 && (
+                <span className="bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full text-xs">
+                  {inschrijvingen.filter(i => i.status === 'pending').length} nieuw
+                </span>
+              )}
+            </button>
+          </nav>
+        </div>
       </div>
 
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('berichten')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'berichten'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Berichten
-          </button>
-          <button
-            onClick={() => setActiveTab('inschrijvingen')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'inschrijvingen'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Inschrijvingen
-          </button>
-        </nav>
-      </div>
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+      ) : (
+        <>
+          {/* Error message */}
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <ErrorText>{error}</ErrorText>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {activeTab === 'berichten' ? <MessagesTab /> : <InschrijvingenTab />}
+          {/* Tab content */}
+          <div className="space-y-6">
+            {activeTab === 'berichten' ? (
+              <MessagesTab />
+            ) : (
+              <InschrijvingenTab />
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 } 
