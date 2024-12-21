@@ -14,9 +14,9 @@ export interface PhotoBase {
 }
 
 export interface PhotoWithDetails extends PhotoBase {
-  title: string
-  description: string | null
-  year: number
+  title?: string
+  description?: string | null
+  year?: number
 }
 
 export interface PhotoSelectorPhoto extends PhotoBase {

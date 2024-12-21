@@ -21,6 +21,20 @@ import { CSS } from '@dnd-kit/utilities'
 import { BulkUploadButton } from './components/BulkUploadButton'
 import { PhotoForm } from './components/PhotoForm'
 
+interface Photo {
+  id: string
+  url: string
+  thumbnail_url: string
+  alt: string
+  visible: boolean
+  order_number: number
+  created_at: string
+  updated_at: string
+  title?: string
+  description?: string
+  year?: number
+}
+
 function SortablePhoto({ 
   photo, 
   index, 
@@ -364,8 +378,14 @@ export function PhotosOverview() {
   }
 
   const handleEdit = (photo: Photo) => {
-    setEditingPhoto(photo)
-    setShowForm(true)
+    const photoWithDetails: Photo = {
+      ...photo,
+      title: photo.title || '',
+      description: photo.description || null,
+      year: photo.year || new Date().getFullYear()
+    }
+    
+    setSelectedPhoto(photoWithDetails)
   }
 
   const handleFormComplete = () => {
