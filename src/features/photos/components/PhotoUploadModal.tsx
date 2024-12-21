@@ -17,50 +17,64 @@ interface UploadPreview {
   title: string
   year: number
   progress: number
+  url?: string
   error?: string
 }
 
 export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps) {
   const [uploads, setUploads] = useState<UploadPreview[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [progress, setProgress] = useState<{[key: string]: number}>({})
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
     
-    // Valideer bestanden
-    const validFiles = files.filter(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        setError(`${file.name} is groter dan 5MB`)
-        return false
-      }
-      if (!file.type.startsWith('image/')) {
-        setError(`${file.name} is geen afbeelding`)
-        return false
-      }
-      return true
-    })
-
-    // Maak previews
-    Promise.all(
-      validFiles.map(file => new Promise<UploadPreview>((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          resolve({
-            file,
-            previewUrl: reader.result as string,
-            title: file.name.split('.')[0],
-            year: new Date().getFullYear(),
-            progress: 0
-          })
-        }
-        reader.readAsDataURL(file)
-      }))
-    ).then(previews => {
-      setUploads(prev => [...prev, ...previews])
+    try {
+      setIsUploading(true)
       setError(null)
-    })
+      const newProgress = {...progress}
+
+      for (const file of files) {
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`${file.name} is groter dan 5MB`)
+        }
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`${file.name} is geen afbeelding`)
+        }
+
+        const uploadResult = await uploadToCloudinary(
+          file,
+          (progressEvent) => {
+            const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            newProgress[file.name] = percentage
+            setProgress({...newProgress})
+          }
+        )
+
+        const preview: UploadPreview = {
+          file,
+          previewUrl: URL.createObjectURL(file),
+          title: file.name.split('.')[0],
+          year: new Date().getFullYear(),
+          progress: 100,
+          url: uploadResult.url
+        }
+        
+        setUploads(prev => [...prev, preview])
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      setError(err instanceof Error ? err.message : 'Er ging iets mis bij het uploaden')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   const removeUpload = (index: number) => {
@@ -79,7 +93,6 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
     setError(null)
 
     try {
-      // Haal eerst het hoogste order_number op
       const { data: existingPhotos } = await supabase
         .from('photos')
         .select('order_number')
@@ -88,20 +101,18 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
 
       const startOrderNumber = (existingPhotos?.[0]?.order_number || 0) + 1
 
-      // Upload alle foto's
       for (let i = 0; i < uploads.length; i++) {
         const upload = uploads[i]
         
         try {
-          // Upload naar Cloudinary met progress callback
           const result = await uploadToCloudinary(
             upload.file,
-            (progress: number) => {
-              updateUpload(i, { progress })
+            (progressEvent) => {
+              const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+              updateUpload(i, { progress: percentage })
             }
           )
           
-          // Maak database record met Cloudinary URL
           const photoData: PhotoInsert = {
             url: result.secure_url,
             alt: upload.title,
@@ -133,7 +144,7 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-screen-safe sm:max-w-xl max-h-[90vh] overflow-hidden animate-fadeIn">
+      <div className="bg-white rounded-lg w-full max-w-screen-safe sm:max-w-lg max-h-[90vh] overflow-hidden animate-fadeIn">
         <div className="p-4 sm:p-6 border-b border-gray-200 flex justify-between items-center">
           <H3>Foto's Toevoegen</H3>
           <button
@@ -147,7 +158,6 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
-          {/* Upload input */}
           <div>
             <input
               ref={fileInputRef}
@@ -167,7 +177,6 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
             </SmallText>
           </div>
 
-          {/* Previews */}
           <div className="space-y-4 max-h-[50vh] overflow-y-auto">
             {uploads.map((upload, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-4">
@@ -255,6 +264,25 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
             </button>
           </div>
         </form>
+
+        {isUploading && Object.keys(progress).length > 0 && (
+          <div className="mt-2 space-y-2">
+            {Object.entries(progress).map(([filename, percentage]) => (
+              <div key={filename} className="text-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-700">{filename}</span>
+                  <span className="text-gray-500">{percentage}%</span>
+                </div>
+                <div className="overflow-hidden h-2 text-xs flex rounded bg-indigo-100">
+                  <div
+                    style={{ width: `${percentage}%` }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 transition-all duration-300"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -34,7 +34,14 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
       let url = photo?.url
       
       if (image) {
-        const uploadResult = await uploadToCloudinary(image, setUploadProgress)
+        const uploadResult = await uploadToCloudinary(
+          image, 
+          (progress) => {
+            // Bereken percentage
+            const percentage = Math.round((progress.loaded / progress.total) * 100)
+            setUploadProgress(percentage)
+          }
+        )
         url = uploadResult.url
       }
 
