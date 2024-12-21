@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase/supabaseClient'
-import { Photo } from '../../types/photo'
+import { Photo, PhotoWithDetails } from './types'
 import {
   DndContext,
   closestCenter,
@@ -20,20 +20,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { BulkUploadButton } from './components/BulkUploadButton'
 import { PhotoForm } from './components/PhotoForm'
-
-interface Photo {
-  id: string
-  url: string
-  thumbnail_url: string
-  alt: string
-  visible: boolean
-  order_number: number
-  created_at: string
-  updated_at: string
-  title?: string
-  description?: string
-  year?: number
-}
 
 function SortablePhoto({ 
   photo, 
@@ -378,11 +364,11 @@ export function PhotosOverview() {
   }
 
   const handleEdit = (photo: Photo) => {
-    const photoWithDetails: Photo = {
+    const photoWithDetails: PhotoWithDetails = {
       ...photo,
-      title: photo.title || '',
-      description: photo.description || null,
-      year: photo.year || new Date().getFullYear()
+      title: '',
+      description: undefined,
+      year: new Date().getFullYear(),
     }
     
     setSelectedPhoto(photoWithDetails)

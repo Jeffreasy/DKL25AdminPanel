@@ -36,7 +36,9 @@ export function PhotoGrid() {
     }
   }
 
-  const years = [...new Set(photos.map(p => p.year))].sort((a, b) => b - a)
+  const years = [...new Set(photos.map(p => p.year))]
+    .filter((year): year is number => year !== undefined)
+    .sort((a, b) => (b || 0) - (a || 0))
 
   const filteredPhotos = photos.filter(photo => {
     if (!filter) return true

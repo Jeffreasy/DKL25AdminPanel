@@ -75,6 +75,7 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
       const transformedPhotos: PhotoSelectorPhoto[] = allPhotos.map(photo => ({
         id: photo.id,
         url: photo.url,
+        thumbnail_url: photo.url,
         alt: photo.alt,
         visible: photo.visible,
         order_number: photo.order_number,

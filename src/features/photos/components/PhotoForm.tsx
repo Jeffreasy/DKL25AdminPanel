@@ -31,13 +31,12 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
     setError(null)
     
     try {
-      let url = photo?.url
+      let url = photo?.url || ''
       
       if (image) {
         const uploadResult = await uploadToCloudinary(
           image, 
           (progress) => {
-            // Bereken percentage
             const percentage = Math.round((progress.loaded / progress.total) * 100)
             setUploadProgress(percentage)
           }
@@ -51,7 +50,8 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
       const photoData: Omit<PhotoWithDetails, 'id' | 'created_at' | 'updated_at'> = {
         url,
-        alt: formData.title,
+        thumbnail_url: url,
+        alt: formData.title || 'Foto',
         title: formData.title,
         description: formData.description || null,
         year: Number(formData.year),
