@@ -32,6 +32,7 @@ export interface Database {
         Row: {
           id: string
           url: string
+          thumbnail_url: string
           alt: string
           order_number: number
           created_at: string

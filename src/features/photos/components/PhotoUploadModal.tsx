@@ -115,6 +115,7 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
           
           const photoData: PhotoInsert = {
             url: result.secure_url,
+            thumbnail_url: result.secure_url,
             alt: upload.title,
             visible: true,
             order_number: startOrderNumber + i
