@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase/supabaseClient'
-import type { PhotoWithDetails } from '../../photos/types'
+import type { PhotoSelectorPhoto } from '../../photos/types'
 import type { AlbumWithDetails } from '../types'
+import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove } from '@dnd-kit/sortable'
 
 interface PhotoSelectorProps {
   album: AlbumWithDetails
@@ -9,53 +11,98 @@ interface PhotoSelectorProps {
   onCancel: () => void
 }
 
-export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProps) {
-  const [photos, setPhotos] = useState<PhotoWithDetails[]>([])
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface PhotoAlbumResponse {
+  photo: {
+    id: string
+    url: string
+    alt: string
+    visible: boolean
+    order_number: number
+    created_at: string
+    updated_at: string
+  }
+}
 
-  useEffect(() => {
-    fetchPhotos()
-  }, [])
+export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProps) {
+  const [photos, setPhotos] = useState<PhotoSelectorPhoto[]>([])
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(new Set())
 
   const fetchPhotos = async () => {
     try {
-      setLoading(true)
-      // Eerst haal de huidige foto's van het album op
-      const { data: albumPhotos } = await supabase
+      const { data: usedPhotoIds } = await supabase
         .from('photos_albums')
         .select('photo_id')
-        .eq('album_id', album.id)
 
-      const currentPhotoIds = albumPhotos?.map(p => p.photo_id) || []
-      setSelectedPhotos(currentPhotoIds)
+      const usedIds = (usedPhotoIds || []).map(p => p.photo_id)
 
-      // Dan alle beschikbare foto's
-      const { data, error } = await supabase
+      const { data: unusedPhotos, error: unusedError } = await supabase
         .from('photos')
         .select('*')
-        .order('order_number', { ascending: true })
+        .not('id', 'in', `(${usedIds.length > 0 ? usedIds.join(',') : '0'})`)
+        .eq('visible', true)
+        .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setPhotos(data)
+      if (unusedError) throw unusedError
+
+      const { data: albumPhotos, error: albumError } = await supabase
+        .from('photos_albums')
+        .select(`
+          photo:photos (
+            id,
+            url,
+            alt,
+            visible,
+            order_number,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('album_id', album.id)
+        .order('order_number') as { data: PhotoAlbumResponse[] | null, error: any }
+
+      if (albumError) throw albumError
+
+      const allPhotos = [
+        ...(albumPhotos?.map(ap => ap.photo) || []),
+        ...(unusedPhotos || [])
+      ]
+
+      const transformedPhotos: PhotoSelectorPhoto[] = allPhotos.map(photo => ({
+        id: photo.id,
+        url: photo.url,
+        alt: photo.alt,
+        visible: photo.visible,
+        order_number: photo.order_number,
+        created_at: photo.created_at,
+        updated_at: photo.updated_at
+      }))
+
+      setPhotos(transformedPhotos)
+
+      const currentPhotoIds = albumPhotos?.map(ap => ap.photo.id) || []
+      setSelectedPhotos(currentPhotoIds)
     } catch (err) {
       console.error('Error fetching photos:', err)
       setError('Er ging iets mis bij het ophalen van de foto\'s')
-    } finally {
-      setLoading(false)
     }
   }
 
+  useEffect(() => {
+    fetchPhotos()
+  }, [album.id])
+
   const handleSave = async () => {
     try {
-      // Verwijder eerst alle bestaande relaties
+      setIsUploading(true)
+      
       await supabase
         .from('photos_albums')
         .delete()
         .eq('album_id', album.id)
 
-      // Voeg dan de nieuwe relaties toe
       if (selectedPhotos.length > 0) {
         const photosToInsert = selectedPhotos.map((photoId, index) => ({
           photo_id: photoId,
@@ -74,80 +121,141 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
     } catch (err) {
       console.error('Error saving photos:', err)
       setError('Er ging iets mis bij het opslaan van de foto\'s')
+    } finally {
+      setIsUploading(false)
     }
   }
 
-  const togglePhoto = (photoId: string) => {
-    setSelectedPhotos(prev => 
-      prev.includes(photoId)
-        ? prev.filter(id => id !== photoId)
-        : [...prev, photoId]
-    )
+  const handleRemoveFromAlbum = async (photoIds: string[]) => {
+    try {
+      setIsUploading(true)
+      const { error } = await supabase
+        .from('photos_albums')
+        .delete()
+        .eq('album_id', album.id)
+        .in('photo_id', photoIds)
+
+      if (error) throw error
+
+      setSelectedPhotos(prev => prev.filter(id => !photoIds.includes(id)))
+      setSelectedForDeletion(new Set())
+      
+      fetchPhotos()
+    } catch (err) {
+      console.error('Error removing photos:', err)
+      setError('Er ging iets mis bij het verwijderen van foto\'s')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    try {
+      const oldIndex = selectedPhotos.indexOf(active.id.toString())
+      const newIndex = selectedPhotos.indexOf(over.id.toString())
+      
+      const newOrder = arrayMove(selectedPhotos, oldIndex, newIndex)
+      setSelectedPhotos(newOrder)
+
+      const updates = newOrder.map((photoId, index) => ({
+        album_id: album.id,
+        photo_id: photoId,
+        order_number: index
+      }))
+
+      const { error } = await supabase
+        .from('photos_albums')
+        .upsert(updates)
+
+      if (error) throw error
+    } catch (err) {
+      console.error('Error reordering photos:', err)
+      setError('Er ging iets mis bij het herordenen van foto\'s')
+    }
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
         <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-medium">Foto's selecteren</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
+          <div>
+            <h2 className="text-lg font-medium">Foto's beheren</h2>
+            <p className="mt-1 text-sm text-gray-500">
               {selectedPhotos.length} foto's geselecteerd
-            </span>
-            <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <span className="sr-only">Sluiten</span>
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            </p>
           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-md">
+              {error}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {photos.map(photo => (
-                <div
-                  key={photo.id}
-                  onClick={() => togglePhoto(photo.id)}
-                  className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer group ${
-                    selectedPhotos.includes(photo.id) ? 'ring-2 ring-indigo-500' : ''
-                  }`}
-                >
-                  <img
-                    src={photo.url}
-                    alt={photo.alt}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className={`absolute inset-0 bg-black transition-opacity ${
-                    selectedPhotos.includes(photo.id) ? 'bg-opacity-40' : 'bg-opacity-0 group-hover:bg-opacity-20'
-                  }`}>
-                    {selectedPhotos.includes(photo.id) && (
-                      <div className="absolute top-2 right-2 bg-indigo-500 rounded-full p-1">
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+          )}
+          
+          {selectedForDeletion.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">
+                {selectedForDeletion.size} geselecteerd
+              </span>
+              <button
+                onClick={() => handleRemoveFromAlbum(Array.from(selectedForDeletion))}
+                className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+                disabled={isUploading}
+              >
+                Verwijderen uit album
+              </button>
+              <button
+                onClick={() => setSelectedForDeletion(new Set())}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                Annuleren
+              </button>
             </div>
           )}
         </div>
 
-        {error && (
-          <div className="p-4 bg-red-50 border-t border-red-200">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto p-4">
+          <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+            <SortableContext items={selectedPhotos}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {photos.map(photo => (
+                  <div
+                    key={photo.id}
+                    className={`
+                      relative aspect-square rounded-lg overflow-hidden cursor-pointer
+                      ${selectedPhotos.includes(photo.id) ? 'ring-2 ring-indigo-500' : 'hover:ring-1 hover:ring-gray-300'}
+                    `}
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.alt}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    <div className="absolute top-2 right-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedForDeletion.has(photo.id)}
+                        onChange={(e) => {
+                          const newSelection = new Set(selectedForDeletion)
+                          if (e.target.checked) {
+                            newSelection.add(photo.id)
+                          } else {
+                            newSelection.delete(photo.id)
+                          }
+                          setSelectedForDeletion(newSelection)
+                        }}
+                        className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
 
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
           <button

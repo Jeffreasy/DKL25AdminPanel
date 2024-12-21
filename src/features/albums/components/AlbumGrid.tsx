@@ -5,7 +5,12 @@ import { ErrorText, SmallText } from '../../../components/typography'
 import { AlbumCard } from './AlbumCard'
 import type { AlbumWithDetails } from '../types'
 
-export function AlbumGrid() {
+interface AlbumGridProps {
+  onAlbumSelect?: (albumId: string) => void;
+  selectedAlbumId?: string | null;
+}
+
+export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
   const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -132,6 +137,8 @@ export function AlbumGrid() {
               album={album}
               view={view}
               onUpdate={fetchAlbums}
+              isSelected={album.id === selectedAlbumId}
+              onSelect={() => onAlbumSelect?.(album.id)}
             />
           ))}
         </div>

@@ -10,6 +10,7 @@ import { PhotoManagementPage } from './pages/PhotoManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
 import { AlbumManagementPage } from './pages/AlbumManagementPage'
+import { AccountSettingsPage } from './pages/AccountSettingsPage'
 
 const queryClient = new QueryClient()
 
@@ -50,6 +51,7 @@ function App() {
                   <Route path="photos" element={<PhotoManagementPage />} />
                   <Route path="albums" element={<AlbumManagementPage />} />
                   <Route path="videos" element={<VideoManagementPage />} />
+                  <Route path="account-settings" element={<AccountSettingsPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
