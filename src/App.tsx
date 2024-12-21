@@ -11,6 +11,7 @@ import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
 import { AlbumManagementPage } from './pages/AlbumManagementPage'
 import { AccountSettingsPage } from './pages/AccountSettingsPage'
+import { SponsorManagementPage } from './pages/SponsorManagementPage'
 
 const queryClient = new QueryClient()
 
@@ -52,6 +53,7 @@ function App() {
                   <Route path="albums" element={<AlbumManagementPage />} />
                   <Route path="videos" element={<VideoManagementPage />} />
                   <Route path="account-settings" element={<AccountSettingsPage />} />
+                  <Route path="sponsors" element={<SponsorManagementPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>

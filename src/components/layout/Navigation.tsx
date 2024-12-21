@@ -4,7 +4,8 @@ import {
   PhotoIcon,
   FilmIcon,
   UserGroupIcon,
-  FolderIcon
+  FolderIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -13,6 +14,7 @@ const navigation = [
   { name: 'Albums', href: '/dashboard/albums', icon: FolderIcon },
   { name: "Video's", href: '/dashboard/videos', icon: FilmIcon },
   { name: 'Partners', href: '/dashboard/partners', icon: UserGroupIcon },
+  { name: 'Sponsors', href: '/dashboard/sponsors', icon: CurrencyDollarIcon },
 ]
 
 export function Navigation() {
