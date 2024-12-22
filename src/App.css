@@ -11,3 +11,12 @@ body {
   overflow-x: hidden;
   width: 100%;
 }
+
+/* Utility classes */
+.content-container {
+  @apply max-w-screen-safe mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.page-container {
+  @apply py-6 sm:py-8 lg:py-12;
+}

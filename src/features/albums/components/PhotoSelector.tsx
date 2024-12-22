@@ -1,27 +1,32 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import type { PhotoSelectorPhoto } from '../../photos/types'
 import type { AlbumWithDetails } from '../types'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove } from '@dnd-kit/sortable'
 import { PhotoUploadModal } from '../../photos/components/PhotoUploadModal'
 
+// TODO: Vervang dit door je nieuwe API service
+const fetchPhotosForAlbum = async (_albumId: string): Promise<PhotoSelectorPhoto[]> => {
+  // Implementeer je nieuwe API call hier
+  return []
+}
+
+const saveAlbumPhotos = async (_albumId: string, _photoIds: string[]): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+}
+
+const removePhotosFromAlbum = async (_albumId: string, _photoIds: string[]): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+}
+
+const reorderAlbumPhotos = async (_albumId: string, _photoIds: string[]): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+}
+
 interface PhotoSelectorProps {
   album: AlbumWithDetails
   onComplete: () => void
   onCancel: () => void
-}
-
-interface PhotoAlbumResponse {
-  photo: {
-    id: string
-    url: string
-    alt: string
-    visible: boolean
-    order_number: number
-    created_at: string
-    updated_at: string
-  }
 }
 
 export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProps) {
@@ -34,59 +39,9 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
 
   const fetchPhotos = async () => {
     try {
-      const { data: usedPhotoIds } = await supabase
-        .from('photos_albums')
-        .select('photo_id')
-
-      const usedIds = (usedPhotoIds || []).map(p => p.photo_id)
-
-      const { data: unusedPhotos, error: unusedError } = await supabase
-        .from('photos')
-        .select('*')
-        .not('id', 'in', `(${usedIds.length > 0 ? usedIds.join(',') : '0'})`)
-        .eq('visible', true)
-        .order('created_at', { ascending: false })
-
-      if (unusedError) throw unusedError
-
-      const { data: albumPhotos, error: albumError } = await supabase
-        .from('photos_albums')
-        .select(`
-          photo:photos (
-            id,
-            url,
-            alt,
-            visible,
-            order_number,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('album_id', album.id)
-        .order('order_number') as { data: PhotoAlbumResponse[] | null, error: any }
-
-      if (albumError) throw albumError
-
-      const allPhotos = [
-        ...(albumPhotos?.map(ap => ap.photo) || []),
-        ...(unusedPhotos || [])
-      ]
-
-      const transformedPhotos: PhotoSelectorPhoto[] = allPhotos.map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        thumbnail_url: photo.url,
-        alt: photo.alt,
-        visible: photo.visible,
-        order_number: photo.order_number,
-        created_at: photo.created_at,
-        updated_at: photo.updated_at
-      }))
-
-      setPhotos(transformedPhotos)
-
-      const currentPhotoIds = albumPhotos?.map(ap => ap.photo.id) || []
-      setSelectedPhotos(currentPhotoIds)
+      const data = await fetchPhotosForAlbum(album.id)
+      setPhotos(data)
+      setSelectedPhotos(data.filter(p => p.inAlbum).map(p => p.id))
     } catch (err) {
       console.error('Error fetching photos:', err)
       setError('Er ging iets mis bij het ophalen van de foto\'s')
@@ -100,26 +55,7 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
   const handleSave = async () => {
     try {
       setIsUploading(true)
-      
-      await supabase
-        .from('photos_albums')
-        .delete()
-        .eq('album_id', album.id)
-
-      if (selectedPhotos.length > 0) {
-        const photosToInsert = selectedPhotos.map((photoId, index) => ({
-          photo_id: photoId,
-          album_id: album.id,
-          order_number: index
-        }))
-
-        const { error } = await supabase
-          .from('photos_albums')
-          .insert(photosToInsert)
-
-        if (error) throw error
-      }
-
+      await saveAlbumPhotos(album.id, selectedPhotos)
       onComplete()
     } catch (err) {
       console.error('Error saving photos:', err)
@@ -132,17 +68,9 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
   const handleRemoveFromAlbum = async (photoIds: string[]) => {
     try {
       setIsUploading(true)
-      const { error } = await supabase
-        .from('photos_albums')
-        .delete()
-        .eq('album_id', album.id)
-        .in('photo_id', photoIds)
-
-      if (error) throw error
-
+      await removePhotosFromAlbum(album.id, photoIds)
       setSelectedPhotos(prev => prev.filter(id => !photoIds.includes(id)))
       setSelectedForDeletion(new Set())
-      
       fetchPhotos()
     } catch (err) {
       console.error('Error removing photos:', err)
@@ -163,17 +91,7 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
       const newOrder = arrayMove(selectedPhotos, oldIndex, newIndex)
       setSelectedPhotos(newOrder)
 
-      const updates = newOrder.map((photoId, index) => ({
-        album_id: album.id,
-        photo_id: photoId,
-        order_number: index
-      }))
-
-      const { error } = await supabase
-        .from('photos_albums')
-        .upsert(updates)
-
-      if (error) throw error
+      await reorderAlbumPhotos(album.id, newOrder)
     } catch (err) {
       console.error('Error reordering photos:', err)
       setError('Er ging iets mis bij het herordenen van foto\'s')
@@ -316,6 +234,7 @@ export function PhotoSelector({ album, onComplete, onCancel }: PhotoSelectorProp
 
         {showUploadModal && (
           <PhotoUploadModal
+            open={showUploadModal}
             onClose={() => setShowUploadModal(false)}
             onComplete={() => {
               setShowUploadModal(false)

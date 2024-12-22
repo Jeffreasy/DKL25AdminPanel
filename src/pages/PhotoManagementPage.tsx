@@ -1,49 +1,82 @@
-import { useState } from 'react'
-import { H1, SmallText } from '../components/typography'
-import { PhotoGrid, PhotoUploadModal } from '../features/photos/components'
+import { useState, useEffect } from 'react'
+import { PhotoGrid } from '../features/photos/components/PhotoGrid'
+import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal'
+import { fetchPhotosFromAPI } from '../features/photos/services/photoService'
+import type { Photo } from '../features/photos/types'
+import { useNavigationHistory } from '../contexts/NavigationHistoryContext'
 
 export function PhotoManagementPage() {
-  const [showUpload, setShowUpload] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { addToHistory } = useNavigationHistory()
+
+  const loadPhotos = async () => {
+    try {
+      setLoading(true)
+      const response = await fetchPhotosFromAPI()
+      setPhotos(response.data || [])
+    } catch (err) {
+      console.error('Error loading photos:', err)
+      setError('Er ging iets mis bij het ophalen van de foto\'s')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    addToHistory("Foto's")
+    loadPhotos()
+  }, [])
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-          <div>
-            <H1 className="mb-1">Foto's</H1>
-            <SmallText>
-              Beheer de foto's van de Koninklijke Loop
-            </SmallText>
+      <div className="bg-white shadow">
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Foto's</h1>
+              <p className="mt-2 text-sm text-gray-700">
+                Beheer de foto's van de Koninklijke Loop
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Foto's Toevoegen
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="hidden sm:inline">Foto's Toevoegen</span>
-            <span className="sm:hidden">Toevoegen</span>
-          </button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="bg-white shadow rounded-lg">
-        <PhotoGrid />
+      {/* Main Content */}
+      <div className="mt-8 px-4 sm:px-6 lg:px-8">
+        <PhotoGrid
+          photos={photos}
+          loading={loading}
+          error={error}
+          onUpdate={loadPhotos}
+          setError={setError}
+        />
       </div>
 
       {/* Upload Modal */}
-      {showUpload && (
-        <PhotoUploadModal
-          onClose={() => setShowUpload(false)}
-          onComplete={() => {
-            setShowUpload(false)
-            // Hier kunnen we de grid refreshen
-          }}
-        />
-      )}
+      <PhotoUploadModal
+        open={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onComplete={() => {
+          setShowUploadModal(false)
+          loadPhotos()
+        }}
+      />
     </div>
   )
 } 

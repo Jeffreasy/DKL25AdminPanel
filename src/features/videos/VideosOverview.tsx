@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase/supabaseClient'
 import { Video } from '../../types/video'
 import {
   DndContext,
@@ -20,6 +19,27 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { VideoPreviewModal } from './components/VideoPreviewModal'
 import { VideoForm } from './components/VideoForm'
+
+// TODO: Vervang dit door je nieuwe API service
+const fetchVideosFromAPI = async (): Promise<Video[]> => {
+  // Implementeer je nieuwe API call hier
+  return []
+}
+
+const deleteVideosFromAPI = async (videoIds: string[]): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Deleting videos:', videoIds)
+}
+
+const updateVideoVisibilityInAPI = async (videoId: string, visible: boolean): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Updating video ${videoId} visibility to: ${visible}`)
+}
+
+const updateVideoOrderInAPI = async (videoId: string, newOrder: number): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Updating video ${videoId} order to: ${newOrder}`)
+}
 
 function SortableVideo({ 
   video, 
@@ -190,13 +210,9 @@ export function VideosOverview() {
 
   const fetchVideos = async () => {
     try {
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .order('order_number')
-
-      if (error) throw error
-      setVideos(data || [])
+      setLoading(true)
+      const data = await fetchVideosFromAPI()
+      setVideos(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
     } finally {
@@ -216,16 +232,12 @@ export function VideosOverview() {
       const newVideos = arrayMove(videos, oldIndex, newIndex)
       setVideos(newVideos)
 
-      // Update de volgorde via de specifieke stored procedure
-      const { error } = await supabase.rpc('reorder_videos', {
-        video_ids: newVideos.map(v => v.id)
-      })
-
-      if (error) throw error
+      // Update order in API
+      await updateVideoOrderInAPI(active.id as string, newIndex)
     } catch (error) {
       console.error('Drag error:', error)
       setError('Fout bij het updaten van de volgorde')
-      await fetchVideos()
+      await fetchVideos() // Herstel de originele volgorde
     }
   }
 
@@ -256,13 +268,7 @@ export function VideosOverview() {
     }
 
     try {
-      const { error } = await supabase
-        .from('videos')
-        .delete()
-        .in('id', Array.from(selectedVideos))
-
-      if (error) throw error
-
+      await deleteVideosFromAPI(Array.from(selectedVideos))
       await fetchVideos()
       setSelectedVideos(new Set())
     } catch (error) {
@@ -289,16 +295,8 @@ export function VideosOverview() {
 
   const handleToggleVisibility = async (video: Video) => {
     try {
-      const { error } = await supabase
-        .from('videos')
-        .update({ 
-          visible: !video.visible,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', video.id)
-
-      if (error) throw error
-
+      await updateVideoVisibilityInAPI(video.id, !video.visible)
+      
       // Update local state
       setVideos(videos.map(v => 
         v.id === video.id 

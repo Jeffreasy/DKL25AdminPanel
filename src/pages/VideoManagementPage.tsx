@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase/supabaseClient'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { LoadingSkeleton } from '../components/auth/LoadingSkeleton'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ErrorText } from '../components/typography'
+import { fetchVideosFromAPI, updateVideoInAPI } from '../features/videos/services/videoService'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface Video {
   id: string
@@ -66,6 +67,7 @@ function isValidVideoUrl(url: string): boolean {
 }
 
 export function VideoManagementPage() {
+  usePageTitle("Video's beheren")
   const [videos, setVideos] = useState<Video[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -89,11 +91,7 @@ export function VideoManagementPage() {
   const fetchVideos = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .order('order_number', { ascending: true })
-
+      const { data, error } = await fetchVideosFromAPI()
       if (error) throw error
       setVideos(data)
     } catch (err) {
@@ -118,27 +116,17 @@ export function VideoManagementPage() {
       }
 
       if (editingVideo) {
-        const { error } = await supabase
-          .from('videos')
-          .update(videoData)
-          .eq('id', editingVideo.id)
-
-        if (error) throw error
+        await updateVideoInAPI(editingVideo.id, videoData)
       } else {
-        // Get highest order number
-        const { data: lastVideo } = await supabase
-          .from('videos')
-          .select('order_number')
-          .order('order_number', { ascending: false })
-          .limit(1)
-
+        // Genereer een tijdelijke ID voor nieuwe videos
+        const tempId = `new-${Date.now()}`
+        const { data: lastVideo } = await fetchVideosFromAPI()
         const orderNumber = (lastVideo?.[0]?.order_number || 0) + 1
 
-        const { error } = await supabase
-          .from('videos')
-          .insert({ ...videoData, order_number: orderNumber })
-
-        if (error) throw error
+        await updateVideoInAPI(tempId, { 
+          ...videoData, 
+          order_number: orderNumber 
+        })
       }
 
       await fetchVideos()
@@ -176,15 +164,10 @@ export function VideoManagementPage() {
 
   const handleToggleVisibility = async (video: Video) => {
     try {
-      const { error } = await supabase
-        .from('videos')
-        .update({ 
-          visible: !video.visible,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', video.id)
-
-      if (error) throw error
+      await updateVideoInAPI(video.id, { 
+        visible: !video.visible,
+        updated_at: new Date().toISOString()
+      })
       await fetchVideos()
     } catch (err) {
       console.error('Error toggling visibility:', err)
@@ -197,12 +180,9 @@ export function VideoManagementPage() {
     if (!confirm(`Weet je zeker dat je ${selectedVideos.size} video's wilt verwijderen?`)) return
 
     try {
-      const { error } = await supabase
-        .from('videos')
-        .delete()
-        .in('id', Array.from(selectedVideos))
-
-      if (error) throw error
+      await Promise.all(Array.from(selectedVideos).map(videoId => 
+        updateVideoInAPI(videoId, { visible: false })
+      ))
       await fetchVideos()
       setSelectedVideos(new Set())
     } catch (err) {

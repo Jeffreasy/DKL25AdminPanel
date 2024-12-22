@@ -1,11 +1,15 @@
-import type { Database } from '../../types/supabase'
-
-export type Album = Database['public']['Tables']['albums']['Row']
-
-export interface AlbumWithDetails extends Album {
-  cover_photo: {
+export interface AlbumWithDetails {
+  id: string
+  title: string
+  description?: string
+  visible: boolean
+  cover_photo?: {
     id: string
     url: string
   } | null
+  cover_photo_id?: string | null
   photos_count: number
+  order_number: number
+  created_at: string
+  updated_at: string
 } 

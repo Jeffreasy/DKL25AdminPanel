@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase/supabaseClient'
-import { LoadingSkeleton } from '../../components/auth/LoadingSkeleton'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 import { ErrorText, SmallText } from '../../components/typography'
 import { PartnerCard } from './components'
-import type { Database } from '../../types/supabase'
+import { fetchPartners } from './services/partnerService'
+import type { Partner } from './types'
 
-type Partner = Database['public']['Tables']['partners']['Row']
-type SortField = 'name' | 'tier' | 'order_number' | 'since'
+type SortField = 'name' | 'order_number'
 type SortOrder = 'asc' | 'desc'
 
 export function PartnersOverview() {
@@ -18,19 +17,16 @@ export function PartnersOverview() {
   const [filter, setFilter] = useState('')
 
   useEffect(() => {
-    fetchPartners()
+    loadPartners()
   }, [])
 
-  const fetchPartners = async () => {
+  const loadPartners = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('partners')
-        .select('*')
-        .order(sortField, { ascending: sortOrder === 'asc' })
-
-      if (error) throw error
-      setPartners(data || [])
+      setError(null)
+      const data = await fetchPartners()
+      console.log('Loaded partners:', data)
+      setPartners(data)
     } catch (err) {
       console.error('Error fetching partners:', err)
       setError('Er ging iets mis bij het ophalen van de partners')
@@ -53,9 +49,19 @@ export function PartnersOverview() {
     const searchTerm = filter.toLowerCase()
     return (
       partner.name.toLowerCase().includes(searchTerm) ||
-      partner.description?.toLowerCase().includes(searchTerm) ||
-      partner.tier.toLowerCase().includes(searchTerm)
+      partner.description?.toLowerCase().includes(searchTerm)
     )
+  })
+
+  const sortedAndFilteredPartners = filteredPartners.sort((a, b) => {
+    if (sortField === 'name') {
+      return sortOrder === 'asc' 
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    }
+    return sortOrder === 'asc'
+      ? a.order_number - b.order_number
+      : b.order_number - a.order_number
   })
 
   if (loading) {
@@ -103,8 +109,6 @@ export function PartnersOverview() {
             >
               <option value="order_number">Volgorde</option>
               <option value="name">Naam</option>
-              <option value="tier">Niveau</option>
-              <option value="since">Datum</option>
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -129,13 +133,24 @@ export function PartnersOverview() {
 
       {/* Partners grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-        {filteredPartners.map((partner) => (
+        {sortedAndFilteredPartners.map((partner) => (
           <PartnerCard
             key={partner.id}
             partner={partner}
-            onUpdate={fetchPartners}
+            onUpdate={loadPartners}
           />
         ))}
+      </div>
+
+      <div className="fixed bottom-6 right-6">
+        <button
+          onClick={() => {/* Voeg hier je create partner logica toe */}}
+          className="btn-primary rounded-full p-4 shadow-lg"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
       </div>
 
       {filteredPartners.length === 0 && (

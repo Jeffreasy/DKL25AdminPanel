@@ -1,35 +1,46 @@
-export interface ValidationRule {
-  test: (value: string) => boolean
-  message: string
+import { type PasswordStrength } from '../types'
+
+export const PASSWORD_REQUIREMENTS = [
+  { 
+    text: 'Minimaal 8 karakters',
+    validator: (p: string) => p.length >= 8 
+  },
+  { 
+    text: 'Minimaal één hoofdletter',
+    validator: (p: string) => /[A-Z]/.test(p) 
+  },
+  { 
+    text: 'Minimaal één kleine letter',
+    validator: (p: string) => /[a-z]/.test(p) 
+  },
+  { 
+    text: 'Minimaal één cijfer',
+    validator: (p: string) => /[0-9]/.test(p) 
+  },
+  { 
+    text: 'Minimaal één speciaal karakter',
+    validator: (p: string) => /[^A-Za-z0-9]/.test(p) 
+  }
+]
+
+export const strengthColors: Record<PasswordStrength, string> = {
+  weak: 'bg-red-500',
+  medium: 'bg-yellow-500',
+  strong: 'bg-green-500'
 }
 
-export const emailRules: ValidationRule[] = [
-  {
-    test: (email) => !!email,
-    message: 'Email is verplicht'
-  },
-  {
-    test: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    message: 'Voer een geldig emailadres in'
-  }
-]
+export const strengthMessages: Record<PasswordStrength, string> = {
+  weak: 'Zwak wachtwoord',
+  medium: 'Redelijk wachtwoord',
+  strong: 'Sterk wachtwoord'
+}
 
-export const passwordRules: ValidationRule[] = [
-  {
-    test: (password) => !!password,
-    message: 'Wachtwoord is verplicht'
-  },
-  {
-    test: (password) => password.length >= 6,
-    message: 'Wachtwoord moet minimaal 6 karakters bevatten'
-  }
-]
+export const getPasswordStrength = (password: string): PasswordStrength => {
+  const meetsRequirements = PASSWORD_REQUIREMENTS.filter(req => 
+    req.validator(password)
+  ).length
 
-export function validateField(value: string, rules: ValidationRule[]): string | null {
-  for (const rule of rules) {
-    if (!rule.test(value)) {
-      return rule.message
-    }
-  }
-  return null
+  if (meetsRequirements <= 2) return 'weak'
+  if (meetsRequirements <= 4) return 'medium'
+  return 'strong'
 } 

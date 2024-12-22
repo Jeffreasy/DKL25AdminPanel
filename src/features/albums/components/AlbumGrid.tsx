@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
-import { LoadingSkeleton } from '../../../components/auth/LoadingSkeleton'
+import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { ErrorText, SmallText } from '../../../components/typography'
 import { AlbumCard } from './AlbumCard'
 import type { AlbumWithDetails } from '../types'
@@ -8,6 +7,12 @@ import type { AlbumWithDetails } from '../types'
 interface AlbumGridProps {
   onAlbumSelect?: (albumId: string) => void;
   selectedAlbumId?: string | null;
+}
+
+// TODO: Vervang dit door je nieuwe API service
+const fetchAlbumsFromAPI = async () => {
+  // Implementeer je nieuwe API call hier
+  return []
 }
 
 export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
@@ -20,27 +25,8 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
   const fetchAlbums = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error: fetchError } = await supabase
-        .from('albums')
-        .select(`
-          *,
-          cover_photo:cover_photo_id(*),
-          photos:photos_albums(count)
-        `)
-        .order('order_number', { ascending: true })
-
-      if (fetchError) throw fetchError
-
-      const transformedData: AlbumWithDetails[] = (data || []).map(album => ({
-        ...album,
-        cover_photo: album.cover_photo ? {
-          id: album.cover_photo.id,
-          url: album.cover_photo.url
-        } : null,
-        photos_count: album.photos[0]?.count || 0
-      }))
-
-      setAlbums(transformedData)
+      const data = await fetchAlbumsFromAPI()
+      setAlbums(data)
     } catch (err) {
       console.error('Error fetching albums:', err)
       setError('Er ging iets mis bij het ophalen van de albums')

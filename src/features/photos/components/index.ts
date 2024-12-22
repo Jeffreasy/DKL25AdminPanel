@@ -1,4 +1,5 @@
 export * from './PhotoCard'
-export * from './PhotoGrid'
 export * from './PhotoForm'
-export * from './PhotoUploadModal' 
+export * from './PhotoGrid'
+export * from './PhotoUploadModal'
+export * from './BulkUploadButton' 

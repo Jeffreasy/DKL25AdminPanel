@@ -1,15 +1,6 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import { H3, ErrorText, SmallText } from '../../../components/typography'
-import type { Database } from '../../../types/supabase'
 import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
-
-type PhotoInsert = Database['public']['Tables']['photos']['Insert']
-
-interface PhotoUploadModalProps {
-  onClose: () => void
-  onComplete: () => void
-}
 
 interface UploadPreview {
   file: File
@@ -21,13 +12,37 @@ interface UploadPreview {
   error?: string
 }
 
-export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps) {
+interface PhotoUploadModalProps {
+  open: boolean
+  onClose: () => void
+  onComplete: () => void
+}
+
+// TODO: Vervang dit door je nieuwe API service
+const savePhotoToAPI = async (params: {
+  url: string
+  alt: string
+  visible: boolean
+  order_number: number
+}): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Saving photo with params:', params)
+}
+
+const getLastOrderNumber = async (): Promise<number> => {
+  // Implementeer je nieuwe API call hier
+  return 0
+}
+
+export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModalProps) {
   const [uploads, setUploads] = useState<UploadPreview[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState<{[key: string]: number}>({})
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  if (!open) return null
 
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -93,13 +108,7 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
     setError(null)
 
     try {
-      const { data: existingPhotos } = await supabase
-        .from('photos')
-        .select('order_number')
-        .order('order_number', { ascending: false })
-        .limit(1)
-
-      const startOrderNumber = (existingPhotos?.[0]?.order_number || 0) + 1
+      const startOrderNumber = await getLastOrderNumber() + 1
 
       for (let i = 0; i < uploads.length; i++) {
         const upload = uploads[i]
@@ -113,19 +122,12 @@ export function PhotoUploadModal({ onClose, onComplete }: PhotoUploadModalProps)
             }
           )
           
-          const photoData: PhotoInsert = {
+          await savePhotoToAPI({
             url: result.secure_url,
-            thumbnail_url: result.secure_url,
             alt: upload.title,
             visible: true,
             order_number: startOrderNumber + i
-          }
-
-          const { error: dbError } = await supabase
-            .from('photos')
-            .insert(photoData)
-
-          if (dbError) throw dbError
+          })
 
         } catch (err) {
           updateUpload(i, { 

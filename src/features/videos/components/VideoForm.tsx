@@ -1,11 +1,29 @@
 import { useState } from 'react'
 import { Video } from '../../../types/video'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 
 interface VideoFormProps {
   video?: Video
   onComplete: () => void
   onCancel: () => void
+}
+
+// TODO: Vervang dit door je nieuwe API service
+const saveVideoToAPI = async (params: {
+  id?: string
+  title: string
+  description: string
+  video_id: string
+  url: string
+  visible: boolean
+  order_number: number
+}): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Saving video with params:', params)
+}
+
+const getLastOrderNumber = async (): Promise<number> => {
+  // Implementeer je nieuwe API call hier
+  return 0
 }
 
 export function VideoForm({ video, onComplete, onCancel }: VideoFormProps) {
@@ -32,30 +50,18 @@ export function VideoForm({ video, onComplete, onCancel }: VideoFormProps) {
       // Bepaal order_number voor nieuwe video's
       let order_number = video?.order_number
       if (!order_number) {
-        const { data: videos } = await supabase
-          .from('videos')
-          .select('order_number')
-          .order('order_number', { ascending: false })
-          .limit(1)
-        
-        order_number = (videos?.[0]?.order_number || 0) + 1
+        order_number = await getLastOrderNumber() + 1
       }
 
-      // Update of insert video
-      const { error: dbError } = await supabase
-        .from('videos')
-        .upsert({
-          id: video?.id,
-          title,
-          description,
-          video_id: videoId,
-          url,
-          visible: true,
-          order_number,
-          updated_at: new Date().toISOString()
-        })
-
-      if (dbError) throw dbError
+      await saveVideoToAPI({
+        id: video?.id,
+        title,
+        description,
+        video_id: videoId,
+        url,
+        visible: true,
+        order_number
+      })
 
       onComplete()
     } catch (err) {

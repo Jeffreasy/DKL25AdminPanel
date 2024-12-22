@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
 import { SmallText } from '../../../components/typography'
-import type { Sponsor, SponsorInsert } from '../types'
+import type { Sponsor } from '../types'
 
 interface SponsorFormProps {
   sponsor?: Sponsor
@@ -12,6 +11,20 @@ interface SponsorFormProps {
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+// TODO: Vervang dit door je nieuwe API service
+const saveSponsorToAPI = async (params: {
+  id?: string
+  name: string
+  description?: string
+  logo?: string
+  website_url?: string
+  visible: boolean
+  order_number: number
+}): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Saving sponsor with params:', params)
+}
 
 export function SponsorForm({ sponsor, onComplete, onCancel }: SponsorFormProps) {
   const [formData, setFormData] = useState({
@@ -73,31 +86,14 @@ export function SponsorForm({ sponsor, onComplete, onCancel }: SponsorFormProps)
         throw new Error('Logo is verplicht')
       }
 
-      const sponsorData: SponsorInsert = {
+      await saveSponsorToAPI({
         name: formData.name,
         description: formData.description || undefined,
-        logo_url,
+        logo: logo_url,
         website_url: formData.website_url || undefined,
         visible: formData.visible,
         order_number: formData.order_number
-      }
-
-      if (sponsor) {
-        // Update bestaande sponsor
-        const { error: updateError } = await supabase
-          .from('sponsors')
-          .update(sponsorData)
-          .eq('id', sponsor.id)
-
-        if (updateError) throw updateError
-      } else {
-        // Voeg nieuwe sponsor toe
-        const { error: insertError } = await supabase
-          .from('sponsors')
-          .insert(sponsorData)
-
-        if (insertError) throw insertError
-      }
+      })
 
       onComplete()
     } catch (err) {

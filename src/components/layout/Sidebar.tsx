@@ -1,82 +1,49 @@
-import { Fragment } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { useSidebar } from '../../contexts/SidebarContext'
 import { Navigation } from './Navigation'
+import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import DKLLogo from '../../assets/DKLLogo.png'
 
-interface SidebarProps {
-  open: boolean
-  setOpen: (open: boolean) => void
-}
+export function Sidebar() {
+  const { isCollapsed, toggleCollapse, setMobileOpen } = useSidebar()
 
-export function Sidebar({ open, setOpen }: SidebarProps) {
   return (
-    <>
-      {/* Mobile sidebar */}
-      <Transition.Root show={open} as={Fragment}>
-        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setOpen}>
-          <Transition.Child
-            as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
+    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+      {/* Header met logo en collapse/close buttons */}
+      <div className="flex h-16 flex-shrink-0 items-center px-4 justify-between">
+        <img
+          className={`transition-all duration-300 ${
+            isCollapsed ? 'w-8' : 'w-auto h-12'
+          }`}
+          src={DKLLogo}
+          alt="DKL25 Admin"
+        />
+        <div className="flex items-center">
+          {/* Mobile close button */}
+          <button
+            type="button"
+            className="md:hidden -m-2.5 p-2.5 text-gray-700"
+            onClick={() => setMobileOpen(false)}
           >
-            <div className="fixed inset-0 bg-gray-900/80" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 flex">
-            <Transition.Child
-              as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
-              enterFrom="-translate-x-full"
-              enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
-              leaveFrom="translate-x-0"
-              leaveTo="-translate-x-full"
-            >
-              <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                  <button
-                    type="button"
-                    className="-m-2.5 p-2.5"
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className="sr-only">Close sidebar</span>
-                    <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
-                  <div className="flex h-16 shrink-0 items-center">
-                    <img
-                      className="h-8 w-auto"
-                      src="https://res.cloudinary.com/dgfuv7wif/image/upload/v1733267882/664b8c1e593a1e81556b4238_0760849fb8_yn6vdm.png"
-                      alt="DKL25"
-                    />
-                  </div>
-                  <Navigation />
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition.Root>
-
-      {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <img
-              className="h-8 w-auto"
-              src="https://res.cloudinary.com/dgfuv7wif/image/upload/v1733267882/664b8c1e593a1e81556b4238_0760849fb8_yn6vdm.png"
-              alt="DKL25"
-            />
-          </div>
-          <Navigation />
+            <span className="sr-only">Close sidebar</span>
+            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+          </button>
+          
+          {/* Desktop collapse button */}
+          <button
+            onClick={toggleCollapse}
+            className="hidden md:block p-1 rounded-md hover:bg-gray-100"
+          >
+            {isCollapsed ? (
+              <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
+            )}
+          </button>
         </div>
       </div>
-    </>
+
+      {/* Navigation */}
+      <Navigation />
+    </div>
   )
 } 

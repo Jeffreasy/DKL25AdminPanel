@@ -1,155 +1,104 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
-import { LoadingSkeleton } from '../../../components/auth/LoadingSkeleton'
-import { ErrorText, SmallText } from '../../../components/typography'
-import { PhotoCard } from '.'
-import type { PhotoWithDetails } from '../types'
+import { useState } from 'react'
+import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
+import { ErrorText } from '../../../components/typography'
+import { PhotoCard } from './PhotoCard'
+import type { Photo } from '../types'
+import { deletePhotoFromAPI } from '../services/photoService'
 
-export function PhotoGrid() {
-  const [photos, setPhotos] = useState<PhotoWithDetails[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState('')
-  const [yearFilter, setYearFilter] = useState<string>('all')
-  const [view, setView] = useState<'grid' | 'list'>('grid')
+interface PhotoGridProps {
+  photos: Photo[]
+  loading: boolean
+  error: string | null
+  onUpdate: () => Promise<void>
+  setError?: (error: string | null) => void
+}
 
-  useEffect(() => {
-    fetchPhotos()
-  }, [yearFilter])
+export function PhotoGrid({ 
+  photos, 
+  loading, 
+  error, 
+  onUpdate,
+  setError = () => {} // Default no-op function
+}: PhotoGridProps) {
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
 
-  const fetchPhotos = async () => {
+  const handleDelete = async (photo: Photo) => {
+    if (!confirm(`Weet je zeker dat je deze foto wilt verwijderen?`)) return
+
     try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .order('order_number', { ascending: true })
-        .eq('visible', true)
-
-      if (error) throw error
-      setPhotos(data || [])
+      await deletePhotoFromAPI(photo.id)
+      await onUpdate()
     } catch (err) {
-      console.error('Error fetching photos:', err)
-      setError('Er ging iets mis bij het ophalen van de foto\'s')
-    } finally {
-      setLoading(false)
+      console.error('Error deleting photo:', err)
+      setError('Er ging iets mis bij het verwijderen van de foto')
     }
   }
 
-  const years = [...new Set(photos.map(p => p.year))]
-    .filter((year): year is number => year !== undefined)
-    .sort((a, b) => (b || 0) - (a || 0))
+  const handleBulkDelete = async () => {
+    if (selectedPhotos.size === 0) return
+    if (!confirm(`Weet je zeker dat je ${selectedPhotos.size} foto's wilt verwijderen?`)) return
 
-  const filteredPhotos = photos.filter(photo => {
-    if (!filter) return true
-    const searchTerm = filter.toLowerCase()
+    try {
+      await Promise.all(Array.from(selectedPhotos).map(id => deletePhotoFromAPI(id)))
+      setSelectedPhotos(new Set())
+      await onUpdate()
+    } catch (err) {
+      console.error('Error bulk deleting photos:', err)
+      setError('Er ging iets mis bij het verwijderen van de foto\'s')
+    }
+  }
+
+  if (loading) {
     return (
-      photo.title?.toLowerCase().includes(searchTerm) ||
-      photo.description?.toLowerCase().includes(searchTerm) ||
-      photo.year?.toString().includes(searchTerm)
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
+          <LoadingSkeleton key={i} className="aspect-square" />
+        ))}
+      </div>
     )
-  })
+  }
+
+  if (error) {
+    return <ErrorText>{error}</ErrorText>
+  }
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="p-4 border-b border-gray-200 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <input
-              type="search"
-              placeholder="Zoeken..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="w-full pl-10 input-primary"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="input-primary"
-            >
-              <option key="all" value="all">Alle jaren</option>
-              {years.map(year => (
-                <option key={`year-${year}`} value={year}>{year}</option>
-              ))}
-            </select>
-
-            <div className="flex rounded-md shadow-sm">
-              <button
-                onClick={() => setView('grid')}
-                className={`px-3 py-2 rounded-l-md border ${
-                  view === 'grid'
-                    ? 'bg-primary-50 text-primary-600 border-primary-200'
-                    : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setView('list')}
-                className={`px-3 py-2 rounded-r-md border-t border-r border-b -ml-px ${
-                  view === 'list'
-                    ? 'bg-primary-50 text-primary-600 border-primary-200'
-                    : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
+      {/* Bulk actions */}
+      {selectedPhotos.size > 0 && (
+        <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            {selectedPhotos.size} foto{selectedPhotos.size === 1 ? '' : '\'s'} geselecteerd
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+          >
+            Verwijderen
+          </button>
         </div>
+      )}
 
-        <SmallText>
-          {filteredPhotos.length} foto{filteredPhotos.length !== 1 ? 's' : ''} gevonden
-        </SmallText>
+      {/* Photo grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {photos.map((photo) => (
+          <PhotoCard
+            key={photo.id}
+            photo={photo}
+            selected={selectedPhotos.has(photo.id)}
+            onSelect={(selected: boolean) => {
+              const newSelection = new Set(selectedPhotos)
+              if (selected) {
+                newSelection.add(photo.id)
+              } else {
+                newSelection.delete(photo.id)
+              }
+              setSelectedPhotos(newSelection)
+            }}
+            onDelete={() => handleDelete(photo)}
+          />
+        ))}
       </div>
-
-      {/* Loading state */}
-      {loading ? (
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <LoadingSkeleton key={i} className="aspect-square" />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="p-4">
-          <ErrorText>{error}</ErrorText>
-        </div>
-      ) : (
-        <div className={view === 'grid' 
-          ? "p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-          : "divide-y divide-gray-200"
-        }>
-          {filteredPhotos.map((photo) => (
-            <PhotoCard
-              key={photo.id}
-              photo={photo}
-              view={view}
-              onUpdate={fetchPhotos}
-            />
-          ))}
-        </div>
-      )}
-
-      {filteredPhotos.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <SmallText>
-            Geen foto's gevonden{filter ? ' voor deze zoekopdracht' : ''}
-          </SmallText>
-        </div>
-      )}
     </div>
   )
 } 

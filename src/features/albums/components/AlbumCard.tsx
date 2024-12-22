@@ -3,7 +3,11 @@ import { AlbumForm } from './AlbumForm'
 import { PhotoSelector } from './PhotoSelector'
 import type { AlbumWithDetails } from '../types'
 import { FolderIcon } from '@heroicons/react/24/outline'
-import { supabase } from '../../../lib/supabase/supabaseClient'
+
+// TODO: Vervang dit door je nieuwe API service
+const deleteAlbumFromAPI = async (_albumId: string) => {
+  // Implementeer je nieuwe API call hier
+}
 
 interface AlbumCardProps {
   album: AlbumWithDetails
@@ -28,22 +32,7 @@ export function AlbumCard({ album, view, onUpdate, isSelected, onSelect }: Album
       setIsDeleting(true)
       setDeleteError(null)
 
-      // Eerst verwijderen we alle foto-album relaties
-      const { error: relationsError } = await supabase
-        .from('photos_albums')
-        .delete()
-        .eq('album_id', album.id)
-
-      if (relationsError) throw relationsError
-
-      // Dan verwijderen we het album zelf
-      const { error: albumError } = await supabase
-        .from('albums')
-        .delete()
-        .eq('id', album.id)
-
-      if (albumError) throw albumError
-
+      await deleteAlbumFromAPI(album.id)
       onUpdate() // Ververs de album lijst
     } catch (err) {
       console.error('Error deleting album:', err)

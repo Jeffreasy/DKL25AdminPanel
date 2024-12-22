@@ -1,13 +1,7 @@
+import type { ContactMessage } from '../types/api'
+
 interface MessageItemProps {
-  message: {
-    id: string
-    naam: string
-    email: string
-    telefoon: string | null
-    bericht: string
-    aangemaakt_op: string
-    status: 'ongelezen' | 'gelezen'
-  }
+  message: ContactMessage
   onToggleRead: (id: string, status: string) => void
 }
 

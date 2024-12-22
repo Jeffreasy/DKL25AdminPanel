@@ -1,10 +1,19 @@
 import { useState, useRef, useCallback } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
-import { ErrorText, SmallText } from '../../../components/typography'
+import { SmallText } from '../../../components/typography'
 import type { AlbumWithDetails } from '../types'
 import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
-import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import { PhotoSelector } from './PhotoSelector'
+import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline'
+
+// TODO: Vervang dit door je nieuwe API service
+const saveAlbumToAPI = async (_params: {
+  title: string
+  description: string
+  coverPhotoUrl: string | null
+  visible: boolean
+}) => {
+  // Implementeer je nieuwe API call hier
+}
 
 interface AlbumFormProps {
   album?: AlbumWithDetails
@@ -23,7 +32,6 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPhotoSelector, setShowPhotoSelector] = useState(false)
-  const [newAlbumId, setNewAlbumId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -59,86 +67,30 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
-    setError(null)
-    setIsSubmitting(true)
     
     try {
-      let cover_photo_id = album?.cover_photo_id
-
+      setIsSubmitting(true)
+      
+      let coverPhotoUrl = null
       if (coverImage) {
-        setUploadProgress(0)
-        const uploadResult = await uploadToCloudinary(
-          coverImage, 
+        const uploadResult = await uploadToCloudinary(coverImage, 
           (progress) => {
-            const percentage = Math.round((progress.loaded / progress.total) * 100)
-            setUploadProgress(percentage)
+            setUploadProgress(Math.round((progress.loaded / progress.total) * 100))
           }
         )
-        
-        const { data: photoData, error: photoError } = await supabase
-          .from('photos')
-          .insert({
-            url: uploadResult.url,
-            alt: formData.title,
-            order_number: 0,
-            visible: true
-          })
-          .select()
-          .single()
-
-        if (photoError) throw photoError
-        cover_photo_id = photoData.id
+        coverPhotoUrl = uploadResult.url
       }
 
-      // Get highest order number for new albums
-      let order_number = album?.order_number
-      if (!order_number) {
-        const { data: lastAlbum } = await supabase
-          .from('albums')
-          .select('order_number')
-          .order('order_number', { ascending: false })
-          .limit(1)
-        
-        order_number = (lastAlbum?.[0]?.order_number || 0) + 1
-      }
+      await saveAlbumToAPI({
+        title: formData.title,
+        description: formData.description,
+        coverPhotoUrl,
+        visible: formData.visible
+      })
 
-      const albumData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        cover_photo_id,
-        visible: formData.visible,
-        order_number
-      }
-
-      let newId: string | undefined
-
-      if (album) {
-        // Update bestaand album
-        const { error: updateError } = await supabase
-          .from('albums')
-          .update(albumData)
-          .eq('id', album.id)
-        if (updateError) throw updateError
-      } else {
-        // Maak nieuw album
-        const { data: newAlbum, error: insertError } = await supabase
-          .from('albums')
-          .insert(albumData)
-          .select()
-          .single()
-        if (insertError) throw insertError
-        newId = newAlbum.id
-      }
-
-      if (newId) {
-        setNewAlbumId(newId)
-        setShowPhotoSelector(true)
-      } else {
-        onComplete()
-      }
+      onComplete()
     } catch (err) {
-      console.error('Error saving album:', err)
-      setError('Er ging iets mis bij het opslaan van het album')
+      setError('Er ging iets mis bij het opslaan')
     } finally {
       setIsSubmitting(false)
     }
@@ -258,8 +210,8 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
               )}
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <ErrorText>{error}</ErrorText>
+                <div className="text-sm text-red-600 mt-2">
+                  {error}
                 </div>
               )}
 
@@ -316,10 +268,10 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
       </div>
 
       {/* Photo Selector Modal */}
-      {showPhotoSelector && newAlbumId && (
+      {showPhotoSelector && (
         <PhotoSelector
           album={{
-            id: newAlbumId,
+            id: crypto.randomUUID(),
             title: formData.title,
             description: formData.description,
             visible: formData.visible,

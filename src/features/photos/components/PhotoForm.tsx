@@ -1,8 +1,6 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import { ErrorText, SmallText } from '../../../components/typography'
 import type { Photo, PhotoWithDetails } from '../types'
-import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
 
 interface PhotoFormProps {
   photo?: Photo | PhotoWithDetails
@@ -10,15 +8,30 @@ interface PhotoFormProps {
   onCancel: () => void
 }
 
+// TODO: Vervang dit door je nieuwe API service
+const savePhotoToAPI = async (params: {
+  id?: string
+  url: string
+  alt: string
+  visible: boolean
+  order_number: number
+  title?: string
+  description?: string
+  year?: number
+}): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Saving photo with params:', params)
+}
+
 export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
   const [formData, setFormData] = useState({
     title: photo && 'title' in photo ? photo.title : '',
     description: photo && 'description' in photo ? photo.description || '' : '',
     year: photo && 'year' in photo ? photo.year : new Date().getFullYear(),
+    visible: photo && 'visible' in photo ? photo.visible : true,
   })
-  const [image, setImage] = useState<File | null>(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -28,47 +41,27 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    if (isSubmitting || !photo) return
     
     try {
-      let url = photo?.url || ''
+      setIsSubmitting(true)
       
-      if (image) {
-        const uploadResult = await uploadToCloudinary(
-          image, 
-          (progress) => {
-            const percentage = Math.round((progress.loaded / progress.total) * 100)
-            setUploadProgress(percentage)
-          }
-        )
-        url = uploadResult.url
-      }
-
-      if (!url) {
-        throw new Error('No image URL available')
-      }
-
-      const photoData: Omit<PhotoWithDetails, 'id' | 'created_at' | 'updated_at'> = {
-        url,
-        thumbnail_url: url,
-        alt: formData.title || 'Foto',
+      await savePhotoToAPI({
+        id: photo.id,
+        url: photo.url,
+        alt: formData.title || 'Untitled',
+        visible: formData.visible,
+        order_number: photo.order_number,
         title: formData.title,
-        description: formData.description || null,
-        year: Number(formData.year),
-        visible: true,
-        order_number: photo?.order_number || 0
-      }
-
-      if (photo) {
-        await supabase.from('photos').update(photoData).eq('id', photo.id)
-      } else {
-        await supabase.from('photos').insert(photoData)
-      }
+        description: formData.description,
+        year: formData.year
+      })
 
       onComplete()
     } catch (err) {
-      console.error('Error saving photo:', err)
-      setError('Er ging iets mis bij het opslaan van de foto')
+      setError('Er ging iets mis bij het opslaan')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -144,7 +137,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      setImage(null)
                       if (fileInputRef.current) {
                         fileInputRef.current.value = ''
                       }
@@ -180,7 +172,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
                     return
                   }
 
-                  setImage(file)
                   setError(null)
                 }}
                 className="block w-full text-sm text-gray-500
@@ -195,21 +186,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               </SmallText>
             </div>
           </div>
-
-          {/* Upload progress */}
-          {uploadProgress > 0 && uploadProgress < 100 && (
-            <div className="relative pt-1">
-              <div className="overflow-hidden h-2 text-xs flex rounded bg-primary-100">
-                <div
-                  style={{ width: `${uploadProgress}%` }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-500 transition-all duration-300"
-                />
-              </div>
-              <SmallText className="mt-1">
-                Uploading... {uploadProgress}%
-              </SmallText>
-            </div>
-          )}
 
           {error && <ErrorText>{error}</ErrorText>}
 

@@ -1,10 +1,9 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import { ErrorText, SmallText } from '../../../components/typography'
-import type { Database, CustomFileOptions } from '../../../types/supabase'
-
-type Partner = Database['public']['Tables']['partners']['Row']
-type PartnerInsert = Database['public']['Tables']['partners']['Insert']
+import type { Partner, CreatePartnerData } from '../types'
+import { createPartner, updatePartner } from '../services/partnerService'
+import { uploadPartnerLogo } from '../../../lib/cloudinary/cloudinaryClient'
+import { isAdmin } from '../../../lib/supabase'
 
 interface PartnerFormProps {
   partner?: Partner
@@ -12,19 +11,41 @@ interface PartnerFormProps {
   onCancel: () => void
 }
 
+interface FormData {
+  name: string
+  description: string
+  website: string
+  tier: Partner['tier']
+  since: string
+  visible: boolean
+  order_number: number
+}
+
 export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps) {
-  const [name, setName] = useState(partner?.name || '')
-  const [description, setDescription] = useState(partner?.description || '')
-  const [website, setWebsite] = useState(partner?.website || '')
-  const [tier, setTier] = useState<Partner['tier']>(partner?.tier || 'bronze')
-  const [logo, setLogo] = useState<File | null>(null)
+  const [formData, setFormData] = useState<FormData>({
+    name: partner?.name || '',
+    description: partner?.description || '',
+    website: partner?.website || '',
+    tier: partner?.tier || 'bronze',
+    since: partner?.since || new Date().toISOString().split('T')[0],
+    visible: partner?.visible ?? true,
+    order_number: partner?.order_number || 0
+  })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(partner?.logo || null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -40,7 +61,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
       return
     }
 
-    setLogo(file)
+    setLogoFile(file)
     setError(null)
 
     // Maak preview URL
@@ -53,90 +74,57 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-    setError(null)
-    setUploadProgress(0)
+    if (isSubmitting) return
 
     try {
-      let logoPath = partner?.logo || ''
+      // Check of gebruiker admin is
+      const isUserAdmin = await isAdmin()
+      if (!isUserAdmin) {
+        setError('Je hebt geen rechten om partners te beheren')
+        return
+      }
 
-      if (logo) {
-        const fileExt = logo.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `partner-logos/${fileName}`
+      setIsSubmitting(true)
+      setError(null)
 
-        const uploadOptions: CustomFileOptions = {
-          cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            const percentage = (progress.loaded / progress.total) * 100
-            setUploadProgress(Math.round(percentage))
-          },
-        }
-
-        const { error: uploadError } = await supabase.storage
-          .from('partners')
-          .upload(filePath, logo, uploadOptions)
-
-        if (uploadError) throw uploadError
-
-        // Haal direct de publieke URL op
-        const { data: { publicUrl } } = supabase.storage
-          .from('partners')
-          .getPublicUrl(filePath)
-
-        // Sla de volledige URL op in de database
-        logoPath = publicUrl
-
-        // Verwijder oude logo als die bestaat
-        if (partner?.logo) {
-          const oldPath = new URL(partner.logo).pathname.split('/').pop()
-          if (oldPath) {
-            await supabase.storage
-              .from('partners')
-              .remove([`partner-logos/${oldPath}`])
-          }
+      // Upload logo if changed
+      let logo = partner?.logo
+      if (logoFile) {
+        try {
+          const result = await uploadPartnerLogo(logoFile)
+          logo = result.secure_url
+        } catch (err) {
+          console.error('Logo upload error:', err)
+          setError('Logo upload mislukt')
+          return
         }
       }
 
-      let orderNumber = partner?.order_number || 0
-      if (!partner?.order_number) {
-        const { data: partners } = await supabase
-          .from('partners')
-          .select('order_number')
-          .order('order_number', { ascending: false })
-          .limit(1)
-        
-        orderNumber = ((partners?.[0]?.order_number || 0) + 1)
+      const partnerData: CreatePartnerData = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        logo,
+        website: formData.website.trim() || undefined,
+        tier: formData.tier,
+        since: formData.since,
+        visible: formData.visible,
+        order_number: formData.order_number
       }
 
-      const partnerData: PartnerInsert = {
-        name,
-        description,
-        logo: logoPath,
-        website,
-        since: new Date().toISOString().split('T')[0],
-        tier,
-        visible: true,
-        order_number: orderNumber,
+      console.log('Submitting partner data:', partnerData)
+
+      if (partner) {
+        await updatePartner(partner.id, partnerData)
+      } else {
+        await createPartner(partnerData)
       }
-
-      const { error: dbError } = await supabase
-        .from('partners')
-        .upsert({
-          id: partner?.id,
-          ...partnerData,
-        })
-
-      if (dbError) throw dbError
 
       onComplete()
     } catch (err) {
-      console.error('Form error:', err)
-      setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
+      console.error('Error saving partner:', err)
+      setError('Er ging iets mis bij het opslaan')
     } finally {
       setIsSubmitting(false)
-      setUploadProgress(0)
     }
   }
 
@@ -149,8 +137,9 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
         <input
           type="text"
           id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={formData.name}
+          onChange={handleInputChange}
+          name="name"
           className="mt-1 input-primary"
           required
         />
@@ -162,8 +151,9 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
         </label>
         <textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={formData.description}
+          onChange={handleInputChange}
+          name="description"
           className="mt-1 input-primary"
           rows={3}
         />
@@ -176,8 +166,9 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
         <input
           type="url"
           id="website"
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
+          value={formData.website}
+          onChange={handleInputChange}
+          name="website"
           className="mt-1 input-primary"
           placeholder="https://..."
         />
@@ -189,8 +180,9 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
         </label>
         <select
           id="tier"
-          value={tier}
-          onChange={(e) => setTier(e.target.value as Partner['tier'])}
+          value={formData.tier}
+          onChange={handleInputChange}
+          name="tier"
           className="mt-1 input-primary"
           required
         >
@@ -198,6 +190,34 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
           <option value="silver">Silver</option>
           <option value="gold">Gold</option>
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="since" className="block text-sm font-medium text-gray-700">
+          Partner sinds *
+        </label>
+        <input
+          type="date"
+          id="since"
+          value={formData.since}
+          onChange={handleInputChange}
+          name="since"
+          className="mt-1 input-primary"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.visible}
+            onChange={(e) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
+            name="visible"
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="text-sm font-medium text-gray-700">Zichtbaar op website</span>
+        </label>
       </div>
 
       <div>
@@ -217,7 +237,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
                 type="button"
                 onClick={() => {
                   setPreviewUrl(null)
-                  setLogo(null)
+                  setLogoFile(null)
                   if (fileInputRef.current) {
                     fileInputRef.current.value = ''
                   }
@@ -250,21 +270,6 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
           </SmallText>
         </div>
       </div>
-
-      {/* Upload progress */}
-      {uploadProgress > 0 && uploadProgress < 100 && (
-        <div className="relative pt-1">
-          <div className="overflow-hidden h-2 text-xs flex rounded bg-primary-100">
-            <div
-              style={{ width: `${uploadProgress}%` }}
-              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-500 transition-all duration-300"
-            />
-          </div>
-          <SmallText className="mt-1">
-            Uploading... {uploadProgress}%
-          </SmallText>
-        </div>
-      )}
 
       {error && <ErrorText>{error}</ErrorText>}
 

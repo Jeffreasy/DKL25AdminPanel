@@ -1,13 +1,25 @@
 import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { supabase } from '../../../lib/supabase/supabaseClient'
+import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
 
 interface BulkUploadButtonProps {
   onUploadComplete: () => void
   className?: string
+  maxFiles?: number
+  maxFileSize?: number
 }
 
-export function BulkUploadButton({ onUploadComplete, className = '' }: BulkUploadButtonProps) {
+// TODO: Vervang dit door je nieuwe API service
+const savePhotoToAPI = async (params: {
+  url: string
+  alt: string
+  order_number: number
+}): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Saving photo with params:', params)
+}
+
+export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 20, maxFileSize = 5242880 }: BulkUploadButtonProps) {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -18,56 +30,35 @@ export function BulkUploadButton({ onUploadComplete, className = '' }: BulkUploa
     },
     multiple: true,
     disabled: uploading,
-    maxFiles: 20, // Maximum aantal files per keer
-    maxSize: 5242880, // 5MB max per file
+    maxFiles: maxFiles,
+    maxSize: maxFileSize,
     onDrop: async (acceptedFiles) => {
       setUploading(true)
       setProgress(0)
       setError(null)
 
       try {
-        // Haal het huidige hoogste order_number op
-        const { data: photos } = await supabase
-          .from('photos')
-          .select('order_number')
-          .order('order_number', { ascending: false })
-          .limit(1)
-
-        const startOrderNumber = (photos?.[0]?.order_number || 0) + 1
+        // Start met order_number 1 of gebruik een API call om laatste nummer op te halen
+        const startOrderNumber = 1
         const totalFiles = acceptedFiles.length
         let completed = 0
 
-        // Upload files in parallel with progress tracking
         const uploadPromises = acceptedFiles.map(async (file, index) => {
-          const formData = new FormData()
-          formData.append('file', file)
-          formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
-
-          const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-            {
-              method: 'POST',
-              body: formData,
+          const result = await uploadToCloudinary(
+            file,
+            (progressEvent) => {
+              // Log progress voor debugging
+              console.log('Upload progress:', progressEvent)
+              completed++
+              setProgress((completed / totalFiles) * 100)
             }
           )
 
-          if (!response.ok) throw new Error('Upload failed')
-          
-          const cloudinaryData = await response.json()
-
-          // Voeg de foto toe aan Supabase
-          const { error: dbError } = await supabase
-            .from('photos')
-            .insert({
-              url: cloudinaryData.secure_url,
-              alt: `DKL 2024 foto ${startOrderNumber + index}`,
-              order_number: startOrderNumber + index,
-            })
-
-          if (dbError) throw dbError
-
-          completed++
-          setProgress((completed / totalFiles) * 100)
+          await savePhotoToAPI({
+            url: result.secure_url,
+            alt: `DKL 2024 foto ${startOrderNumber + index}`,
+            order_number: startOrderNumber + index,
+          })
         })
 
         await Promise.all(uploadPromises)
@@ -97,68 +88,35 @@ export function BulkUploadButton({ onUploadComplete, className = '' }: BulkUploa
       <div className="flex flex-col items-center space-y-3">
         {/* Upload Icon */}
         <div className={`
-          p-3 rounded-full
-          ${isDragActive ? 'bg-indigo-100' : 'bg-gray-100'}
-          ${isDragReject ? 'bg-red-100' : ''}
+          w-12 h-12 rounded-lg flex items-center justify-center
+          ${uploading ? 'bg-indigo-100' : 'bg-indigo-50'}
         `}>
-          <svg 
-            className={`w-6 h-6 ${isDragActive ? 'text-indigo-600' : 'text-gray-600'} ${isDragReject ? 'text-red-600' : ''}`}
-            fill="none" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
         </div>
 
         {/* Status Text */}
-        <div className="text-center">
-          {isDragReject ? (
-            <p className="text-sm text-red-600">
-              Alleen afbeeldingen zijn toegestaan
-            </p>
+        <div className="text-sm text-center">
+          {uploading ? (
+            <div className="text-indigo-600">
+              Uploading... {Math.round(progress)}%
+            </div>
           ) : isDragActive ? (
-            <p className="text-sm text-indigo-600">
-              Sleep de foto's hier...
-            </p>
+            <div className="text-indigo-600">
+              Drop de bestanden hier...
+            </div>
           ) : (
-            <div>
-              <p className="text-sm text-gray-600">
-                Sleep foto's hierheen of{' '}
-                <span className="text-indigo-600 hover:text-indigo-700">
-                  klik om te selecteren
-                </span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                JPG, PNG of WebP (max 5MB per foto)
-              </p>
+            <div className="text-gray-600">
+              Sleep foto's hierheen of klik om te uploaden
             </div>
           )}
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
+          <div className="text-sm text-red-600">
             {error}
-          </div>
-        )}
-
-        {/* Upload Progress */}
-        {uploading && (
-          <div className="w-full max-w-xs">
-            <div className="flex justify-between text-xs text-gray-600 mb-1">
-              <span>Uploading...</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <div className="bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${progress}%` }}
-              />
-            </div>
           </div>
         )}
       </div>

@@ -1,42 +1,48 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useSidebar } from '../../contexts/SidebarContext'
 import { Sidebar } from './Sidebar'
-import { useAuth } from '../../features/auth/AuthContext'
-import { UserMenu } from './UserMenu'
+import { Header } from './Header'
+import { ResizeHandle } from './ResizeHandle'
 
-export function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { user } = useAuth()
+export function MainLayout({ children }: { children: React.ReactNode }) {
+  const { 
+    isCollapsed, 
+    customWidth, 
+    isMobileOpen, 
+    setMobileOpen 
+  } = useSidebar()
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      
+    <div className="h-screen flex overflow-hidden bg-gray-100">
+      {/* Mobile overlay */}
+      <div
+        className={`fixed inset-0 z-20 bg-gray-900/50 transition-opacity duration-200 md:hidden
+          ${isMobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
+      {/* Sidebar */}
+      <div
+        className={`
+          fixed md:static inset-y-0 left-0 z-30 
+          flex flex-col flex-shrink-0
+          transform transition-all duration-200
+          md:translate-x-0 
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isCollapsed ? 'w-20' : customWidth ? `w-[${customWidth}px]` : 'w-72'}
+        `}
+      >
+        <Sidebar />
+        <ResizeHandle />
+      </div>
+
       {/* Main content */}
-      <div className="lg:pl-72">
-        {/* Top navigation */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-
-          <div className="flex flex-1 justify-end gap-x-4 self-stretch lg:gap-x-6">
-            {/* User menu */}
-            {user && <UserMenu user={user} />}
-          </div>
-        </div>
-
-        {/* Main content area */}
-        <main className="py-8">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <Outlet />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-auto">
+          <div className="py-6">
+            <div className="mx-auto px-4 sm:px-6 md:px-8">
+              {children}
+            </div>
           </div>
         </main>
       </div>

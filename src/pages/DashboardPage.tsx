@@ -1,36 +1,33 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase/supabaseClient'
 import { H1, SmallText, ErrorText } from '../components/typography'
 import { FilterableList } from '../components/FilterableList'
 import { MessageItem } from '../components/MessageItem'
 import { StatisticsGrid } from '../components/StatisticsGrid'
 import { RegistrationItem } from '../components/RegistrationItem'
-
-interface ContactMessage {
-  id: string
-  naam: string
-  email: string
-  telefoon: string | null
-  bericht: string
-  aangemaakt_op: string
-  status: 'ongelezen' | 'gelezen'
-  gearchiveerd: boolean
-}
-
-interface Inschrijving {
-  id: string
-  created_at: string
-  naam: string
-  email: string
-  rol: 'Deelnemer' | 'Begeleider' | 'Vrijwilliger'
-  telefoon: string | null
-  afstand: '2.5 KM' | '6 KM' | '10 KM' | '15 KM'
-  ondersteuning: 'Nee' | 'Ja' | 'Anders'
-  bijzonderheden: string
-  status: 'pending' | 'approved' | 'rejected'
-}
+import type { ContactMessage, Inschrijving } from '../types/api'
 
 type TabType = 'berichten' | 'inschrijvingen'
+
+// TODO: Vervang dit door je nieuwe API services
+const fetchMessagesFromAPI = async (): Promise<ContactMessage[]> => {
+  // Implementeer je nieuwe API call hier
+  return []
+}
+
+const updateMessageStatusInAPI = async (messageId: string, newStatus: 'ongelezen' | 'gelezen'): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Updating message ${messageId} to status: ${newStatus}`)
+}
+
+const fetchInschrijvingenFromAPI = async (): Promise<Inschrijving[]> => {
+  // Implementeer je nieuwe API call hier
+  return []
+}
+
+const updateInschrijvingStatusInAPI = async (id: string, newStatus: Inschrijving['status']): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Updating registration ${id} to status: ${newStatus}`)
+}
 
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('berichten')
@@ -49,14 +46,9 @@ export function DashboardPage() {
 
   const fetchMessages = async () => {
     try {
-      const { data, error } = await supabase
-        .from('contact_berichten')
-        .select('*')
-        .order('aangemaakt_op', { ascending: false })
-        .eq('gearchiveerd', false)
-
-      if (error) throw error
-      setMessages(data || [])
+      setLoading(true)
+      const data = await fetchMessagesFromAPI()
+      setMessages(data)
     } catch (err) {
       console.error('Error fetching messages:', err)
       setError('Er ging iets mis bij het ophalen van de berichten')
@@ -67,18 +59,12 @@ export function DashboardPage() {
 
   const toggleMessageRead = async (messageId: string, currentStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('contact_berichten')
-        .update({ 
-          status: currentStatus === 'ongelezen' ? 'gelezen' : 'ongelezen' 
-        })
-        .eq('id', messageId)
-
-      if (error) throw error
+      const newStatus = currentStatus === 'ongelezen' ? 'gelezen' : 'ongelezen'
+      await updateMessageStatusInAPI(messageId, newStatus)
       
       setMessages(messages.map(msg => 
         msg.id === messageId 
-          ? { ...msg, status: currentStatus === 'ongelezen' ? 'gelezen' : 'ongelezen' } 
+          ? { ...msg, status: newStatus } 
           : msg
       ))
     } catch (err) {
@@ -89,13 +75,9 @@ export function DashboardPage() {
 
   const fetchInschrijvingen = async () => {
     try {
-      const { data, error } = await supabase
-        .from('inschrijvingen')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setInschrijvingen(data || [])
+      setLoading(true)
+      const data = await fetchInschrijvingenFromAPI()
+      setInschrijvingen(data)
     } catch (err) {
       console.error('Error fetching inschrijvingen:', err)
       setError('Er ging iets mis bij het ophalen van de inschrijvingen')
@@ -106,12 +88,7 @@ export function DashboardPage() {
 
   const updateInschrijvingStatus = async (id: string, newStatus: Inschrijving['status']) => {
     try {
-      const { error } = await supabase
-        .from('inschrijvingen')
-        .update({ status: newStatus })
-        .eq('id', id)
-
-      if (error) throw error
+      await updateInschrijvingStatusInAPI(id, newStatus)
       
       setInschrijvingen(inschrijvingen.map(inschrijving => 
         inschrijving.id === id ? { ...inschrijving, status: newStatus } : inschrijving
@@ -150,10 +127,8 @@ export function DashboardPage() {
   const stats = calculateStats()
 
   const MessagesTab = () => (
-    <FilterableList
+    <FilterableList<ContactMessage>
       title="Berichten"
-      table="contact_berichten"
-      queryKey="messages"
       filters={{ gearchiveerd: false }}
       sortOptions={[
         { label: 'Nieuwste eerst', value: { column: 'aangemaakt_op', ascending: false } },
@@ -161,7 +136,7 @@ export function DashboardPage() {
       ]}
       renderItem={(message) => (
         <MessageItem
-          message={message as ContactMessage}
+          message={message}
           onToggleRead={toggleMessageRead}
         />
       )}
@@ -172,17 +147,15 @@ export function DashboardPage() {
     return (
       <>
         <StatisticsGrid stats={stats} />
-        <FilterableList
+        <FilterableList<Inschrijving>
           title="Inschrijvingen"
-          table="inschrijvingen"
-          queryKey="registrations"
           sortOptions={[
             { label: 'Nieuwste eerst', value: { column: 'created_at', ascending: false } },
             { label: 'Oudste eerst', value: { column: 'created_at', ascending: true } }
           ]}
           renderItem={(registration) => (
             <RegistrationItem
-              registration={registration as Inschrijving}
+              registration={registration}
               onStatusUpdate={updateInschrijvingStatus}
             />
           )}

@@ -1,17 +1,50 @@
 import { useState, useCallback, memo, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase/supabaseClient'
 import { H3, SmallText } from '../../../components/typography'
 import { PhotoForm } from './PhotoForm'
-import type { PhotoWithDetails } from '../types'
+import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'
 
-interface PhotoCardProps {
-  photo: PhotoWithDetails
-  view: 'grid' | 'list'
-  onUpdate: () => void
+// TODO: Vervang dit door je nieuwe API services
+const updatePhotoVisibilityInAPI = async (photoId: string, visible: boolean): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Updating photo ${photoId} visibility to: ${visible}`)
 }
 
-export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: PhotoCardProps) {
+const deletePhotoFromAPI = async (photoId: string): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Deleting photo ${photoId}`)
+}
+
+const addPhotoToAlbumAPI = async (photoId: string, albumId: string): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Adding photo ${photoId} to album ${albumId}`)
+}
+
+const removePhotoFromAlbumAPI = async (photoId: string, albumId: string): Promise<void> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Removing photo ${photoId} from album ${albumId}`)
+}
+
+const fetchPhotoAlbumsFromAPI = async (photoId: string): Promise<string[]> => {
+  // Implementeer je nieuwe API call hier
+  console.log(`Fetching albums for photo ${photoId}`)
+  return []
+}
+
+const fetchAllAlbumsFromAPI = async (): Promise<AlbumWithDetails[]> => {
+  // Implementeer je nieuwe API call hier
+  console.log('Fetching all albums')
+  return []
+}
+
+interface PhotoCardProps {
+  photo: Photo
+  selected: boolean
+  onSelect: (selected: boolean) => void
+  onDelete: () => void
+}
+
+export const PhotoCard = memo(function PhotoCard({ photo, selected, onSelect, onDelete }: PhotoCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showAlbums, setShowAlbums] = useState(false)
@@ -21,25 +54,14 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
 
   // Fetch albums where this photo is included
   useEffect(() => {
-    const fetchPhotoAlbums = async () => {
+    const loadPhotoAlbums = async () => {
       try {
-        // Haal eerst alle albums op waar deze foto in zit
-        const { data: photoAlbums, error: photoAlbumsError } = await supabase
-          .from('photos_albums')
-          .select('album_id')
-          .eq('photo_id', photo.id)
-
-        if (photoAlbumsError) throw photoAlbumsError
-        setSelectedAlbums(photoAlbums.map(item => item.album_id))
+        setLoading(true)
+        const albumIds = await fetchPhotoAlbumsFromAPI(photo.id)
+        setSelectedAlbums(albumIds)
         
-        // Haal alle beschikbare albums op
-        const { data: albumsData, error: albumsError } = await supabase
-          .from('albums')
-          .select('*')
-          .order('title')
-
-        if (albumsError) throw albumsError
-        setAlbums(albumsData)
+        const allAlbums = await fetchAllAlbumsFromAPI()
+        setAlbums(allAlbums)
       } catch (err) {
         console.error('Error fetching albums:', err)
       } finally {
@@ -47,7 +69,7 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
       }
     }
 
-    fetchPhotoAlbums()
+    loadPhotoAlbums()
   }, [photo.id])
 
   const handleAlbumToggle = async (albumId: string) => {
@@ -55,37 +77,14 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
       setIsUpdating(true)
       
       if (selectedAlbums.includes(albumId)) {
-        // Verwijder uit album
-        await supabase
-          .from('photos_albums')
-          .delete()
-          .eq('photo_id', photo.id)
-          .eq('album_id', albumId)
-
+        await removePhotoFromAlbumAPI(photo.id, albumId)
         setSelectedAlbums(prev => prev.filter(id => id !== albumId))
       } else {
-        // Voeg toe aan album
-        const { data: lastOrder } = await supabase
-          .from('photos_albums')
-          .select('order_number')
-          .eq('album_id', albumId)
-          .order('order_number', { ascending: false })
-          .limit(1)
-
-        const newOrder = (lastOrder?.[0]?.order_number || 0) + 1
-
-        await supabase
-          .from('photos_albums')
-          .insert({
-            photo_id: photo.id,
-            album_id: albumId,
-            order_number: newOrder
-          })
-
+        await addPhotoToAlbumAPI(photo.id, albumId)
         setSelectedAlbums(prev => [...prev, albumId])
       }
 
-      onUpdate()
+      onSelect(true)
     } catch (err) {
       console.error('Error updating albums:', err)
     } finally {
@@ -96,17 +95,30 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
   const handleVisibilityToggle = useCallback(async () => {
     try {
       setIsUpdating(true)
-      await supabase
-        .from('photos')
-        .update({ visible: !photo.visible })
-        .eq('id', photo.id)
-      onUpdate()
+      await updatePhotoVisibilityInAPI(photo.id, !photo.visible)
+      onSelect(true)
     } catch (err) {
       console.error('Error toggling visibility:', err)
     } finally {
       setIsUpdating(false)
     }
-  }, [photo.id, photo.visible, onUpdate])
+  }, [photo.id, photo.visible, onSelect])
+
+  const handleDelete = async () => {
+    if (!confirm('Weet je zeker dat je deze foto wilt verwijderen?')) {
+      return
+    }
+
+    try {
+      setIsUpdating(true)
+      await deletePhotoFromAPI(photo.id)
+      onDelete()
+    } catch (err) {
+      console.error('Error deleting photo:', err)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   // Voeg een Albums knop toe aan de actieknoppen
   const AlbumsButton = (
@@ -122,7 +134,7 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
     </button>
   )
 
-  if (view === 'grid') {
+  if (selected) {
     return (
       <>
         <div className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
@@ -172,6 +184,15 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
+                  <button
+                    onClick={handleDelete}
+                    className="text-red-600 hover:text-red-700"
+                    disabled={isUpdating}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                   <div className="flex gap-1">
                     {AlbumsButton}
                   </div>
@@ -186,7 +207,7 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
             photo={photo}
             onComplete={() => {
               setShowEdit(false)
-              onUpdate()
+              onSelect(true)
             }}
             onCancel={() => setShowEdit(false)}
           />
@@ -290,6 +311,15 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
+          <button
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-700"
+            disabled={isUpdating}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
           <div className="flex gap-1">
             {AlbumsButton}
           </div>
@@ -301,7 +331,7 @@ export const PhotoCard = memo(function PhotoCard({ photo, view, onUpdate }: Phot
           photo={photo}
           onComplete={() => {
             setShowEdit(false)
-            onUpdate()
+            onSelect(true)
           }}
           onCancel={() => setShowEdit(false)}
         />

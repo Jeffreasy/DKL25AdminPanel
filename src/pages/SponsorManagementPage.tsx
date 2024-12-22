@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { H1, SmallText } from '../components/typography'
 import { SponsorGrid, SponsorForm } from '../features/sponsors/components'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function SponsorManagementPage() {
+  usePageTitle("Sponsors beheren")
   const [showForm, setShowForm] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 

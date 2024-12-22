@@ -1,14 +1,8 @@
+import type { Inschrijving } from '../types/api'
+
 interface RegistrationItemProps {
-  registration: {
-    id: string
-    naam: string
-    email: string
-    rol: string
-    afstand: string
-    status: 'pending' | 'approved' | 'rejected'
-    created_at: string
-  }
-  onStatusUpdate: (id: string, status: 'approved' | 'rejected') => void
+  registration: Inschrijving
+  onStatusUpdate: (id: string, status: Inschrijving['status']) => void
 }
 
 export function RegistrationItem({ registration, onStatusUpdate }: RegistrationItemProps) {
