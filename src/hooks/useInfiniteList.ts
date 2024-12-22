@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useRef, useCallback } from 'react'
-import { supabase } from '../lib/supabase/supabaseClient'
+import { supabase } from '../lib/supabase'
 
 interface UseInfiniteListProps {
   queryKey: string
