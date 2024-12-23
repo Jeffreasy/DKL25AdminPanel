@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
+import { supabase } from '../../../lib/supabase'
+import type { CloudinaryUploadResponse } from '../../../lib/cloudinary/types'
 
 interface BulkUploadButtonProps {
   onUploadComplete: () => void
@@ -9,19 +11,41 @@ interface BulkUploadButtonProps {
   maxFileSize?: number
 }
 
-// TODO: Vervang dit door je nieuwe API service
 const savePhotoToAPI = async (params: {
   url: string
   alt: string
   order_number: number
+  thumbnail_url?: string
 }): Promise<void> => {
-  // Implementeer je nieuwe API call hier
-  console.log('Saving photo with params:', params)
+  const { error } = await supabase
+    .from('photos')
+    .insert([{
+      url: params.url,
+      alt: params.alt,
+      thumbnail_url: params.thumbnail_url || params.url,
+      order_number: params.order_number,
+      visible: true,
+      year: new Date().getFullYear()
+    }])
+
+  if (error) throw error
+}
+
+const getLastOrderNumber = async (): Promise<number> => {
+  const { data, error } = await supabase
+    .from('photos')
+    .select('order_number')
+    .order('order_number', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) return 0
+  return (data?.order_number || 0) + 1
 }
 
 export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 20, maxFileSize = 5242880 }: BulkUploadButtonProps) {
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState<{[key: string]: number}>({})
   const [error, setError] = useState<string | null>(null)
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -34,44 +58,53 @@ export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 
     maxSize: maxFileSize,
     onDrop: async (acceptedFiles) => {
       setUploading(true)
-      setProgress(0)
+      setProgress({})
       setError(null)
 
       try {
-        // Start met order_number 1 of gebruik een API call om laatste nummer op te halen
-        const startOrderNumber = 1
-        const totalFiles = acceptedFiles.length
-        let completed = 0
+        const startOrderNumber = await getLastOrderNumber()
 
-        const uploadPromises = acceptedFiles.map(async (file, index) => {
-          const result = await uploadToCloudinary(
-            file,
-            (progressEvent) => {
-              // Log progress voor debugging
-              console.log('Upload progress:', progressEvent)
-              completed++
-              setProgress((completed / totalFiles) * 100)
+        for (let i = 0; i < acceptedFiles.length; i += 3) {
+          const batch = acceptedFiles.slice(i, i + 3)
+          await Promise.all(batch.map(async (file, index) => {
+            try {
+              const result: CloudinaryUploadResponse = await uploadToCloudinary(
+                file,
+                (progressEvent) => {
+                  setProgress(prev => ({
+                    ...prev,
+                    [file.name]: Math.round((progressEvent.loaded / progressEvent.total) * 100)
+                  }))
+                }
+              )
+
+              await savePhotoToAPI({
+                url: result.secure_url,
+                thumbnail_url: result.secure_url,
+                alt: file.name.split('.')[0],
+                order_number: startOrderNumber + i + index,
+              })
+            } catch (err) {
+              console.error(`Error uploading ${file.name}:`, err)
+              throw err
             }
-          )
+          }))
+        }
 
-          await savePhotoToAPI({
-            url: result.secure_url,
-            alt: `DKL 2024 foto ${startOrderNumber + index}`,
-            order_number: startOrderNumber + index,
-          })
-        })
-
-        await Promise.all(uploadPromises)
         onUploadComplete()
       } catch (err) {
         console.error('Upload error:', err)
         setError(err instanceof Error ? err.message : 'Upload failed')
       } finally {
         setUploading(false)
-        setProgress(0)
+        setProgress({})
       }
     }
   })
+
+  // Bereken totale voortgang
+  const totalProgress = Object.values(progress).reduce((sum, value) => sum + value, 0) / 
+    (Object.keys(progress).length || 1)
 
   return (
     <div
@@ -96,11 +129,19 @@ export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 
           </svg>
         </div>
 
-        {/* Status Text */}
+        {/* Status Text met gedetailleerde voortgang */}
         <div className="text-sm text-center">
           {uploading ? (
-            <div className="text-indigo-600">
-              Uploading... {Math.round(progress)}%
+            <div className="space-y-2">
+              <div className="text-indigo-600">
+                Uploading... {Math.round(totalProgress)}%
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 transition-all duration-300"
+                  style={{ width: `${totalProgress}%` }}
+                />
+              </div>
             </div>
           ) : isDragActive ? (
             <div className="text-indigo-600">
@@ -109,13 +150,16 @@ export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 
           ) : (
             <div className="text-gray-600">
               Sleep foto's hierheen of klik om te uploaden
+              <div className="text-xs text-gray-500 mt-1">
+                Max {maxFiles} bestanden, {(maxFileSize / (1024 * 1024)).toFixed(1)}MB per bestand
+              </div>
             </div>
           )}
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="text-sm text-red-600">
+          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
             {error}
           </div>
         )}
