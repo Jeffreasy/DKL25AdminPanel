@@ -16,80 +16,80 @@ import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
 import { NavigationHistoryProvider } from './contexts/NavigationHistoryContext'
-
-function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <SidebarProvider>
-        <FavoritesProvider>
-          <NavigationHistoryProvider>
-            {children}
-          </NavigationHistoryProvider>
-        </FavoritesProvider>
-      </SidebarProvider>
-    </AuthProvider>
-  )
-}
+import { AuthGuard } from './components/auth/AuthGuard'
 
 export const router = createBrowserRouter([
   {
-    element: <Providers><Outlet /></Providers>,
+    path: '/login',
+    element: (
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    )
+  },
+  {
+    path: '/',
+    element: (
+      <AuthProvider>
+        <SidebarProvider>
+          <FavoritesProvider>
+            <NavigationHistoryProvider>
+              <AuthGuard>
+                <MainLayout>
+                  <Outlet />
+                </MainLayout>
+              </AuthGuard>
+            </NavigationHistoryProvider>
+          </FavoritesProvider>
+        </SidebarProvider>
+      </AuthProvider>
+    ),
     children: [
       {
-        path: '/',
-        element: <MainLayout><Outlet /></MainLayout>,
-        children: [
-          {
-            index: true,
-            element: <Navigate to="/dashboard" replace />
-          },
-          {
-            path: 'dashboard',
-            element: <DashboardPage />
-          },
-          {
-            path: 'photos',
-            element: <PhotoManagementPage />
-          },
-          {
-            path: 'albums',
-            element: <AlbumManagementPage />
-          },
-          {
-            path: 'videos',
-            element: <VideoManagementPage />
-          },
-          {
-            path: 'partners',
-            element: <PartnerManagementPage />
-          },
-          {
-            path: 'sponsors',
-            element: <SponsorManagementPage />
-          },
-          {
-            path: 'profile',
-            element: <ProfilePage />
-          },
-          {
-            path: 'settings',
-            element: <SettingsPage />
-          }
-        ]
+        index: true,
+        element: <Navigate to="/dashboard" replace />
       },
       {
-        path: '/login',
-        element: <LoginPage />
+        path: 'dashboard',
+        element: <DashboardPage />
       },
       {
-        path: '/reset-password',
-        element: <ResetPasswordPage />
+        path: 'photos',
+        element: <PhotoManagementPage />
       },
       {
-        path: '*',
-        element: <NotFoundPage />
+        path: 'albums',
+        element: <AlbumManagementPage />
+      },
+      {
+        path: 'videos',
+        element: <VideoManagementPage />
+      },
+      {
+        path: 'partners',
+        element: <PartnerManagementPage />
+      },
+      {
+        path: 'sponsors',
+        element: <SponsorManagementPage />
+      },
+      {
+        path: 'profile',
+        element: <ProfilePage />
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />
       }
     ]
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />
   }
 ])
 

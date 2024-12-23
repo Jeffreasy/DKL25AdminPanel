@@ -16,6 +16,14 @@ function classNames(...classes: string[]) {
 export function UserMenu() {
   const { user, logout } = useAuth()
 
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (err) {
+      console.error('Error logging out:', err)
+    }
+  }
+
   if (!user) return null
 
   const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Gebruiker'
@@ -94,7 +102,7 @@ export function UserMenu() {
           <Menu.Item>
             {({ active }) => (
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className={classNames(
                   active ? 'bg-gray-50' : '',
                   'block w-full text-left px-3 py-1 text-sm leading-6 text-gray-900'

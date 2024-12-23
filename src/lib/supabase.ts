@@ -52,4 +52,14 @@ export const isAdmin = async () => {
 export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   return user
+}
+
+// Voeg deze functie toe om de auth status te checken
+export const checkAuth = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) {
+    console.error('Auth check error:', error)
+    return false
+  }
+  return !!session
 } 

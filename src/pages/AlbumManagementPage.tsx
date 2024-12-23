@@ -1,65 +1,17 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState } from 'react'
 import { AlbumGrid } from '../features/albums/components/AlbumGrid'
 import { AlbumForm } from '../features/albums/components/AlbumForm'
 import { PhotoSelector } from '../features/albums/components/PhotoSelector'
-import type { AlbumWithDetails } from '../features/albums/types'
 import { usePageTitle } from '../hooks/usePageTitle'
-
-// TODO: Vervang dit door je nieuwe API service
-const fetchAlbumsFromAPI = async (): Promise<AlbumWithDetails[]> => {
-  // Implementeer je nieuwe API call hier
-  // Zorg dat de response data al getransformeerd is naar het juiste formaat
-  return []
-}
 
 export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
   const [isCreating, setIsCreating] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null)
-  const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const selectedAlbumData = selectedAlbum 
-    ? albums.find(a => a.id === selectedAlbum)
-    : null
-
-  useEffect(() => {
-    const fetchAlbums = async () => {
-      try {
-        setLoading(true)
-        const data = await fetchAlbumsFromAPI()
-        setAlbums(data)
-      } catch (err) {
-        console.error('Error fetching albums:', err)
-        setError('Er ging iets mis bij het ophalen van de albums')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAlbums()
-  }, [refreshKey])
-
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 text-center bg-red-50 rounded-lg">
-        {error}
-      </div>
-    )
   }
 
   return (
@@ -82,7 +34,7 @@ export function AlbumManagementPage() {
       </div>
 
       <AlbumGrid 
-        key={refreshKey} 
+        key={refreshKey}
         onAlbumSelect={setSelectedAlbum}
         selectedAlbumId={selectedAlbum}
       />
@@ -97,9 +49,9 @@ export function AlbumManagementPage() {
         />
       )}
 
-      {selectedAlbumData && (
+      {selectedAlbum && (
         <PhotoSelector
-          album={selectedAlbumData}
+          albumId={selectedAlbum}
           onComplete={() => {
             setSelectedAlbum(null)
             handleRefresh()
