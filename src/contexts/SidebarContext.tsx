@@ -1,73 +1,41 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState } from 'react'
 
 interface SidebarContextType {
   isCollapsed: boolean
-  toggleCollapse: () => void
-  customWidth: number
-  setCustomWidth: (width: number) => void
   isMobileOpen: boolean
   setMobileOpen: (open: boolean) => void
-  isResizing: boolean
-  startResizing: () => void
+  toggleCollapse: () => void
 }
 
-const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
+const SidebarContext = createContext<SidebarContextType>({
+  isCollapsed: false,
+  isMobileOpen: false,
+  setMobileOpen: () => {},
+  toggleCollapse: () => {}
+})
 
-const DEFAULT_SIDEBAR_WIDTH = 280 // pixels
-
-export function SidebarProvider({ children }: { children: ReactNode }) {
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [customWidth, setCustomWidth] = useState(DEFAULT_SIDEBAR_WIDTH)
   const [isMobileOpen, setMobileOpen] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
 
-  const toggleCollapse = () => {
-    setIsCollapsed(prev => !prev)
-    setCustomWidth(DEFAULT_SIDEBAR_WIDTH)
-  }
-
-  const startResizing = useCallback(() => {
-    setIsResizing(true)
-    document.body.style.cursor = 'ew-resize'
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(200, Math.min(400, e.clientX))
-      setCustomWidth(newWidth)
-    }
-
-    const handleMouseUp = () => {
-      setIsResizing(false)
-      document.body.style.cursor = ''
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [])
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed)
 
   return (
-    <SidebarContext.Provider value={{ 
-      isCollapsed, 
-      toggleCollapse, 
-      customWidth, 
-      setCustomWidth,
+    <SidebarContext.Provider value={{
+      isCollapsed,
       isMobileOpen,
       setMobileOpen,
-      isResizing,
-      startResizing
+      toggleCollapse
     }}>
       {children}
     </SidebarContext.Provider>
   )
 }
 
-export function useSidebar() {
+export const useSidebar = () => {
   const context = useContext(SidebarContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useSidebar must be used within a SidebarProvider')
   }
   return context
-}
-
-export { DEFAULT_SIDEBAR_WIDTH } 
+} 
