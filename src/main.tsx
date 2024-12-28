@@ -11,6 +11,7 @@ import { FavoritesProvider } from './contexts/FavoritesContext'
 import './index.css'
 import './styles/scrollbars.css'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { BrowserRouter } from 'react-router-dom'
 
 const queryClient = new QueryClient()
 
@@ -21,15 +22,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <MantineProvider>
-          <AuthProvider>
-            <SidebarProvider>
-              <FavoritesProvider>
-                <NavigationHistoryProvider>
-                  <RouterProvider router={router} />
-                </NavigationHistoryProvider>
-              </FavoritesProvider>
-            </SidebarProvider>
-          </AuthProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <SidebarProvider>
+                <FavoritesProvider>
+                  <NavigationHistoryProvider>
+                    <RouterProvider router={router} />
+                  </NavigationHistoryProvider>
+                </FavoritesProvider>
+              </SidebarProvider>
+            </AuthProvider>
+          </BrowserRouter>
         </MantineProvider>
       </QueryClientProvider>
     </ErrorBoundary>
