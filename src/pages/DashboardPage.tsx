@@ -7,8 +7,9 @@ import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldinge
 import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
 import type { Aanmelding } from '../features/aanmeldingen/types'
 import type { ContactMessage, ContactStats } from '../features/contact/types'
+import { InboxTab } from '../features/dashboard/tabs/InboxTab'
 
-type TabType = 'overzicht' | 'aanmeldingen' | 'contact'
+type TabType = 'overzicht' | 'aanmeldingen' | 'contact' | 'inbox'
 
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overzicht')
@@ -77,7 +78,8 @@ export function DashboardPage() {
           {[
             { id: 'overzicht', name: 'Volledig overzicht' },
             { id: 'aanmeldingen', name: 'Aanmeldingen' },
-            { id: 'contact', name: 'Contact' }
+            { id: 'contact', name: 'Contact' },
+            { id: 'inbox', name: 'Email Inbox' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -123,6 +125,8 @@ export function DashboardPage() {
         return <AanmeldingenTab stats={calculateStats()} aanmeldingen={aanmeldingen} onUpdate={loadData} />
       case 'contact':
         return <ContactTab stats={contactStats} messages={messages} onUpdate={loadData} />
+      case 'inbox':
+        return <InboxTab />
       default:
         return null
     }

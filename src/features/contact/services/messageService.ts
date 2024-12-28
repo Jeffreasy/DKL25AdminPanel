@@ -16,20 +16,16 @@ export async function fetchMessages(): Promise<{ data: ContactMessage[], error: 
   }
 }
 
-export async function updateMessageStatus(
-  id: string, 
-  status: ContactStatus,
-  behandeld_door?: string
-): Promise<{ error: Error | null }> {
+export async function updateMessageStatus(id: string, status: ContactStatus) {
   try {
-    const updates: Partial<ContactMessage> = {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    const updates = {
       status,
-      updated_at: new Date().toISOString()
-    }
-
-    if (status === 'afgehandeld') {
-      updates.behandeld_door = behandeld_door
-      updates.behandeld_op = new Date().toISOString()
+      ...(status === 'afgehandeld' ? {
+        behandeld_door: user?.email,
+        behandeld_op: new Date().toISOString()
+      } : {})
     }
 
     const { error } = await supabase
@@ -37,7 +33,11 @@ export async function updateMessageStatus(
       .update(updates)
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      console.error('Update error:', error)
+      throw error
+    }
+    
     return { error: null }
   } catch (err) {
     console.error('Error updating message:', err)
@@ -45,17 +45,11 @@ export async function updateMessageStatus(
   }
 }
 
-export async function updateMessageNotes(
-  id: string, 
-  notities: string
-): Promise<{ error: Error | null }> {
+export async function updateMessageNotes(id: string, notities: string) {
   try {
     const { error } = await supabase
       .from('contact_formulieren')
-      .update({ 
-        notities,
-        updated_at: new Date().toISOString()
-      })
+      .update({ notities })
       .eq('id', id)
 
     if (error) throw error

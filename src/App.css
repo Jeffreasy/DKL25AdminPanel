@@ -4,6 +4,18 @@
   padding: 0;
   width: 100%;
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Zorg voor correcte portal rendering */
+#mantine-modal-root {
+  position: fixed;
+  z-index: 1000;
+}
+
+.mantine-Modal-root {
+  position: relative !important;
 }
 
 /* Voorkom horizontale scroll op mobiel */
@@ -19,4 +31,18 @@ body {
 
 .page-container {
   @apply py-6 sm:py-8 lg:py-12;
+}
+
+/* Voeg nieuwe styles toe */
+.mantine-Modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+.mantine-Modal-inner {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }

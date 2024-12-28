@@ -9,6 +9,7 @@ export interface ContactMessage {
   // Afzender gegevens
   naam: string
   email: string
+  onderwerp: string
   bericht: string
   
   // Status tracking
