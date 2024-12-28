@@ -1,59 +1,31 @@
 import { useSidebar } from '../../contexts/SidebarContext'
-import { Navigation } from './Navigation'
-import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import DKLLogo from '../../assets/DKLLogo.png'
-import { componentClasses as cc } from '../../styles/shared'
-import { cl } from '../../styles/shared'
-import { ResizeHandle } from './ResizeHandle'
+import { navigation, NavigationItem } from '../../types/navigation'
+import { Link } from 'react-router-dom'
 
 export function Sidebar() {
-  const { isCollapsed, toggleCollapse, setMobileOpen } = useSidebar()
+  const { isCollapsed } = useSidebar()
 
   return (
-    <div className={cc.sidebar.container}>
-      {/* Header */}
-      <div className={cc.sidebar.header.wrapper}>
-        <img
-          className={cl(
-            cc.sidebar.header.logo.base,
-            isCollapsed ? cc.sidebar.header.logo.collapsed : cc.sidebar.header.logo.expanded
-          )}
-          src={DKLLogo}
-          alt="DKL25 Admin"
+    <aside className={`bg-[#1B2B3A] ${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300`}>
+      <div className="p-4">
+        <img 
+          src="https://res.cloudinary.com/dgfuv7wif/image/upload/v1733267882/664b8c1e593a1e81556b4238_0760849fb8_yn6vdm.png" 
+          alt="Logo" 
+          className="h-8 w-auto" 
         />
-        
-        <div className="flex items-center">
-          {/* Mobile close button */}
-          <button
-            type="button"
-            className={cl(cc.button.icon, 'md:hidden')}
-            onClick={() => setMobileOpen(false)}
-          >
-            <span className="sr-only">Close sidebar</span>
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-          
-          {/* Desktop collapse button */}
-          <button
-            onClick={toggleCollapse}
-            className={cl(cc.button.icon, 'hidden md:block')}
-          >
-            {isCollapsed ? (
-              <ChevronRightIcon className="h-5 w-5" />
-            ) : (
-              <ChevronLeftIcon className="h-5 w-5" />
-            )}
-          </button>
-        </div>
       </div>
-
-      {/* Navigation */}
-      <div className={cc.sidebar.content.wrapper}>
-        <Navigation />
-      </div>
-
-      {/* Resize Handle */}
-      <ResizeHandle />
-    </div>
+      <nav className="mt-4">
+        {navigation.map((item: NavigationItem) => (
+          <Link
+            key={item.name}
+            to={item.href}
+            className="flex items-center px-4 py-2 text-gray-300 hover:bg-gray-700"
+          >
+            <item.icon className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-3">{item.name}</span>}
+          </Link>
+        ))}
+      </nav>
+    </aside>
   )
 } 
