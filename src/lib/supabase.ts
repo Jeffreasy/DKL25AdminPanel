@@ -10,6 +10,14 @@ console.log('Env check:', {
   env: import.meta.env.MODE
 })
 
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.error('Missing Supabase environment variables:', {
+    url: import.meta.env.VITE_SUPABASE_URL,
+    hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
+  })
+  throw new Error('Supabase configuration missing')
+}
+
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
