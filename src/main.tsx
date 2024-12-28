@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MantineProvider } from '@mantine/core'
 import { AuthProvider } from './contexts/AuthContext'
@@ -23,7 +23,7 @@ const RootElement = () => (
           <SidebarProvider>
             <FavoritesProvider>
               <NavigationHistoryProvider>
-                <div id="app" />
+                <Outlet />
               </NavigationHistoryProvider>
             </FavoritesProvider>
           </SidebarProvider>

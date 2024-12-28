@@ -10,7 +10,6 @@ export const routes: RouteObject[] = [
     element: <LoginPage />
   },
   {
-    path: '/',
     element: (
       <AuthGuard>
         <MainLayout />
@@ -18,7 +17,7 @@ export const routes: RouteObject[] = [
     ),
     children: [
       {
-        index: true,
+        path: '/',
         element: <DashboardPage />
       }
     ]
