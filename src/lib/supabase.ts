@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Check en log de environment variables
+console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL)
+console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY)
 
-// Log voor debugging
-console.log('Supabase URL:', supabaseUrl)
-console.log('Supabase key exists:', !!supabaseKey)
-
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
 
 // Helper functie om te checken of iemand admin is
 export const isAdmin = async () => {
