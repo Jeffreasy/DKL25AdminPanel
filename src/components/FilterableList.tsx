@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
-import { LoadingSkeleton } from './LoadingSkeleton'
-import { ErrorText } from './typography'
+import { useState } from 'react'
+import { Select } from '@mantine/core'
 
 interface SortOption {
   label: string
@@ -10,112 +9,87 @@ interface SortOption {
   }
 }
 
-interface FilterableListProps<T> {
+interface StatusOption {
+  label: string
+  value: string
+}
+
+interface StatusFilter {
+  label: string
+  options: StatusOption[]
+}
+
+export interface FilterableListProps<T> {
   title: string
+  data: T[]
+  sortOptions: SortOption[]
+  statusFilter?: StatusFilter
   renderItem: (item: T) => React.ReactNode
-  sortOptions?: SortOption[]
-  filters?: Record<string, any>
-  initialSort?: SortOption['value']
-  className?: string
 }
 
-// TODO: Vervang dit door je nieuwe API service
-const fetchDataFromAPI = async <T,>(params: {
-  table: string
-  sortBy?: { column: string; ascending: boolean }
-  filters?: Record<string, any>
-}): Promise<T[]> => {
-  // Implementeer je nieuwe API call hier
-  console.log('Fetching data with params:', params)
-  return []
-}
-
-export function FilterableList<T>({ 
+export function FilterableList<T extends { [key: string]: any }>({ 
   title,
-  renderItem,
-  sortOptions = [],
-  filters = {},
-  initialSort,
-  className
+  data,
+  sortOptions,
+  statusFilter,
+  renderItem
 }: FilterableListProps<T>) {
-  const [data, setData] = useState<T[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentSort, setCurrentSort] = useState(initialSort || sortOptions[0]?.value)
+  const [sortBy, setSortBy] = useState(sortOptions[0].value)
+  const [statusValue, setStatusValue] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [currentSort, filters])
+  // Sort data
+  const sortedData = [...data].sort((a, b) => {
+    const aValue = a[sortBy.column]
+    const bValue = b[sortBy.column]
+    const modifier = sortBy.ascending ? 1 : -1
+    return aValue < bValue ? -1 * modifier : aValue > bValue ? 1 * modifier : 0
+  })
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const items = await fetchDataFromAPI<T>({
-        table: title.toLowerCase(),
-        sortBy: currentSort,
-        filters
-      })
-      setData(items)
-    } catch (err) {
-      console.error(`Error fetching ${title}:`, err)
-      setError(`Er ging iets mis bij het ophalen van de ${title.toLowerCase()}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <LoadingSkeleton key={i} className="h-24" />
-        ))}
-      </div>
-    )
-  }
-
-  if (error) {
-    return <ErrorText>{error}</ErrorText>
-  }
+  // Filter by status if needed
+  const filteredData = statusValue 
+    ? sortedData.filter(item => item.status === statusValue)
+    : sortedData
 
   return (
-    <div className={`space-y-4 ${className || ''}`}>
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-medium text-gray-900">
-          {title}
-        </h2>
-        {sortOptions.length > 0 && (
-          <select
-            value={`${currentSort?.column}-${currentSort?.ascending}`}
-            onChange={(e) => {
-              const [column, ascending] = e.target.value.split('-')
-              setCurrentSort({
-                column,
-                ascending: ascending === 'true'
-              })
-            }}
-            className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            {sortOptions.map((option) => (
-              <option
-                key={`${option.value.column}-${option.value.ascending}`}
-                value={`${option.value.column}-${option.value.ascending}`}
-              >
-                {option.label}
-              </option>
-            ))}
-          </select>
-        )}
+    <div className="bg-[#1B2B3A] rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-700">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-white">{title}</h3>
+          <div className="flex gap-2">
+            {statusFilter && (
+              <Select
+                size="xs"
+                placeholder={statusFilter.label}
+                data={statusFilter.options}
+                value={statusValue}
+                onChange={setStatusValue}
+                clearable
+                className="min-w-[140px]"
+              />
+            )}
+            <Select
+              size="xs"
+              placeholder="Sorteren"
+              data={sortOptions.map(option => ({
+                label: option.label,
+                value: JSON.stringify(option.value)
+              }))}
+              value={JSON.stringify(sortBy)}
+              onChange={(value) => value && setSortBy(JSON.parse(value))}
+              className="min-w-[140px]"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
-        {data.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            Geen {title.toLowerCase()} gevonden
+      <div className="divide-y divide-gray-700">
+        {filteredData.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-gray-400 text-center">
+            Geen items gevonden
           </div>
         ) : (
-          data.map((item, index) => (
-            <div key={index}>
+          filteredData.map((item, index) => (
+            <div key={index} className="px-4">
               {renderItem(item)}
             </div>
           ))

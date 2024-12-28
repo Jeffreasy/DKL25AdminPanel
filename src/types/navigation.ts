@@ -1,7 +1,7 @@
 export interface SubMenuItem {
   name: string
-  href: string
-  title: string
+  path: string
+  label: string
   badge?: {
     text: string
     color: string
@@ -10,13 +10,7 @@ export interface SubMenuItem {
 
 export interface MenuItem {
   name: string
-  href?: string
-  title?: string
-  icon: React.ComponentType<React.ComponentProps<'svg'>>
-  isGroup?: boolean
-  badge?: {
-    text: string
-    color: string
-  }
-  submenu?: SubMenuItem[]
+  path: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
 } 

@@ -2,20 +2,9 @@ import { useState, useEffect } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ErrorText } from '../components/typography'
-import { fetchVideosFromAPI, updateVideoInAPI } from '../features/videos/services/videoService'
+import { fetchVideos, updateVideo } from '../features/videos/services/videoService'
 import { usePageTitle } from '../hooks/usePageTitle'
-
-interface Video {
-  id: string
-  title: string
-  description: string | null
-  url: string
-  thumbnail_url: string | null
-  visible: boolean
-  order_number: number
-  created_at: string
-  updated_at: string
-}
+import type { Video } from '../features/videos/types'
 
 interface VideoFormData {
   title: string
@@ -85,17 +74,17 @@ export function VideoManagementPage() {
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetchVideos()
+    loadVideos()
   }, [])
 
-  const fetchVideos = async () => {
+  const loadVideos = async () => {
     try {
       setLoading(true)
-      const { data, error } = await fetchVideosFromAPI()
+      const { data, error } = await fetchVideos()
       if (error) throw error
       setVideos(data)
     } catch (err) {
-      console.error('Error fetching videos:', err)
+      console.error('Error loading videos:', err)
       setError('Er ging iets mis bij het ophalen van de videos')
     } finally {
       setLoading(false)
@@ -116,20 +105,20 @@ export function VideoManagementPage() {
       }
 
       if (editingVideo) {
-        await updateVideoInAPI(editingVideo.id, videoData)
+        await updateVideo(editingVideo.id, videoData)
       } else {
         // Genereer een tijdelijke ID voor nieuwe videos
         const tempId = `new-${Date.now()}`
-        const { data: lastVideo } = await fetchVideosFromAPI()
+        const { data: lastVideo } = await fetchVideos()
         const orderNumber = (lastVideo?.[0]?.order_number || 0) + 1
 
-        await updateVideoInAPI(tempId, { 
+        await updateVideo(tempId, { 
           ...videoData, 
           order_number: orderNumber 
         })
       }
 
-      await fetchVideos()
+      await loadVideos()
       handleCloseForm()
     } catch (err) {
       console.error('Error saving video:', err)
@@ -164,11 +153,11 @@ export function VideoManagementPage() {
 
   const handleToggleVisibility = async (video: Video) => {
     try {
-      await updateVideoInAPI(video.id, { 
+      await updateVideo(video.id, { 
         visible: !video.visible,
         updated_at: new Date().toISOString()
       })
-      await fetchVideos()
+      await loadVideos()
     } catch (err) {
       console.error('Error toggling visibility:', err)
       setError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
@@ -181,9 +170,9 @@ export function VideoManagementPage() {
 
     try {
       await Promise.all(Array.from(selectedVideos).map(videoId => 
-        updateVideoInAPI(videoId, { visible: false })
+        updateVideo(videoId, { visible: false })
       ))
-      await fetchVideos()
+      await loadVideos()
       setSelectedVideos(new Set())
     } catch (err) {
       console.error('Error deleting videos:', err)

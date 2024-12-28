@@ -1,73 +1,43 @@
-import { useState, useEffect } from 'react'
+import { componentClasses as cc } from '../styles/shared'
+import { cl } from '../styles/shared'
 import { LoadingSkeleton } from './LoadingSkeleton'
-import { ErrorText } from './typography'
+import type { Photo } from '../types/photo'
 
-interface Photo {
-  id: string
-  url: string
-  alt: string
-  title?: string
-  description?: string
-  visible: boolean
-  order_number: number
-  created_at: string
-  updated_at: string
+interface PhotoGalleryProps {
+  photos: Photo[]
+  loading?: boolean
+  onPhotoClick?: (photo: Photo) => void
 }
 
-// TODO: Vervang dit door je nieuwe API service
-const fetchPhotosFromAPI = async (): Promise<Photo[]> => {
-  // Implementeer je nieuwe API call hier
-  return []
-}
-
-export function PhotoGallery() {
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const loadPhotos = async () => {
-      try {
-        setLoading(true)
-        const data = await fetchPhotosFromAPI()
-        setPhotos(data)
-      } catch (err) {
-        console.error('Error loading photos:', err)
-        setError('Er ging iets mis bij het ophalen van de foto\'s')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadPhotos()
-  }, [])
-
+export function PhotoGallery({ photos, loading, onPhotoClick }: PhotoGalleryProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <LoadingSkeleton className="aspect-square" />
-        <LoadingSkeleton className="aspect-square" />
-        <LoadingSkeleton className="aspect-square" />
-        <LoadingSkeleton className="aspect-square" />
+      <div className={cc.grid}>
+        {[...Array(6)].map((_, i) => (
+          <LoadingSkeleton key={i} className="aspect-square" />
+        ))}
       </div>
     )
   }
 
-  if (error) {
-    return <ErrorText>{error}</ErrorText>
-  }
-
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className={cc.grid}>
       {photos.map(photo => (
-        <div key={photo.id} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+        <button
+          key={photo.id}
+          onClick={() => onPhotoClick?.(photo)}
+          className={cl(
+            cc.image.container,
+            'group cursor-pointer'
+          )}
+        >
           <img
-            src={photo.url}
+            src={photo.thumbnail_url || photo.url}
             alt={photo.alt}
-            className="w-full h-full object-cover"
-            loading="lazy"
+            className={cc.image.fit}
           />
-        </div>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+        </button>
       ))}
     </div>
   )

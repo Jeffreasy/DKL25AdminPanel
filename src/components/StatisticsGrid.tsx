@@ -1,9 +1,7 @@
+import { UsersIcon } from '@heroicons/react/24/outline'
+
 interface Stats {
-  status: {
-    pending: number
-    approved: number
-    rejected: number
-  }
+  totaal: number
   rollen: {
     Deelnemer: number
     Begeleider: number
@@ -15,6 +13,11 @@ interface Stats {
     '10 KM': number
     '15 KM': number
   }
+  ondersteuning: {
+    Ja: number
+    Nee: number
+    Anders: number
+  }
 }
 
 interface StatisticsGridProps {
@@ -23,25 +26,68 @@ interface StatisticsGridProps {
 
 export function StatisticsGrid({ stats }: StatisticsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-white p-4 rounded-lg shadow-sm">
-        <h3 className="text-sm font-medium text-gray-500 mb-3">Status</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-yellow-600">Nieuw</span>
-            <span>{stats.status.pending}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-green-600">Goedgekeurd</span>
-            <span>{stats.status.approved}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-red-600">Afgewezen</span>
-            <span>{stats.status.rejected}</span>
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Totaal */}
+      <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="p-5">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <UsersIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">Totaal aanmeldingen</dt>
+                <dd className="text-lg font-medium text-gray-900 dark:text-white">{stats.totaal}</dd>
+              </dl>
+            </div>
           </div>
         </div>
       </div>
-      {/* Voeg andere statistieken toe */}
+
+      {/* Rollen */}
+      <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="p-5">
+          <h3 className="text-sm font-medium text-gray-500">Rollen</h3>
+          <dl className="mt-2 divide-y divide-gray-200 dark:divide-gray-700">
+            {Object.entries(stats.rollen).map(([rol, aantal]) => (
+              <div key={rol} className="py-2 flex justify-between">
+                <dt className="text-sm text-gray-500">{rol}</dt>
+                <dd className="text-sm font-medium text-gray-900 dark:text-white">{aantal}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+
+      {/* Afstanden */}
+      <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="p-5">
+          <h3 className="text-sm font-medium text-gray-500">Afstanden</h3>
+          <dl className="mt-2 divide-y divide-gray-200 dark:divide-gray-700">
+            {Object.entries(stats.afstanden).map(([afstand, aantal]) => (
+              <div key={afstand} className="py-2 flex justify-between">
+                <dt className="text-sm text-gray-500">{afstand}</dt>
+                <dd className="text-sm font-medium text-gray-900 dark:text-white">{aantal}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+
+      {/* Ondersteuning */}
+      <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="p-5">
+          <h3 className="text-sm font-medium text-gray-500">Ondersteuning nodig</h3>
+          <dl className="mt-2 divide-y divide-gray-200 dark:divide-gray-700">
+            {Object.entries(stats.ondersteuning).map(([type, aantal]) => (
+              <div key={type} className="py-2 flex justify-between">
+                <dt className="text-sm text-gray-500">{type}</dt>
+                <dd className="text-sm font-medium text-gray-900 dark:text-white">{aantal}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
     </div>
   )
 } 

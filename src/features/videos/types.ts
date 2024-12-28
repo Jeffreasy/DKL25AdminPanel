@@ -3,6 +3,7 @@ export interface Video {
   title: string
   description: string | null
   url: string
+  video_id: string
   thumbnail_url: string | null
   visible: boolean
   order_number: number

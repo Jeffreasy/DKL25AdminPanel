@@ -5,13 +5,14 @@ import { PhotoCard } from './PhotoCard'
 import { supabase } from '../../../lib/supabase'
 import type { Photo } from '../types'
 import type { Album } from '../../albums/types'
-import { deletePhotoFromAPI } from '../services/photoService'
+import { deletePhoto } from '../../../features/services/photoService'
 
 interface PhotoGridProps {
   photos: Photo[]
   loading: boolean
   error: string | null
   onUpdate: () => Promise<void>
+  view?: 'grid' | 'list'
   setError?: (error: string | null) => void
 }
 
@@ -20,7 +21,8 @@ export function PhotoGrid({
   loading, 
   error, 
   onUpdate,
-  setError = () => {} // Default no-op function
+  view = 'grid',
+  setError = () => {}
 }: PhotoGridProps) {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const [showAlbumSelector, setShowAlbumSelector] = useState(false)
@@ -54,23 +56,40 @@ export function PhotoGrid({
 
   const addToAlbum = async (albumId: string) => {
     try {
+      // Eerst checken welke foto's al in het album zitten
+      const { data: existingPhotos, error: fetchError } = await supabase
+        .from('album_photos')
+        .select('photo_id')
+        .eq('album_id', albumId)
+
+      if (fetchError) throw fetchError
+
+      // Filter de foto's die we willen toevoegen
+      const existingPhotoIds = new Set(existingPhotos?.map(p => p.photo_id) || [])
+      const photosToAdd = Array.from(selectedPhotos).filter(id => !existingPhotoIds.has(id))
+
+      if (photosToAdd.length === 0) {
+        setError('Deze foto\'s zitten al in het album')
+        return
+      }
+
       // Haal huidige order numbers op
-      const { data: currentPhotos, error: fetchError } = await supabase
+      const { data: currentPhotos, error: orderError } = await supabase
         .from('album_photos')
         .select('order_number')
         .eq('album_id', albumId)
         .order('order_number', { ascending: false })
         .limit(1)
 
-      if (fetchError) throw fetchError
+      if (orderError) throw orderError
 
       let nextOrderNumber = (currentPhotos?.[0]?.order_number || 0) + 1
 
-      // Voeg foto's toe aan album
+      // Voeg alleen nieuwe foto's toe
       const { error: insertError } = await supabase
         .from('album_photos')
         .insert(
-          Array.from(selectedPhotos).map(photoId => ({
+          photosToAdd.map(photoId => ({
             album_id: albumId,
             photo_id: photoId,
             order_number: nextOrderNumber++
@@ -92,7 +111,7 @@ export function PhotoGrid({
     if (!confirm(`Weet je zeker dat je deze foto wilt verwijderen?`)) return
 
     try {
-      await deletePhotoFromAPI(photo.id)
+      await deletePhoto(photo.id)
       await onUpdate()
     } catch (err) {
       console.error('Error deleting photo:', err)
@@ -105,7 +124,7 @@ export function PhotoGrid({
     if (!confirm(`Weet je zeker dat je ${selectedPhotos.size} foto's wilt verwijderen?`)) return
 
     try {
-      await Promise.all(Array.from(selectedPhotos).map(id => deletePhotoFromAPI(id)))
+      await Promise.all(Array.from(selectedPhotos).map(id => deletePhoto(id)))
       setSelectedPhotos(new Set())
       await onUpdate()
     } catch (err) {
@@ -118,7 +137,11 @@ export function PhotoGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className={
+        view === 'grid' 
+          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          : "space-y-4"
+      }>
         {[...Array(8)].map((_, i) => (
           <LoadingSkeleton key={i} className="aspect-square" />
         ))}
@@ -131,7 +154,11 @@ export function PhotoGrid({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={
+      view === 'grid' 
+        ? "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2"
+        : "space-y-4"
+    }>
       {/* Bulk actions */}
       {selectedPhotos.size > 0 && (
         <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
@@ -195,25 +222,24 @@ export function PhotoGrid({
       )}
 
       {/* Photo grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {photos.map((photo) => (
-          <PhotoCard
-            key={photo.id}
-            photo={photo}
-            selected={selectedPhotos.has(photo.id)}
-            onSelect={(selected: boolean) => {
-              const newSelection = new Set(selectedPhotos)
-              if (selected) {
-                newSelection.add(photo.id)
-              } else {
-                newSelection.delete(photo.id)
-              }
-              setSelectedPhotos(newSelection)
-            }}
-            onDelete={() => handleDelete(photo)}
-          />
-        ))}
-      </div>
+      {photos.map((photo) => (
+        <PhotoCard
+          key={photo.id}
+          photo={photo}
+          selected={selectedPhotos.has(photo.id)}
+          onSelect={(selected: boolean) => {
+            const newSelection = new Set(selectedPhotos)
+            if (selected) {
+              newSelection.add(photo.id)
+            } else {
+              newSelection.delete(photo.id)
+            }
+            setSelectedPhotos(newSelection)
+          }}
+          onDelete={() => handleDelete(photo)}
+          view={view}
+        />
+      ))}
     </div>
   )
 } 

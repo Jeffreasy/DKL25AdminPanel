@@ -13,7 +13,10 @@ export interface Album {
 
 export interface AlbumWithDetails extends Album {
   cover_photo?: Photo | null;
-  photos_count: { count: number }[];
+  photos_count: {
+    count: number;
+    photo_id: string;
+  }[];
 }
 
 export interface AlbumPhoto {

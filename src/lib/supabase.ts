@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-})
+// Log voor debugging
+console.log('Supabase URL:', supabaseUrl)
+console.log('Supabase key exists:', !!supabaseKey)
+
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Helper functie om te checken of iemand admin is
 export const isAdmin = async () => {

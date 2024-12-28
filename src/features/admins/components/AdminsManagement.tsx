@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { componentClasses as cc } from '../../../styles/shared'
+import { cl } from '../../../styles/shared'
 
 interface Admin {
   id: string
@@ -75,7 +77,7 @@ export function AdminsManagement() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Beheer Admins</h2>
+      <h2 className={cc.listItem.title}>Beheer Admins</h2>
       
       <form onSubmit={addAdmin} className="flex gap-2">
         <input
@@ -83,25 +85,27 @@ export function AdminsManagement() {
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
           placeholder="Email van nieuwe admin"
-          className="input-primary flex-1"
+          className={cc.form.input}
         />
-        <button type="submit" className="btn-primary">
+        <button type="submit" className={cc.button.primary}>
           Toevoegen
         </button>
       </form>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className={cc.form.error}>{error}</p>}
 
       <ul className="divide-y">
         {admins.map(admin => (
-          <li key={admin.id} className="py-2 flex justify-between items-center">
-            <span>{admin.email}</span>
-            <button
-              onClick={() => removeAdmin(admin.id)}
-              className="text-red-600 hover:text-red-800"
-            >
-              Verwijderen
-            </button>
+          <li key={admin.id} className={cc.listItem.container}>
+            <div className={cc.listItem.content}>
+              <span className={cc.listItem.title}>{admin.email}</span>
+              <button
+                onClick={() => removeAdmin(admin.id)}
+                className={cl(cc.button.icon, 'hover:text-red-600 hover:bg-red-50')}
+              >
+                Verwijderen
+              </button>
+            </div>
           </li>
         ))}
       </ul>

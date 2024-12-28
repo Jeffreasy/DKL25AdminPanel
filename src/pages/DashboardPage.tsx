@@ -1,262 +1,147 @@
 import { useState, useEffect } from 'react'
 import { H1, SmallText, ErrorText } from '../components/typography'
-import { FilterableList } from '../components/FilterableList'
-import { MessageItem } from '../components/MessageItem'
-import { StatisticsGrid } from '../components/StatisticsGrid'
-import { RegistrationItem } from '../components/RegistrationItem'
-import type { ContactMessage, Inschrijving } from '../types/api'
+import { OverviewTab } from '../features/dashboard/tabs/OverviewTab'
+import { AanmeldingenTab } from '../features/dashboard/tabs/AanmeldingenTab'
+import { ContactTab } from '../features/dashboard/tabs/ContactTab'
+import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldingenService'
+import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
+import type { Aanmelding } from '../features/aanmeldingen/types'
+import type { ContactMessage, ContactStats } from '../features/contact/types'
 
-type TabType = 'berichten' | 'inschrijvingen'
-
-// TODO: Vervang dit door je nieuwe API services
-const fetchMessagesFromAPI = async (): Promise<ContactMessage[]> => {
-  // Implementeer je nieuwe API call hier
-  return []
-}
-
-const updateMessageStatusInAPI = async (messageId: string, newStatus: 'ongelezen' | 'gelezen'): Promise<void> => {
-  // Implementeer je nieuwe API call hier
-  console.log(`Updating message ${messageId} to status: ${newStatus}`)
-}
-
-const fetchInschrijvingenFromAPI = async (): Promise<Inschrijving[]> => {
-  // Implementeer je nieuwe API call hier
-  return []
-}
-
-const updateInschrijvingStatusInAPI = async (id: string, newStatus: Inschrijving['status']): Promise<void> => {
-  // Implementeer je nieuwe API call hier
-  console.log(`Updating registration ${id} to status: ${newStatus}`)
-}
+type TabType = 'overzicht' | 'aanmeldingen' | 'contact'
 
 export function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('berichten')
+  const [activeTab, setActiveTab] = useState<TabType>('overzicht')
+  const [aanmeldingen, setAanmeldingen] = useState<Aanmelding[]>([])
   const [messages, setMessages] = useState<ContactMessage[]>([])
-  const [inschrijvingen, setInschrijvingen] = useState<Inschrijving[]>([])
+  const [contactStats, setContactStats] = useState<ContactStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Data loading
   useEffect(() => {
-    if (activeTab === 'berichten') {
-      fetchMessages()
-    } else {
-      fetchInschrijvingen()
-    }
+    loadData()
   }, [activeTab])
 
-  const fetchMessages = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const data = await fetchMessagesFromAPI()
-      setMessages(data)
+      if (activeTab === 'contact') {
+        const [messagesResult, statsResult] = await Promise.all([
+          fetchMessages(),
+          getContactStats()
+        ])
+        if (messagesResult.error) throw messagesResult.error
+        if (statsResult.error) throw statsResult.error
+        setMessages(messagesResult.data)
+        setContactStats(statsResult.data)
+      } else {
+        const { data, error } = await fetchAanmeldingen()
+        if (error) throw error
+        setAanmeldingen(data)
+      }
     } catch (err) {
-      console.error('Error fetching messages:', err)
-      setError('Er ging iets mis bij het ophalen van de berichten')
+      console.error('Error loading data:', err)
+      setError('Er ging iets mis bij het ophalen van de gegevens')
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleMessageRead = async (messageId: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'ongelezen' ? 'gelezen' : 'ongelezen'
-      await updateMessageStatusInAPI(messageId, newStatus)
-      
-      setMessages(messages.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, status: newStatus } 
-          : msg
-      ))
-    } catch (err) {
-      console.error('Error updating message:', err)
-      setError('Er ging iets mis bij het bijwerken van het bericht')
-    }
-  }
-
-  const fetchInschrijvingen = async () => {
-    try {
-      setLoading(true)
-      const data = await fetchInschrijvingenFromAPI()
-      setInschrijvingen(data)
-    } catch (err) {
-      console.error('Error fetching inschrijvingen:', err)
-      setError('Er ging iets mis bij het ophalen van de inschrijvingen')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateInschrijvingStatus = async (id: string, newStatus: Inschrijving['status']) => {
-    try {
-      await updateInschrijvingStatusInAPI(id, newStatus)
-      
-      setInschrijvingen(inschrijvingen.map(inschrijving => 
-        inschrijving.id === id ? { ...inschrijving, status: newStatus } : inschrijving
-      ))
-    } catch (err) {
-      console.error('Error updating inschrijving:', err)
-      setError('Er ging iets mis bij het bijwerken van de inschrijving')
-    }
-  }
-
+  // Stats berekening
   const calculateStats = () => ({
-    totaal: inschrijvingen.length,
-    status: {
-      pending: inschrijvingen.filter(i => i.status === 'pending').length,
-      approved: inschrijvingen.filter(i => i.status === 'approved').length,
-      rejected: inschrijvingen.filter(i => i.status === 'rejected').length
-    },
+    totaal: aanmeldingen.length,
     rollen: {
-      Deelnemer: inschrijvingen.filter(i => i.rol === 'Deelnemer').length,
-      Begeleider: inschrijvingen.filter(i => i.rol === 'Begeleider').length,
-      Vrijwilliger: inschrijvingen.filter(i => i.rol === 'Vrijwilliger').length
+      Deelnemer: aanmeldingen.filter(i => i.rol === 'Deelnemer').length,
+      Begeleider: aanmeldingen.filter(i => i.rol === 'Begeleider').length,
+      Vrijwilliger: aanmeldingen.filter(i => i.rol === 'Vrijwilliger').length
     },
     afstanden: {
-      '2.5 KM': inschrijvingen.filter(i => i.afstand === '2.5 KM').length,
-      '6 KM': inschrijvingen.filter(i => i.afstand === '6 KM').length,
-      '10 KM': inschrijvingen.filter(i => i.afstand === '10 KM').length,
-      '15 KM': inschrijvingen.filter(i => i.afstand === '15 KM').length
+      '2.5 KM': aanmeldingen.filter(i => i.afstand === '2.5 KM').length,
+      '6 KM': aanmeldingen.filter(i => i.afstand === '6 KM').length,
+      '10 KM': aanmeldingen.filter(i => i.afstand === '10 KM').length,
+      '15 KM': aanmeldingen.filter(i => i.afstand === '15 KM').length
     },
     ondersteuning: {
-      Ja: inschrijvingen.filter(i => i.ondersteuning === 'Ja').length,
-      Nee: inschrijvingen.filter(i => i.ondersteuning === 'Nee').length,
-      Anders: inschrijvingen.filter(i => i.ondersteuning === 'Anders').length
+      Ja: aanmeldingen.filter(i => i.ondersteuning === 'Ja').length,
+      Nee: aanmeldingen.filter(i => i.ondersteuning === 'Nee').length,
+      Anders: aanmeldingen.filter(i => i.ondersteuning === 'Anders').length
     }
   })
 
-  const stats = calculateStats()
-
-  const MessagesTab = () => (
-    <FilterableList<ContactMessage>
-      title="Berichten"
-      filters={{ gearchiveerd: false }}
-      sortOptions={[
-        { label: 'Nieuwste eerst', value: { column: 'aangemaakt_op', ascending: false } },
-        { label: 'Oudste eerst', value: { column: 'aangemaakt_op', ascending: true } }
-      ]}
-      renderItem={(message) => (
-        <MessageItem
-          message={message}
-          onToggleRead={toggleMessageRead}
-        />
-      )}
-    />
+  // Tabs rendering
+  const renderTabs = () => (
+    <nav className="border-b border-gray-200 bg-white">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex h-12 items-center justify-start -mb-px space-x-8">
+          {[
+            { id: 'overzicht', name: 'Volledig overzicht' },
+            { id: 'aanmeldingen', name: 'Aanmeldingen' },
+            { id: 'contact', name: 'Contact' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`
+                h-full px-2 text-sm font-medium border-b-2 
+                ${activeTab === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </nav>
   )
 
-  const InschrijvingenTab = () => {
-    return (
-      <>
-        <StatisticsGrid stats={stats} />
-        <FilterableList<Inschrijving>
-          title="Inschrijvingen"
-          sortOptions={[
-            { label: 'Nieuwste eerst', value: { column: 'created_at', ascending: false } },
-            { label: 'Oudste eerst', value: { column: 'created_at', ascending: true } }
-          ]}
-          renderItem={(registration) => (
-            <RegistrationItem
-              registration={registration}
-              onStatusUpdate={updateInschrijvingStatus}
-            />
-          )}
-        />
-      </>
-    )
+  // Content rendering per tab
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500" />
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="rounded-md bg-red-50 p-3">
+          <ErrorText>{error}</ErrorText>
+        </div>
+      )
+    }
+
+    switch (activeTab) {
+      case 'overzicht':
+        return <OverviewTab stats={calculateStats()} />
+      case 'aanmeldingen':
+        return <AanmeldingenTab stats={calculateStats()} aanmeldingen={aanmeldingen} onUpdate={loadData} />
+      case 'contact':
+        return <ContactTab stats={contactStats} messages={messages} onUpdate={loadData} />
+      default:
+        return null
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header met tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <H1 className="mb-1">Dashboard</H1>
-          <SmallText>
-            Beheer berichten en inschrijvingen
-          </SmallText>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <H1 className="text-lg font-medium text-gray-900">Dashboard</H1>
+          <SmallText>Overzicht van alle gegevens</SmallText>
         </div>
-        
-        {/* Tabs - nu meer zichtbaar en klikbaar */}
-        <div className="border-b border-gray-200">
-          <nav className="px-4 sm:px-6 flex space-x-8">
-            <button
-              onClick={() => setActiveTab('berichten')}
-              className={`py-4 px-1 relative inline-flex items-center gap-2 ${
-                activeTab === 'berichten'
-                  ? 'border-b-2 border-indigo-500'
-                  : 'border-b-2 border-transparent'
-              }`}
-            >
-              <span className={`text-sm font-medium ${
-                activeTab === 'berichten'
-                  ? 'text-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}>
-                Berichten
-              </span>
-              {messages.filter(m => m.status === 'ongelezen').length > 0 && (
-                <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs">
-                  {messages.filter(m => m.status === 'ongelezen').length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('inschrijvingen')}
-              className={`py-4 px-1 relative inline-flex items-center gap-2 ${
-                activeTab === 'inschrijvingen'
-                  ? 'border-b-2 border-indigo-500'
-                  : 'border-b-2 border-transparent'
-              }`}
-            >
-              <span className={`text-sm font-medium ${
-                activeTab === 'inschrijvingen'
-                  ? 'text-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}>
-                Inschrijvingen
-              </span>
-              {inschrijvingen.filter(i => i.status === 'pending').length > 0 && (
-                <span className="bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full text-xs">
-                  {inschrijvingen.filter(i => i.status === 'pending').length} nieuw
-                </span>
-              )}
-            </button>
-          </nav>
-        </div>
-      </div>
+      </header>
 
-      {/* Loading state */}
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
-        </div>
-      ) : (
-        <>
-          {/* Error message */}
-          {error && (
-            <div className="rounded-lg bg-red-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <ErrorText>{error}</ErrorText>
-                </div>
-              </div>
-            </div>
-          )}
+      {renderTabs()}
 
-          {/* Tab content */}
-          <div className="space-y-6">
-            {activeTab === 'berichten' ? (
-              <MessagesTab />
-            ) : (
-              <InschrijvingenTab />
-            )}
-          </div>
-        </>
-      )}
+      <main className="px-4 sm:px-6 lg:px-8 py-4">
+        {renderContent()}
+      </main>
     </div>
   )
 } 
