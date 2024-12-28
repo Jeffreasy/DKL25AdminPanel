@@ -6,11 +6,11 @@ import { verifyEmailAddress } from '../../api/email'
 
 const MAILGUN_BASE_URL = `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}`
 
-// Voeg debug logging toe
+// Add debug logging
 console.log('Mailgun config:', {
   hasApiKey: !!MAILGUN_API_KEY,
   domain: MAILGUN_DOMAIN,
-  baseUrl: MAILGUN_BASE_URL
+  baseUrl: MAILGUN_BASE_URL,
 })
 
 interface EmailEvent {
@@ -93,29 +93,39 @@ export const adminEmailService = {
 
   // Email events ophalen via Mailgun
   async getEmailEvents() {
-    const response = await fetch(`${MAILGUN_BASE_URL}/events`, {
-      headers: {
-        'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
+    try {
+      const response = await fetch(`${MAILGUN_BASE_URL}/events`, {
+        headers: {
+          'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
+        }
+      })
+
+      if (!response.ok) {
+        console.error('Mailgun API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        })
+        throw new Error('Failed to fetch email events')
       }
-    })
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch email events')
+      const events = await response.json()
+      
+      await Promise.all(events.items.map((event: any) => this.logEmailEvent({
+        event_type: event.event,
+        email_id: event.message?.headers['message-id'],
+        from_email: event.message?.headers?.from,
+        to_email: event.message?.headers?.to,
+        subject: event.message?.headers?.subject,
+        timestamp: event.timestamp,
+        raw_event: event
+      })))
+
+      return events.items
+    } catch (error) {
+      console.error('Failed to fetch email events:', error)
+      throw error
     }
-
-    const events = await response.json()
-    
-    await Promise.all(events.items.map((event: any) => this.logEmailEvent({
-      event_type: event.event,
-      email_id: event.message?.headers['message-id'],
-      from_email: event.message?.headers?.from,
-      to_email: event.message?.headers?.to,
-      subject: event.message?.headers?.subject,
-      timestamp: event.timestamp,
-      raw_event: event  // Pass the complete event
-    })))
-
-    return events.items
   },
 
   // Email versturen via Admin Panel (nu via Mailgun)
