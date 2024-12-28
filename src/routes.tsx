@@ -6,7 +6,7 @@ import { MainLayout } from './components/layout/MainLayout'
 
 export const routes: RouteObject[] = [
   {
-    path: '/login',
+    path: 'login',
     element: <LoginPage />
   },
   {
@@ -18,7 +18,7 @@ export const routes: RouteObject[] = [
     ),
     children: [
       {
-        path: '/',
+        index: true,
         element: <DashboardPage />
       }
     ]
