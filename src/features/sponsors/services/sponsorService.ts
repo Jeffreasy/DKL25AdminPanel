@@ -15,15 +15,8 @@ export const sponsorService = {
 
     // Map de database kolommen naar onze frontend types
     return data.map(sponsor => ({
-      id: sponsor.id,
-      name: sponsor.name,
-      description: sponsor.description,
-      logoUrl: sponsor.logo_url,
-      websiteUrl: sponsor.website_url,
-      order: sponsor.order_number,
-      isActive: sponsor.is_active,
-      createdAt: sponsor.created_at,
-      updatedAt: sponsor.updated_at
+      ...sponsor,
+      visible: sponsor.visible ?? true
     }))
   },
 
@@ -36,7 +29,8 @@ export const sponsorService = {
         logo_url: data.logoUrl,
         website_url: data.websiteUrl,
         order_number: data.order,
-        is_active: data.isActive
+        is_active: data.isActive,
+        visible: data.visible
       }])
       .select()
       .single()
@@ -47,15 +41,8 @@ export const sponsorService = {
     }
 
     return {
-      id: sponsor.id,
-      name: sponsor.name,
-      description: sponsor.description,
-      logoUrl: sponsor.logo_url,
-      websiteUrl: sponsor.website_url,
-      order: sponsor.order_number,
-      isActive: sponsor.is_active,
-      createdAt: sponsor.created_at,
-      updatedAt: sponsor.updated_at
+      ...sponsor,
+      visible: sponsor.visible ?? true
     }
   },
 
@@ -68,7 +55,8 @@ export const sponsorService = {
         logo_url: data.logoUrl,
         website_url: data.websiteUrl,
         order_number: data.order,
-        is_active: data.isActive
+        is_active: data.isActive,
+        visible: data.visible
       })
       .eq('id', id)
       .select()
@@ -80,15 +68,8 @@ export const sponsorService = {
     }
 
     return {
-      id: sponsor.id,
-      name: sponsor.name,
-      description: sponsor.description,
-      logoUrl: sponsor.logo_url,
-      websiteUrl: sponsor.website_url,
-      order: sponsor.order_number,
-      isActive: sponsor.is_active,
-      createdAt: sponsor.created_at,
-      updatedAt: sponsor.updated_at
+      ...sponsor,
+      visible: sponsor.visible ?? true
     }
   },
 

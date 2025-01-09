@@ -14,8 +14,8 @@ export function SponsorCard({ sponsor, onEdit, onDelete, onVisibilityToggle }: S
       <div className="cursor-grab">
         <div className="aspect-[3/2] bg-gray-100 relative">
           <img
-            src={sponsor.logo_url}
-            alt={sponsor.name}
+            src={sponsor.logoUrl}
+            alt={`${sponsor.name} logo`}
             className="w-full h-full object-contain p-4"
           />
           {!sponsor.visible && (
@@ -33,9 +33,9 @@ export function SponsorCard({ sponsor, onEdit, onDelete, onVisibilityToggle }: S
             {sponsor.description}
           </p>
         )}
-        {sponsor.website_url && (
+        {sponsor.websiteUrl && (
           <a
-            href={sponsor.website_url}
+            href={sponsor.websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-500"

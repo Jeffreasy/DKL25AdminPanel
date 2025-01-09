@@ -102,7 +102,16 @@ export function SponsorGrid() {
       {/* Edit Modal */}
       {editingSponsor && (
         <SponsorForm
-          initialData={editingSponsor}
+          initialData={{
+            name: editingSponsor.name,
+            description: editingSponsor.description,
+            logoUrl: editingSponsor.logoUrl,
+            websiteUrl: editingSponsor.websiteUrl ?? '',
+            order: editingSponsor.order,
+            isActive: editingSponsor.isActive,
+            visible: editingSponsor.visible,
+            id: editingSponsor.id
+          }}
           onComplete={handleUpdateComplete}
           onCancel={() => setEditingSponsor(null)}
         />

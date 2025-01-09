@@ -3,7 +3,8 @@ export interface Sponsor {
   name: string
   description: string
   logoUrl: string
-  websiteUrl: string
+  websiteUrl?: string
+  visible: boolean
   order: number
   isActive: boolean
   createdAt: string
@@ -14,7 +15,8 @@ export interface SponsorFormData {
   name: string
   description: string
   logoUrl: string
-  websiteUrl: string
+  websiteUrl?: string
   order: number
   isActive: boolean
+  visible: boolean
 } 

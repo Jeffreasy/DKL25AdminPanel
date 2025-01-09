@@ -16,7 +16,8 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
     logoUrl: '',
     websiteUrl: '',
     order: 0,
-    isActive: true
+    isActive: true,
+    visible: true
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
