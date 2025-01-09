@@ -1,5 +1,5 @@
 import { useSidebar } from '../../contexts/SidebarContext'
-import { navigation } from '../../types/navigation'
+import { menuItems } from '../../types/navigation'
 import { Link } from 'react-router-dom'
 import { XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { Transition } from '@headlessui/react'
@@ -58,8 +58,8 @@ export function Sidebar() {
       </div>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex h-screen">
-        <div className={`bg-[#1B2B3A] ${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300`}>
+      <div className="hidden md:block bg-[#1B2B3A] h-screen sticky top-0">
+        <div className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300`}>
           <SidebarContent isCollapsed={isCollapsed} />
         </div>
       </div>
@@ -70,7 +70,7 @@ export function Sidebar() {
 // Separate component for sidebar content to avoid duplication
 function SidebarContent({ isCollapsed, onClose }: { isCollapsed: boolean, onClose?: () => void }) {
   return (
-    <>
+    <div className="h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
         <img 
@@ -92,23 +92,47 @@ function SidebarContent({ isCollapsed, onClose }: { isCollapsed: boolean, onClos
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 py-4">
-        {navigation.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            className="flex items-center px-3 py-2 text-base font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white group"
-            onClick={onClose}
-          >
-            <item.icon className={`
-              flex-shrink-0 h-6 w-6
-              transition-colors duration-200
-              text-gray-400 group-hover:text-white
-              ${isCollapsed ? 'mx-auto' : 'mr-3'}
-            `} />
-            {!isCollapsed && <span>{item.name}</span>}
-          </Link>
-        ))}
+        {menuItems.map(item => 
+          'items' in item ? (
+            <div key={item.label} className="space-y-1">
+              <span className="text-gray-500">{item.label}</span>
+              <div className="ml-4">
+                {item.items.map(subItem => (
+                  <Link
+                    key={subItem.path}
+                    to={subItem.path}
+                    className="flex items-center px-3 py-2 text-base font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white group"
+                    onClick={onClose}
+                  >
+                    <subItem.icon className={`
+                      flex-shrink-0 h-6 w-6
+                      transition-colors duration-200
+                      text-gray-400 group-hover:text-white
+                      ${isCollapsed ? 'mx-auto' : 'mr-3'}
+                    `} />
+                    {!isCollapsed && <span>{subItem.label}</span>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="flex items-center px-3 py-2 text-base font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white group"
+              onClick={onClose}
+            >
+              <item.icon className={`
+                flex-shrink-0 h-6 w-6
+                transition-colors duration-200
+                text-gray-400 group-hover:text-white
+                ${isCollapsed ? 'mx-auto' : 'mr-3'}
+              `} />
+              {!isCollapsed && <span>{item.label}</span>}
+            </Link>
+          )
+        )}
       </nav>
-    </>
+    </div>
   )
 } 

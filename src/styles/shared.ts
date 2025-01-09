@@ -60,14 +60,18 @@ export const componentClasses = {
       section: "flex-shrink-0 px-2 py-4 space-y-1"
     },
     item: {
-      base: "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
-      active: "bg-gray-100 text-gray-900",
-      inactive: "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+      base: "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200",
+      active: "bg-gray-700 text-white",
+      inactive: "text-gray-300 hover:bg-gray-700 hover:text-white",
       icon: {
-        base: "mr-3 flex-shrink-0 h-6 w-6",
-        active: "text-gray-500",
-        inactive: "text-gray-400 group-hover:text-gray-500"
-      }
+        base: "mr-3 h-5 w-5 flex-shrink-0",
+        inactive: "text-gray-400 group-hover:text-white"
+      },
+    },
+    group: {
+      header: "flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md",
+      expanded: "bg-gray-700 text-white",
+      items: "ml-4 space-y-1 mt-1"
     },
     resize: {
       handle: "absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize hover:bg-gray-200 transition-colors",

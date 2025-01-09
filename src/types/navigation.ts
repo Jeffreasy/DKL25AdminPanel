@@ -1,63 +1,45 @@
-import { 
-  HomeIcon, 
-  PhotoIcon, 
+import {
+  HomeIcon,
+  PhotoIcon,
   FolderIcon,
   VideoCameraIcon,
   UserGroupIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 import type { ComponentType } from 'react'
 
 export interface MenuItem {
-  name: string
+  label: string
   path: string
   icon: ComponentType<{ className?: string }>
+}
+
+export interface MenuGroup {
   label: string
+  items: MenuItem[]
 }
 
-export interface NavigationItem {
-  name: string
-  href: string
-  icon: ComponentType<{ className?: string }>
-}
+export type MenuItemOrGroup = MenuItem | MenuGroup
 
-export const navigation: NavigationItem[] = [
+export const menuItems: MenuItemOrGroup[] = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: HomeIcon
+    label: 'Dashboard',
+    path: '/dashboard',
+    icon: HomeIcon,
   },
   {
-    name: "Foto's",
-    href: '/photos',
-    icon: PhotoIcon
+    label: 'Media',
+    items: [
+      { label: "Foto's", path: '/photos', icon: PhotoIcon },
+      { label: 'Albums', path: '/albums', icon: FolderIcon },
+      { label: "Video's", path: '/videos', icon: VideoCameraIcon },
+    ]
   },
   {
-    name: 'Albums',
-    href: '/albums',
-    icon: FolderIcon
-  },
-  {
-    name: "Video's",
-    href: '/videos',
-    icon: VideoCameraIcon
-  },
-  {
-    name: 'Partners',
-    href: '/partners',
-    icon: UserGroupIcon
-  },
-  {
-    name: 'Sponsors',
-    href: '/sponsors',
-    icon: CurrencyDollarIcon
+    label: 'Relaties',
+    items: [
+      { label: 'Partners', path: '/partners', icon: UserGroupIcon },
+      { label: 'Sponsors', path: '/sponsors', icon: CurrencyDollarIcon },
+    ]
   }
-]
-
-// Navigation items voor de Navigation component
-export const menuItems: MenuItem[] = navigation.map(item => ({
-  name: item.name,
-  path: item.href,
-  icon: item.icon,
-  label: item.name
-})) 
+] 

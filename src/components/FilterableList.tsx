@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Select } from '@mantine/core'
 
-interface SortOption {
+// Base interface voor items die gesorteerd kunnen worden
+interface Sortable {
+  [key: string]: string | number | boolean | Date | null
+}
+
+interface SortOption<T extends Sortable> {
   label: string
   value: {
-    column: string
+    column: keyof T
     ascending: boolean
   }
 }
@@ -19,15 +24,15 @@ interface StatusFilter {
   options: StatusOption[]
 }
 
-export interface FilterableListProps<T> {
+export interface FilterableListProps<T extends Sortable> {
   title: string
   data: T[]
-  sortOptions: SortOption[]
+  sortOptions: SortOption<T>[]
   statusFilter?: StatusFilter
   renderItem: (item: T) => React.ReactNode
 }
 
-export function FilterableList<T extends { [key: string]: any }>({ 
+export function FilterableList<T extends Sortable>({ 
   title,
   data,
   sortOptions,
@@ -41,13 +46,34 @@ export function FilterableList<T extends { [key: string]: any }>({
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortBy.column]
     const bValue = b[sortBy.column]
-    const modifier = sortBy.ascending ? 1 : -1
-    return aValue < bValue ? -1 * modifier : aValue > bValue ? 1 * modifier : 0
+
+    // Handle different types of values
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return sortBy.ascending ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime()
+    }
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortBy.ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+    }
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortBy.ascending ? aValue - bValue : bValue - aValue
+    }
+
+    if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+      return sortBy.ascending ? (aValue === bValue ? 0 : aValue ? 1 : -1) : (aValue === bValue ? 0 : aValue ? -1 : 1)
+    }
+
+    // Handle null values
+    if (aValue === null) return sortBy.ascending ? -1 : 1
+    if (bValue === null) return sortBy.ascending ? 1 : -1
+
+    return 0
   })
 
   // Filter by status if needed
   const filteredData = statusValue 
-    ? sortedData.filter(item => item.status === statusValue)
+    ? sortedData.filter(item => 'status' in item && item.status === statusValue)
     : sortedData
 
   return (

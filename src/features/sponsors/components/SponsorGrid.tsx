@@ -1,198 +1,140 @@
 import { useState, useEffect } from 'react'
-import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
-import { ErrorText } from '../../../components/typography'
-import type { Sponsor } from '../types'
-import { 
-  fetchSponsorsFromAPI, 
-  updateSponsorInAPI,
-  deleteSponsorFromAPI,
-  updateSponsorOrderInAPI 
-} from '../services/sponsorService'
+import { Sponsor } from '../types'
+import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { sponsorService } from '../services/sponsorService'
 import { SponsorForm } from './SponsorForm'
-import {
-  DndContext,
-  closestCenter,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy
-} from '@dnd-kit/sortable'
-import { SponsorCard } from './SponsorCard'
 
 export function SponsorGrid() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null)
-  const [selectedSponsors, setSelectedSponsors] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchSponsors()
+    loadSponsors()
   }, [])
 
-  const fetchSponsors = async () => {
+  const loadSponsors = async () => {
     try {
       setLoading(true)
-      const sponsors = await fetchSponsorsFromAPI()
-      setSponsors(sponsors)
+      const data = await sponsorService.getSponsors()
+      setSponsors(data)
     } catch (err) {
-      console.error('Error fetching sponsors:', err)
       setError('Er ging iets mis bij het ophalen van de sponsors')
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (sponsor: Sponsor) => {
-    if (!confirm(`Weet je zeker dat je ${sponsor.name} wilt verwijderen?`)) {
-      return
-    }
+  const handleEdit = (sponsor: Sponsor) => {
+    setEditingSponsor(sponsor)
+  }
 
+  const handleDelete = async (id: string) => {
     try {
-      await deleteSponsorFromAPI(sponsor.id)
-      fetchSponsors()
+      await sponsorService.deleteSponsor(id)
+      await loadSponsors() // Herlaad de lijst na verwijderen
+      setShowDeleteConfirm(null)
     } catch (err) {
       console.error('Error deleting sponsor:', err)
-      setError('Er ging iets mis bij het verwijderen van de sponsor')
+      // Toon eventueel een error message
     }
   }
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Minimale afstand voordat drag start
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    try {
-      const oldIndex = sponsors.findIndex(s => s.id === active.id)
-      const newIndex = sponsors.findIndex(s => s.id === over.id)
-      
-      if (oldIndex === -1 || newIndex === -1) return
-
-      // Update lokale state
-      const newOrder = arrayMove(sponsors, oldIndex, newIndex)
-      setSponsors(newOrder)
-
-      // Maak updates met alle benodigde velden
-      const updates = newOrder.map((sponsor, index) => ({
-        id: sponsor.id,
-        order_number: index + 1
-      }))
-
-      await updateSponsorOrderInAPI(updates)
-    } catch (err) {
-      console.error('Error reordering sponsors:', err)
-      setError('Er ging iets mis bij het herordenen')
-      fetchSponsors() // Reset naar originele volgorde
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedSponsors.size === 0) return
-    if (!confirm(`Weet je zeker dat je ${selectedSponsors.size} sponsors wilt verwijderen?`)) return
-
-    try {
-      await Promise.all(Array.from(selectedSponsors).map(id => deleteSponsorFromAPI(id)))
-      setSelectedSponsors(new Set())
-      fetchSponsors()
-    } catch (err) {
-      console.error('Error bulk deleting sponsors:', err)
-      setError('Er ging iets mis bij het verwijderen van de sponsors')
-    }
-  }
-
-  const handleVisibilityToggle = async (sponsor: Sponsor) => {
-    try {
-      await updateSponsorInAPI(sponsor.id, { 
-        visible: !sponsor.visible,
-        updated_at: new Date().toISOString()
-      })
-      fetchSponsors()
-    } catch (err) {
-      console.error('Error toggling sponsor visibility:', err)
-      setError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
-    }
+  const handleUpdateComplete = async () => {
+    setEditingSponsor(null)
+    await loadSponsors() // Herlaad de lijst na update
   }
 
   if (loading) {
-    return (
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <LoadingSkeleton key={i} className="aspect-[3/2]" />
-        ))}
-      </div>
-    )
+    return <div className="p-4">Laden...</div>
   }
 
   if (error) {
-    return <div className="p-4"><ErrorText>{error}</ErrorText></div>
+    return <div className="p-4 text-red-600">{error}</div>
   }
 
   return (
-    <div className="space-y-4">
-      {selectedSponsors.size > 0 && (
-        <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-          <span className="text-sm text-gray-600">
-            {selectedSponsors.size} sponsor{selectedSponsors.size === 1 ? '' : 's'} geselecteerd
-          </span>
-          <button
-            onClick={handleBulkDelete}
-            className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
-          >
-            Verwijderen
-          </button>
-        </div>
-      )}
-
-      <DndContext 
-        sensors={sensors}
-        onDragEnd={handleDragEnd} 
-        collisionDetection={closestCenter}
-      >
-        <SortableContext 
-          items={sponsors.map(s => s.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sponsors.map((sponsor) => (
-              <SponsorCard 
-                key={sponsor.id} 
-                sponsor={sponsor}
-                onEdit={setEditingSponsor}
-                onDelete={handleDelete}
-                onVisibilityToggle={handleVisibilityToggle}
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+        {sponsors.map((sponsor) => (
+          <div key={sponsor.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div className="aspect-[3/2] p-4 bg-gray-50 rounded-t-lg flex items-center justify-center">
+              <img
+                src={sponsor.logoUrl}
+                alt={`${sponsor.name} logo`}
+                className="max-w-[85%] max-h-[85%] object-contain"
               />
-            ))}
+            </div>
+            
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-900">{sponsor.name}</h3>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => handleEdit(sponsor)}
+                    className="p-1 text-gray-400 hover:text-gray-500"
+                  >
+                    <PencilIcon className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => setShowDeleteConfirm(sponsor.id)}
+                    className="p-1 text-gray-400 hover:text-red-500"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-2">{sponsor.description}</p>
+              
+              <div className="text-sm text-gray-500">
+                <p>Volgorde: {sponsor.order}</p>
+                <p>Status: {sponsor.isActive ? 'Actief' : 'Inactief'}</p>
+              </div>
+            </div>
           </div>
-        </SortableContext>
-      </DndContext>
+        ))}
+      </div>
 
+      {/* Edit Modal */}
       {editingSponsor && (
         <SponsorForm
-          sponsor={editingSponsor}
-          onComplete={() => {
-            setEditingSponsor(null)
-            fetchSponsors()
-          }}
+          initialData={editingSponsor}
+          onComplete={handleUpdateComplete}
           onCancel={() => setEditingSponsor(null)}
         />
       )}
-    </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Sponsor verwijderen
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Weet je zeker dat je deze sponsor wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={() => handleDelete(showDeleteConfirm)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
+              >
+                Verwijderen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 } 
