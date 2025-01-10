@@ -10,7 +10,7 @@ export function PartnerManagementPage() {
 
   useEffect(() => {
     addToHistory('Partners')
-  }, [])
+  }, [addToHistory])
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Sponsor } from '../types'
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
+import { ErrorText, SmallText } from '../../../components/typography'
 import { sponsorService } from '../services/sponsorService'
+import type { Sponsor } from '../types'
+import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { SponsorForm } from './SponsorForm'
+
+type SortField = 'name' | 'order'
+type SortOrder = 'asc' | 'desc'
 
 export function SponsorGrid() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
@@ -10,6 +15,9 @@ export function SponsorGrid() {
   const [error, setError] = useState<string | null>(null)
   const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<SortField>('order')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [filter, setFilter] = useState('')
 
   useEffect(() => {
     loadSponsors()
@@ -48,18 +56,105 @@ export function SponsorGrid() {
     await loadSponsors() // Herlaad de lijst na update
   }
 
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const filteredSponsors = sponsors.filter(sponsor => {
+    if (!filter) return true
+    const searchTerm = filter.toLowerCase()
+    return (
+      sponsor.name.toLowerCase().includes(searchTerm) ||
+      sponsor.description?.toLowerCase().includes(searchTerm)
+    )
+  })
+
+  const sortedAndFilteredSponsors = filteredSponsors.sort((a, b) => {
+    if (sortField === 'name') {
+      return sortOrder === 'asc' 
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    }
+    return sortOrder === 'asc'
+      ? a.order - b.order
+      : b.order - a.order
+  })
+
   if (loading) {
-    return <div className="p-4">Laden...</div>
+    return (
+      <div className="p-4 space-y-4">
+        <LoadingSkeleton />
+        <LoadingSkeleton />
+        <LoadingSkeleton />
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">{error}</div>
+    return (
+      <div className="p-4">
+        <ErrorText>{error}</ErrorText>
+      </div>
+    )
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-        {sponsors.map((sponsor) => (
+    <div className="space-y-4">
+      {/* Filters en sortering */}
+      <div className="p-4 border-b border-gray-200 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative flex-1">
+            <input
+              type="search"
+              placeholder="Zoeken..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full pl-10 input-primary"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={sortField}
+              onChange={(e) => handleSort(e.target.value as SortField)}
+              className="input-primary"
+            >
+              <option value="order">Volgorde</option>
+              <option value="name">Naam</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="p-2 rounded-md border border-gray-300 hover:bg-gray-50"
+            >
+              {sortOrder === 'asc' ? (
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9M3 12h5m0 0v8m0-8h14" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+        <SmallText>
+          {filteredSponsors.length} sponsor{filteredSponsors.length !== 1 ? 's' : ''} gevonden
+        </SmallText>
+      </div>
+
+      {/* Sponsors grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {sortedAndFilteredSponsors.map((sponsor) => (
           <div key={sponsor.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
             <div className="aspect-[3/2] p-4 bg-gray-50 rounded-t-lg flex items-center justify-center">
               <img
@@ -92,12 +187,44 @@ export function SponsorGrid() {
               
               <div className="text-sm text-gray-500">
                 <p>Volgorde: {sponsor.order}</p>
-                <p>Status: {sponsor.isActive ? 'Actief' : 'Inactief'}</p>
+                <p>
+                  Status:{' '}
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      sponsor.visible
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {sponsor.visible ? 'Zichtbaar' : 'Verborgen'}
+                  </span>
+                </p>
+                {sponsor.websiteUrl && (
+                  <a
+                    href={sponsor.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:text-indigo-500 flex items-center gap-1 mt-2"
+                  >
+                    Bezoek website
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {filteredSponsors.length === 0 && (
+        <div className="text-center py-12">
+          <SmallText>
+            Geen sponsors gevonden{filter ? ' voor deze zoekopdracht' : ''}
+          </SmallText>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingSponsor && (
@@ -144,6 +271,6 @@ export function SponsorGrid() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 } 

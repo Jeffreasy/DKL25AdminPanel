@@ -13,10 +13,17 @@ export const sponsorService = {
       throw error
     }
 
-    // Map de database kolommen naar onze frontend types
     return data.map(sponsor => ({
-      ...sponsor,
-      visible: sponsor.visible ?? true
+      id: sponsor.id,
+      name: sponsor.name,
+      description: sponsor.description,
+      logoUrl: sponsor.logo_url,
+      websiteUrl: sponsor.website_url,
+      order: sponsor.order_number,
+      isActive: sponsor.is_active,
+      visible: sponsor.visible ?? true,
+      createdAt: sponsor.created_at,
+      updatedAt: sponsor.updated_at
     }))
   },
 
