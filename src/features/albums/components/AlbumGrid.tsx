@@ -39,26 +39,17 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
       const { data, error } = await supabase
         .from('albums')
         .select(`
-          id,
-          title,
-          description,
-          cover_photo_id,
-          visible,
-          order_number,
-          created_at,
-          updated_at,
-          cover_photo:photos!cover_photo_id (
-            id,
-            url,
-            thumbnail_url,
-            alt,
-            title,
-            description,
-            visible,
-            order_number,
-            created_at,
-            updated_at,
-            year
+          *,
+          cover_photo:photos!albums_cover_photo_id_fkey(*),
+          photos:album_photos(
+            photo:photos(
+              id,
+              url,
+              thumbnail_url,
+              title,
+              alt,
+              visible
+            )
           ),
           photos_count:album_photos(count)
         `)

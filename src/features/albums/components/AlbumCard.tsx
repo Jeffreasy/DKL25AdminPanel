@@ -22,6 +22,8 @@ interface AlbumCardProps {
   onSelect?: () => void
 }
 
+const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E`
+
 export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardProps) {
   const [showEdit, setShowEdit] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
@@ -96,6 +98,53 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     }
   }
 
+  const getCoverPhotoUrl = () => {
+    if (album.cover_photo) {
+      return album.cover_photo.thumbnail_url || album.cover_photo.url
+    }
+    
+    if (album.photos?.[0]?.photo) {
+      const firstPhoto = album.photos[0].photo
+      return firstPhoto.thumbnail_url || firstPhoto.url
+    }
+    
+    return PLACEHOLDER_SVG
+  }
+
+  const handleAddPhotos = async (selectedPhotoIds: string[]) => {
+    try {
+      // Haal huidige order numbers op
+      const { data: currentPhotos, error: orderError } = await supabase
+        .from('album_photos')
+        .select('order_number')
+        .eq('album_id', album.id)
+        .order('order_number', { ascending: false })
+        .limit(1)
+
+      if (orderError) throw orderError
+
+      let nextOrderNumber = (currentPhotos?.[0]?.order_number || 0) + 1
+
+      // Voeg nieuwe foto's toe
+      const { error: insertError } = await supabase
+        .from('album_photos')
+        .insert(
+          selectedPhotoIds.map(photoId => ({
+            album_id: album.id,
+            photo_id: photoId,
+            order_number: nextOrderNumber++
+          }))
+        )
+
+      if (insertError) throw insertError
+
+      setShowPhotos(false)
+      onUpdate()
+    } catch (err) {
+      console.error('Error adding photos:', err)
+    }
+  }
+
   return (
     <>
       <div
@@ -111,21 +160,23 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
           className="aspect-[4/3] bg-gray-100 relative group cursor-pointer"
           onClick={() => onSelect?.()}
         >
-          {album.cover_photo ? (
+          {getCoverPhotoUrl() !== PLACEHOLDER_SVG ? (
             <img
-              src={album.cover_photo.thumbnail_url || album.cover_photo.url}
+              src={getCoverPhotoUrl()}
               alt={album.title}
               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => {
-                // Fallback naar placeholder als de afbeelding niet kan worden geladen
                 e.currentTarget.onerror = null
-                e.currentTarget.src = 'data:image/svg+xml,...' // Placeholder SVG
+                e.currentTarget.src = PLACEHOLDER_SVG
               }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
-              <PhotoIcon className="w-12 h-12" />
+            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+              <div className="flex flex-col items-center gap-2">
+                <PhotoIcon className="w-12 h-12 text-gray-300" />
+                <span className="text-sm text-gray-400">Geen foto's</span>
+              </div>
             </div>
           )}
 
@@ -140,7 +191,7 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
           </div>
 
           <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 rounded-full text-white text-xs font-medium">
-            {album.photos_count[0]?.count || 0} foto's
+            {(album.photos_count?.[0]?.count ?? 0)} foto's
           </div>
 
           {!album.visible && (
@@ -224,10 +275,8 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
       {showPhotos && (
         <PhotoSelector
           albumId={album.id}
-          onComplete={() => {
-            setShowPhotos(false)
-            onUpdate()
-          }}
+          existingPhotoIds={album.photos?.map(p => p.photo.id) || []}
+          onComplete={handleAddPhotos}
           onCancel={() => setShowPhotos(false)}
         />
       )}

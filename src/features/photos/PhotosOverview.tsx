@@ -4,7 +4,7 @@ import { PhotoGrid } from './components/PhotoGrid'
 import { PhotoUploadModal } from './components/PhotoUploadModal'
 import { BulkUploadButton } from './components/BulkUploadButton'
 import { fetchPhotos, fetchAllAlbums } from '../../features/services/photoService'
-import type { Photo } from './types'
+import type { Photo, PhotoCount } from './types'
 import type { AlbumWithDetails } from '../albums/types'
 import { Link } from 'react-router-dom'
 import { 
@@ -94,9 +94,9 @@ export function PhotosOverview() {
 
   // Filter photos that are not in any album
   const unorganizedPhotos = photos.filter(photo => {
-    // Haal eerst alle foto IDs op uit de album_photos relaties
+    // Haal eerst alle foto IDs uit de album_photos relaties
     const albumPhotoIds = albums.flatMap(album => 
-      album.photos_count.map(pc => pc.photo_id)
+      (album.photos_count as PhotoCount[]).map(pc => pc.photo_id)
     )
     // Check of deze foto in een album zit
     return !albumPhotoIds.includes(photo.id)

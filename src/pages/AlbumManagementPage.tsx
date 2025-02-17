@@ -1,17 +1,40 @@
 import { useState } from 'react'
 import { AlbumGrid } from '../features/albums/components/AlbumGrid'
 import { AlbumForm } from '../features/albums/components/AlbumForm'
-import { PhotoSelector } from '../features/albums/components/PhotoSelector'
+import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal'
 import { usePageTitle } from '../hooks/usePageTitle'
+import type { AlbumWithDetails } from '../features/albums/types'
+import { supabase } from '../lib/supabase'
 
 export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
   const [isCreating, setIsCreating] = useState(false)
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null)
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithDetails | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
+  }
+
+  const handleAlbumSelect = async (albumId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('albums')
+        .select(`
+          *,
+          cover_photo:photos!albums_cover_photo_id_fkey(*),
+          photos:album_photos(
+            photo:photos(*)
+          )
+        `)
+        .eq('id', albumId)
+        .single()
+
+      if (error) throw error
+      setSelectedAlbum(data)
+    } catch (err) {
+      console.error('Error loading album:', err)
+    }
   }
 
   return (
@@ -35,8 +58,8 @@ export function AlbumManagementPage() {
 
       <AlbumGrid 
         key={refreshKey}
-        onAlbumSelect={setSelectedAlbum}
-        selectedAlbumId={selectedAlbum}
+        onAlbumSelect={handleAlbumSelect}
+        selectedAlbumId={selectedAlbum?.id}
       />
 
       {isCreating && (
@@ -50,13 +73,13 @@ export function AlbumManagementPage() {
       )}
 
       {selectedAlbum && (
-        <PhotoSelector
-          albumId={selectedAlbum}
-          onComplete={() => {
-            setSelectedAlbum(null)
+        <AlbumDetailModal
+          album={selectedAlbum}
+          onClose={() => setSelectedAlbum(null)}
+          onUpdate={() => {
             handleRefresh()
+            handleAlbumSelect(selectedAlbum.id)
           }}
-          onCancel={() => setSelectedAlbum(null)}
         />
       )}
     </div>

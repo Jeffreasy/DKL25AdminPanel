@@ -1,8 +1,9 @@
 import { supabase } from '../../lib/supabase'
-import { MAILGUN_API_KEY, MAILGUN_DOMAIN } from '../../config'
-import type { AutoResponse } from './types'
+import { MAILGUN_API_KEY, MAILGUN_DOMAIN, IMAP_CONFIG } from '../../config'
+import type { AutoResponse, EmailEvent } from './types'
 import { sendEmail } from './api'
 import { verifyEmailAddress } from '../../api/email'
+import { emailService, type Email } from '../../api/email'
 
 const MAILGUN_BASE_URL = `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}`
 
@@ -12,16 +13,6 @@ console.log('Mailgun config:', {
   domain: MAILGUN_DOMAIN,
   baseUrl: MAILGUN_BASE_URL,
 })
-
-interface EmailEvent {
-  id: number
-  event_type: string
-  timestamp: string
-  email_id: string
-  from_email: string
-  to_email: string
-  subject: string
-}
 
 interface EmailStats {
   id: number
@@ -46,6 +37,11 @@ interface SendEmailParams {
   template?: string
   template_variables?: Record<string, any>
   attachments?: File[]
+}
+
+interface EmailEventResponse {
+  items: EmailEvent[]
+  total: number
 }
 
 export const adminEmailService = {
@@ -92,39 +88,22 @@ export const adminEmailService = {
   },
 
   // Email events ophalen via Mailgun
-  async getEmailEvents() {
+  async getEmailEvents(params: {
+    limit?: number
+    page?: number
+    account?: 'info' | 'inschrijving'
+  } = {}) {
     try {
-      const response = await fetch(`${MAILGUN_BASE_URL}/events`, {
-        headers: {
-          'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
-        }
+      const { items, total } = await emailService.getEmails({
+        limit: params.limit,
+        offset: params.page ? (params.page - 1) * (params.limit || 50) : 0,
+        account: params.account
       })
 
-      if (!response.ok) {
-        console.error('Mailgun API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url
-        })
-        throw new Error('Failed to fetch email events')
-      }
-
-      const events = await response.json()
-      
-      await Promise.all(events.items.map((event: any) => this.logEmailEvent({
-        event_type: event.event,
-        email_id: event.message?.headers['message-id'],
-        from_email: event.message?.headers?.from,
-        to_email: event.message?.headers?.to,
-        subject: event.message?.headers?.subject,
-        timestamp: event.timestamp,
-        raw_event: event
-      })))
-
-      return events.items
+      return { items, total }
     } catch (error) {
-      console.error('Failed to fetch email events:', error)
-      throw error
+      console.error('Failed to fetch emails:', error)
+      throw new Error('Failed to fetch emails')
     }
   },
 
@@ -316,23 +295,7 @@ export const adminEmailService = {
     }
   },
 
-  async checkEmailVerification(email: string) {
-    try {
-      const response = await fetch(`https://api.eu.mailgun.net/v3/domains/${MAILGUN_DOMAIN}/credentials`, {
-        headers: {
-          'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
-        }
-      })
-      
-      if (!response.ok) throw new Error('Failed to check verification status')
-      
-      const data = await response.json()
-      return data.items.some((item: any) => 
-        item.login === email && item.status === 'active'
-      )
-    } catch (error) {
-      console.error('Failed to check email verification:', error)
-      throw error
-    }
+  async checkEmailVerification(email: string): Promise<boolean> {
+    return emailService.verifyEmailAddress(email)
   }
 } 

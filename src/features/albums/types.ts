@@ -1,4 +1,4 @@
-import type { Photo } from '../photos/types'
+import type { PhotoCount } from '../photos/types'
 
 export interface Album {
   id: string;
@@ -9,18 +9,19 @@ export interface Album {
   order_number: number;
   created_at: string;
   updated_at: string;
-}
-
-export interface AlbumWithDetails extends Album {
-  cover_photo?: Photo | null;
-  photos_count: {
-    count: number;
-    photo_id: string;
-  }[];
+  cover_photo?: import('../photos/types').Photo;
+  photos?: AlbumPhoto[];
+  photos_count: PhotoCount[];
 }
 
 export interface AlbumPhoto {
   album_id: string;
   photo_id: string;
   order_number: number;
-} 
+  photo: import('../photos/types').Photo;
+}
+
+export type AlbumWithDetails = Album & {
+  photos?: AlbumPhoto[];
+  cover_photo?: import('../photos/types').Photo;
+}; 

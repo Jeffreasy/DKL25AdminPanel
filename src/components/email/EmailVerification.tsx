@@ -17,6 +17,7 @@ export function EmailVerification({ email, onVerified }: EmailVerificationProps)
       await verifyEmailAddress(email)
       onVerified()
     } catch (err) {
+      console.error('Email verification failed:', err)
       setError('Kon verificatie email niet versturen. Probeer het later opnieuw.')
     } finally {
       setVerifying(false)

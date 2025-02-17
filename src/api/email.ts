@@ -1,51 +1,97 @@
-import { MAILGUN_API_KEY, MAILGUN_DOMAIN } from '../config'
+import { supabase } from '../lib/supabase'
 
-export async function sendEmail(params: {
-  to: string
-  from: string
+// Types voor emails in Supabase
+export interface Email {
+  id: number
+  sender: string
   subject: string
-  html: string
-  'h:Reply-To'?: string
-}) {
-  const response = await fetch(`https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams(params)
-  })
-
-  if (!response.ok) {
-    const text = await response.text()
-    let error
-    try {
-      error = JSON.parse(text)
-    } catch {
-      error = { message: text }
-    }
-    throw new Error(error.message || `Failed to send email: ${response.status}`)
-  }
-
-  return response.json()
+  body: string
+  html?: string
+  account: 'info' | 'inschrijving'
+  created_at: string
+  read: boolean
+  message_id?: string
+  attachments?: {
+    filename: string
+    content_type: string
+    size: number
+    url?: string
+  }[]
 }
 
-export async function verifyEmailAddress(email: string) {
-  const response = await fetch(`https://api.eu.mailgun.net/v3/domains/${MAILGUN_DOMAIN}/credentials/verify`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      login: email
-    })
-  })
+// Interface voor email queries
+export interface EmailQueryParams {
+  limit?: number
+  offset?: number
+  account?: 'info' | 'inschrijving'
+  search?: string
+  unread_only?: boolean
+}
 
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(error)
+// Email service functies
+export const emailService = {
+  // Ophalen van emails uit Supabase
+  async getEmails(params: {
+    limit?: number
+    offset?: number
+    account?: 'info' | 'inschrijving'
+    search?: string
+    unread_only?: boolean
+  } = {}) {
+    let query = supabase
+      .from('emails')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    if (params.account) {
+      query = query.eq('account', params.account)
+    }
+
+    if (params.unread_only) {
+      query = query.eq('read', false)
+    }
+
+    if (params.search) {
+      query = query.or(`subject.ilike.%${params.search}%,body.ilike.%${params.search}%,sender.ilike.%${params.search}%`)
+    }
+
+    if (params.limit) {
+      query = query.limit(params.limit)
+    }
+
+    if (params.offset) {
+      query = query.range(params.offset, params.offset + (params.limit || 10) - 1)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    return {
+      items: data as Email[],
+      total: count || 0
+    }
+  },
+
+  // Email als gelezen markeren
+  async markAsRead(id: number) {
+    const { error } = await supabase
+      .from('emails')
+      .update({ read: true })
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  // Basis email verificatie
+  verifyEmailAddress(email: string): boolean {
+    const authorizedEmails = [
+      'info@dekoninklijkeloop.nl',
+      'inschrijving@dekoninklijkeloop.nl'
+    ]
+    return authorizedEmails.includes(email)
   }
+}
 
-  return response.json()
-} 
+// Export de verifyEmailAddress functie voor backward compatibility
+export const verifyEmailAddress = emailService.verifyEmailAddress 
