@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './contexts/auth/AuthProvider'
-import { NavigationHistoryProvider } from './contexts/NavigationHistoryContext'
+import { NavigationHistoryContext } from './contexts/navigation/NavigationHistoryContext'
 import { FavoritesContext } from './contexts/favorites/FavoritesContext'
 import { SidebarContext } from './contexts/sidebar/SidebarContext'
 import { App } from './App'
@@ -27,17 +27,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const toggle = useCallback(() => setIsOpen(prev => !prev), [])
   const close = useCallback(() => setIsOpen(false), [])
 
+  // Navigation History State
+  const [history, setHistory] = useState<string[]>([])
+  const addToHistory = useCallback((path: string) => {
+    setHistory(prev => [...prev, path])
+  }, [])
+  const clearHistory = useCallback(() => {
+    setHistory([])
+  }, [])
+
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <NavigationHistoryProvider>
+          <NavigationHistoryContext.Provider value={{ history, addToHistory, clearHistory }}>
             <FavoritesContext.Provider value={{ favorites, addFavorite, removeFavorite }}>
               <SidebarContext.Provider value={{ isOpen, toggle, close }}>
                 {children}
               </SidebarContext.Provider>
             </FavoritesContext.Provider>
-          </NavigationHistoryProvider>
+          </NavigationHistoryContext.Provider>
         </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
