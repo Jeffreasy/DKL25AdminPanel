@@ -132,38 +132,44 @@ interface Email {
 
 export const emailService = {
   async getEmails(filters: EmailFilters = {}) {
-    let query = supabase
-      .from('emails')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      let query = supabase
+        .from('emails')
+        .select('*', { count: 'exact' })
 
-    if (filters.account) {
-      query = query.eq('account', filters.account)
-    }
+      if (filters.account) {
+        query = query.eq('account', filters.account)
+      }
 
-    if (filters.read !== undefined) {
-      query = query.eq('read', filters.read)
-    }
+      if (filters.read !== undefined) {
+        query = query.eq('read', filters.read)
+      }
 
-    if (filters.search) {
-      query = query.or(`subject.ilike.%${filters.search}%,body.ilike.%${filters.search}%`)
-    }
+      if (filters.search) {
+        query = query.or(`subject.ilike.%${filters.search}%,body.ilike.%${filters.search}%`)
+      }
 
-    if (filters.limit) {
-      query = query.limit(filters.limit)
-    }
+      query = query.order('created_at', { ascending: false })
 
-    if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
-    }
+      if (filters.limit) {
+        query = query.limit(filters.limit)
+      }
 
-    const { data, error, count } = await query.select('*', { count: 'exact' })
-    
-    if (error) throw error
-    
-    return {
-      items: data as Email[],
-      total: count || 0
+      if (filters.offset) {
+        query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+      
+      return {
+        items: data as Email[],
+        total: count || 0
+      }
+    } catch (error) {
+      console.error('Error fetching emails:', error)
+      throw error
     }
   },
 
