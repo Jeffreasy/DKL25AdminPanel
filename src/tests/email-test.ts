@@ -1,43 +1,28 @@
-import { emailService } from '../api/email'
+import { adminEmailService } from '../features/email/adminEmailService'
 
 const testEmail = async () => {
   try {
-    // Test API endpoint
-    console.log('Testing API endpoint...')
-    const response = await fetch('http://localhost:3000/api/emails/save-email-info', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: 'test@example.com',
-        subject: 'Test Email',
-        body: 'Dit is een test email',
-        html: '<p>Dit is een test email</p>',
-        account: 'info',
-        message_id: 'test-123',
-        attachments: []
-      })
+    // Test N8N email sending
+    console.log('Testing N8N email sending...')
+    const sendResult = await adminEmailService.sendAdminEmail({
+      to: 'test@example.com',
+      from: 'no-reply@dekoninklijkeloop.nl',
+      subject: 'Test Email',
+      body: '<p>Dit is een test email via N8N</p>'
     })
-
-    const data = await response.json()
-    console.log('API Response:', data)
-
-    // Test email service
-    console.log('\nTesting email service...')
-    const emails = await emailService.getEmails({ limit: 1 })
-    console.log('Latest email:', emails.items[0])
+    console.log('Send result:', sendResult)
 
     // Test email verification
     console.log('\nTesting email verification...')
-    const validEmail = emailService.verifyEmailAddress('info@dekoninklijkeloop.nl')
-    const invalidEmail = emailService.verifyEmailAddress('test@example.com')
-    console.log('Valid email check:', validEmail)
-    console.log('Invalid email check:', invalidEmail)
+    const verifyResult = await adminEmailService.verifyEmailAddress('test@example.com')
+    console.log('Verification result:', verifyResult)
 
   } catch (error) {
     console.error('Error:', error)
   }
 }
 
-testEmail() 
+// Alleen uitvoeren als expliciet aangeroepen
+if (process.env.NODE_ENV === 'development' && process.env.RUN_EMAIL_TEST) {
+  testEmail()
+} 
