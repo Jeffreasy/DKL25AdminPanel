@@ -109,9 +109,16 @@ export const adminEmailService = {
         })
       
       if (error) {
+        // Log de error maar laat de applicatie doordraaien
         console.error('Failed to log email event:', error)
+        
+        // Als de tabel niet bestaat, probeer deze aan te maken
+        if (error.code === '42P01') {
+          console.log('Email events table does not exist, application will continue')
+        }
       }
     } catch (error) {
+      // Vang alle errors op maar laat de applicatie doordraaien
       console.error('Error in logEmailEvent:', error)
     }
   },
