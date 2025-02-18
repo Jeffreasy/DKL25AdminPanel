@@ -7,12 +7,12 @@ interface UseInfiniteListProps {
   queryKey: string
   table: string
   pageSize?: number
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
   sortBy?: { column: string; ascending: boolean }
   searchQuery?: string
 }
 
-export function useInfiniteList({
+export function useInfiniteList<T extends Record<string, unknown>>({
   queryKey,
   table,
   pageSize = 20,
@@ -91,7 +91,7 @@ export function useInfiniteList({
   return {
     parentRef,
     virtualizer,
-    items: allItems,
+    items: allItems as T[],
     isLoading: isFetching,
     isRefetching,
     refetch,

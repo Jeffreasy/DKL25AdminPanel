@@ -1,19 +1,9 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
-import { adminEmailService } from '../../email/adminEmailService'
 import { supabase } from '../../../lib/supabase'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
-
-interface EmailEvent {
-  id: string
-  type: 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed'
-  from_email: string
-  to_email: string
-  subject: string
-  timestamp: string
-}
 
 interface EmailMessage {
   id: string
@@ -22,6 +12,16 @@ interface EmailMessage {
   subject: string
   timestamp: string
   status: 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed'
+}
+
+interface RawEmailEvent {
+  id: string
+  type: string
+  timestamp: string
+  from_email: string
+  to_email: string
+  subject: string
+  [key: string]: unknown
 }
 
 interface SupabaseEmailEvent {
@@ -35,13 +35,13 @@ interface SupabaseEmailEvent {
   created_at: string
   message_id: string
   metadata: {
-    raw_event: any
+    raw_event: RawEmailEvent
   }
 }
 
 interface EmailDetails extends EmailMessage {
   metadata?: {
-    raw_event: any
+    raw_event: RawEmailEvent
     headers?: Record<string, string>
     body?: string
   }
@@ -68,35 +68,17 @@ export function InboxTab() {
 
       if (supabaseError) throw supabaseError
 
-      const mailgunEvents = await adminEmailService.getEmailEvents()
+      const allEmails = (supabaseEmails || []).map((email: SupabaseEmailEvent) => ({
+        id: email.id,
+        from: email.from_email,
+        to: email.to_email,
+        subject: email.subject,
+        timestamp: new Date(email.created_at).toISOString(),
+        status: email.status as EmailMessage['status'],
+        metadata: email.metadata
+      }))
 
-      const allEmails = [
-        ...(supabaseEmails || []).map((email: SupabaseEmailEvent) => ({
-          id: email.id,
-          from: email.from_email,
-          to: email.to_email,
-          subject: email.subject,
-          timestamp: new Date(email.created_at).toISOString(),
-          status: email.status,
-          metadata: email.metadata
-        })),
-        ...mailgunEvents.map((event: EmailEvent) => ({
-          id: event.id,
-          from: event.from_email,
-          to: event.to_email,
-          subject: event.subject,
-          timestamp: new Date(Number(event.timestamp) * 1000).toISOString(),
-          status: event.type,
-          metadata: { raw_event: event }
-        }))
-      ]
-
-      const uniqueEmails = allEmails.reduce((acc, email) => {
-        acc[email.id] = email
-        return acc
-      }, {} as Record<string, EmailMessage>)
-
-      setEmails(Object.values(uniqueEmails))
+      setEmails(allEmails)
     } catch (err) {
       console.error('Failed to load emails:', err)
       setError('Kon emails niet laden')
@@ -165,7 +147,7 @@ export function InboxTab() {
         <div className="flex-1 min-h-0 bg-white shadow rounded-lg overflow-hidden">
           <div className="overflow-y-auto h-full">
             <ul className="divide-y divide-gray-200">
-              {emails.map(email => (
+              {emails.map((email: EmailMessage) => (
                 <li 
                   key={email.id} 
                   className="hover:bg-gray-50 cursor-pointer"

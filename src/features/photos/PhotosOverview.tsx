@@ -18,7 +18,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 interface PhotosByYear {
-  [year: number]: Photo[]
+  [key: string]: Photo[]
 }
 
 interface CollapsibleSectionProps {
@@ -64,7 +64,7 @@ export function PhotosOverview() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [activeTab, setActiveTab] = useState<'all' | 'unorganized'>('all')
@@ -86,7 +86,7 @@ export function PhotosOverview() {
       setAlbums(albumsData)
     } catch (err) {
       console.error('Error loading data:', err)
-      setError('Er ging iets mis bij het ophalen van de gegevens')
+      setError(new Error('Er ging iets mis bij het ophalen van de gegevens'))
     } finally {
       setLoading(false)
     }
@@ -104,14 +104,14 @@ export function PhotosOverview() {
 
   // Groepeer foto's per jaar
   const groupPhotosByYear = (photoList: Photo[]): PhotosByYear => {
-    return photoList.reduce((acc, photo) => {
-      const year = photo.year || new Date(photo.created_at).getFullYear()
+    return photoList.reduce((acc: PhotosByYear, photo) => {
+      const year = String(photo.year || new Date(photo.created_at).getFullYear())
       if (!acc[year]) {
         acc[year] = []
       }
       acc[year].push(photo)
       return acc
-    }, {} as PhotosByYear)
+    }, {})
   }
 
   const toggleSection = (sectionId: string) => {
@@ -150,7 +150,7 @@ export function PhotosOverview() {
     }
 
     if (error) {
-      return <div className="text-red-600 text-center py-8">{error}</div>
+      return <div className="text-red-600 text-center py-8">{error.message}</div>
     }
 
     const photosByYear = groupPhotosByYear(
@@ -216,16 +216,17 @@ export function PhotosOverview() {
           <CollapsibleSection
             key={year}
             title={`Foto's ${year}`}
-            count={photosByYear[Number(year)].length}
+            count={photosByYear[year].length}
             defaultOpen={expandedSections.has(`year-${year}`)}
             onToggle={() => toggleSection(`year-${year}`)}
           >
             <PhotoGrid
-              photos={photosByYear[Number(year)]}
+              photos={photosByYear[year]}
               loading={false}
               error={null}
+              setError={setError}
               onUpdate={loadData}
-              view={view}
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
             />
           </CollapsibleSection>
         ))}

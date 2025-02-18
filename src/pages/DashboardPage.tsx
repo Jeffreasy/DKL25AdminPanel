@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { H1, SmallText, ErrorText } from '../components/typography'
 import { OverviewTab } from '../features/dashboard/tabs/OverviewTab'
 import { AanmeldingenTab } from '../features/dashboard/tabs/AanmeldingenTab'
@@ -17,16 +17,13 @@ export function DashboardPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [contactStats, setContactStats] = useState<ContactStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
-  // Data loading
-  useEffect(() => {
-    loadData()
-  }, [activeTab])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
+      
       if (activeTab === 'contact') {
         const [messagesResult, statsResult] = await Promise.all([
           fetchMessages(),
@@ -34,6 +31,7 @@ export function DashboardPage() {
         ])
         if (messagesResult.error) throw messagesResult.error
         if (statsResult.error) throw statsResult.error
+        
         setMessages(messagesResult.data)
         setContactStats(statsResult.data)
       } else {
@@ -42,14 +40,16 @@ export function DashboardPage() {
         setAanmeldingen(data)
       }
     } catch (err) {
-      console.error('Error loading data:', err)
-      setError('Er ging iets mis bij het ophalen van de gegevens')
+      setError(err instanceof Error ? err : new Error('Er ging iets mis bij het ophalen van de gegevens'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeTab])
 
-  // Stats berekening
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
   const calculateStats = () => ({
     totaal: aanmeldingen.length,
     rollen: {
@@ -70,7 +70,6 @@ export function DashboardPage() {
     }
   })
 
-  // Tabs rendering
   const renderTabs = () => (
     <nav className="border-b border-gray-200 bg-white">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -100,7 +99,6 @@ export function DashboardPage() {
     </nav>
   )
 
-  // Content rendering per tab
   const renderContent = () => {
     if (loading) {
       return (
@@ -113,7 +111,7 @@ export function DashboardPage() {
     if (error) {
       return (
         <div className="rounded-md bg-red-50 p-3">
-          <ErrorText>{error}</ErrorText>
+          <ErrorText>{error.message}</ErrorText>
         </div>
       )
     }
@@ -134,18 +132,20 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <H1 className="text-lg font-medium text-gray-900">Dashboard</H1>
-          <SmallText>Overzicht van alle gegevens</SmallText>
+      <div className="py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+          <H1>Dashboard</H1>
+          <SmallText>Beheer hier alle aspecten van DKL25</SmallText>
         </div>
-      </header>
-
-      {renderTabs()}
-
-      <main className="px-4 sm:px-6 lg:px-8 py-4">
-        {renderContent()}
-      </main>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+          <div className="py-4">
+            {renderTabs()}
+            <div className="mt-4">
+              {renderContent()}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 } 

@@ -76,8 +76,8 @@ export function AlbumManagementPage() {
         <AlbumDetailModal
           album={selectedAlbum}
           onClose={() => setSelectedAlbum(null)}
-          onUpdate={() => {
-            handleRefresh()
+          onSave={async () => {
+            await handleRefresh()
             handleAlbumSelect(selectedAlbum.id)
           }}
         />

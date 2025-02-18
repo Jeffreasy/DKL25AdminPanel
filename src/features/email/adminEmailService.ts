@@ -1,9 +1,9 @@
 import { supabase } from '../../lib/supabase'
-import { MAILGUN_API_KEY, MAILGUN_DOMAIN, IMAP_CONFIG } from '../../config'
-import type { AutoResponse, EmailEvent } from './types'
+import { MAILGUN_API_KEY, MAILGUN_DOMAIN } from '../../config'
+import type { AutoResponse } from './types'
 import { sendEmail } from './api'
 import { verifyEmailAddress } from '../../api/email'
-import { emailService, type Email } from '../../api/email'
+import { emailService } from '../../api/email'
 
 const MAILGUN_BASE_URL = `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}`
 
@@ -28,6 +28,10 @@ interface EmailStats {
   confirmation_sent: number
 }
 
+interface TemplateVariables {
+  [key: string]: string | number | boolean
+}
+
 interface SendEmailParams {
   to: string | string[]
   subject: string
@@ -35,13 +39,34 @@ interface SendEmailParams {
   from: string
   replyTo?: string
   template?: string
-  template_variables?: Record<string, any>
+  template_variables?: TemplateVariables
   attachments?: File[]
 }
 
-interface EmailEventResponse {
-  items: EmailEvent[]
-  total: number
+interface RawEmailEvent {
+  type: string
+  timestamp: string
+  delivery_status?: {
+    [key: string]: unknown
+  }
+  message?: {
+    size?: number
+    attachments?: unknown[]
+    headers?: Record<string, string>
+  }
+  severity?: string
+  flags?: string[]
+  [key: string]: unknown
+}
+
+export interface EmailEvent {
+  id: string
+  event_type: string
+  email_id: string
+  from_email: string
+  to_email: string
+  subject: string
+  raw_event?: RawEmailEvent
 }
 
 export const adminEmailService = {
@@ -150,41 +175,32 @@ export const adminEmailService = {
   },
 
   // Database helper functions blijven hetzelfde
-  async logEmailEvent(event: Partial<EmailEvent> & { raw_event?: any }) {
+  async logEmailEvent(event: Partial<RawEmailEvent>) {
     try {
       const timestamp = event.timestamp 
         ? new Date(Number(event.timestamp) * 1000).toISOString()
         : new Date().toISOString()
 
-      const { error } = await supabase
-        .from('email_events')
-        .insert({
-          event_type: event.event_type,
-          email_id: event.email_id,
-          from_email: event.from_email,
-          to_email: event.to_email,
-          subject: event.subject,
-          status: event.event_type,
-          created_at: timestamp,
-          message_id: event.email_id,
-          metadata: {
-            raw_event: event.raw_event,
-            delivery_status: event.raw_event?.delivery_status,
-            message_details: {
-              size: event.raw_event?.message?.size,
-              attachments: event.raw_event?.message?.attachments,
-              headers: event.raw_event?.message?.headers
-            },
-            severity: event.raw_event?.severity,
-            flags: event.raw_event?.flags
-          }
-        })
+      const { error } = await supabase.from('email_events').insert({
+        ...event,
+        timestamp,
+        metadata: {
+          raw_event: event,
+          delivery_status: event.delivery_status,
+          message_details: {
+            size: event.message?.size,
+            attachments: event.message?.attachments,
+            headers: event.message?.headers
+          },
+          severity: event.severity,
+          flags: event.flags
+        }
+      })
 
-      if (error) {
-        console.error('Failed to log email event:', error)
-      }
+      if (error) throw error
     } catch (err) {
       console.error('Error logging email event:', err)
+      throw err
     }
   },
 

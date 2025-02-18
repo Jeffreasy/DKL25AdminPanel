@@ -3,16 +3,18 @@ import { createPortal } from 'react-dom'
 import { Menu } from '@headlessui/react'
 import { usePopper } from 'react-popper'
 
-export interface ContextMenuItem {
-  label?: string
-  icon?: React.ComponentType<any>
-  onClick?: () => void
+interface MenuItem {
+  label: string
+  onClick: () => void
+  icon?: React.ComponentType<{ className?: string }>
+  disabled?: boolean
   danger?: boolean
   divider?: boolean
 }
 
 interface ContextMenuProps {
-  items: ContextMenuItem[]
+  items: MenuItem[]
+  onClose?: () => void
   children: React.ReactNode
 }
 
@@ -41,9 +43,10 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
   })
 
   useEffect(() => {
+    const currentTimeout = timeoutRef.current
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+      if (currentTimeout) {
+        clearTimeout(currentTimeout)
       }
     }
   }, [])

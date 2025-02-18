@@ -115,7 +115,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
         thumbnail_url,
         visible: formData.visible,
         order_number: orderNumber,
-        year: formData.year
+        year: Number(formData.year)
       })
 
       onComplete()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AlbumWithDetails } from '../types'
 import { supabase } from '../../../lib/supabase'
 import { isAdmin } from '../../../lib/supabase'
-import { useAuth } from '../../../contexts/AuthContext'
+import { useAuth } from '../../../contexts/hooks/useAuth'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
@@ -14,7 +14,7 @@ interface AlbumFormProps {
 }
 
 export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
-  const { isAuthenticated } = useAuth()
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: album?.title || '',
     description: album?.description || '',
@@ -23,6 +23,10 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  if (!user) {
+    return null
+  }
 
   const getLastOrderNumber = async (): Promise<number> => {
     try {
@@ -46,7 +50,7 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting || !isAuthenticated) return
+    if (isSubmitting || !user) return
 
     try {
       setIsSubmitting(true)

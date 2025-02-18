@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { PhotoGrid } from '../../photos/components/PhotoGrid'
 import { PhotoSelector } from './PhotoSelector'
 import { AlbumForm } from './AlbumForm'
-import type { Album, AlbumWithDetails } from '../types'
+import type { AlbumWithDetails } from '../types'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { Z_INDEX } from '../../../constants/zIndex'
@@ -10,15 +10,27 @@ import { Z_INDEX } from '../../../constants/zIndex'
 interface AlbumDetailModalProps {
   album: AlbumWithDetails
   onClose: () => void
-  onUpdate: () => void
+  onSave: () => Promise<void>
 }
 
-export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalProps) {
+export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isAddingPhotos, setIsAddingPhotos] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
   const [photos, setPhotos] = useState(album.photos?.map(ap => ap.photo) || [])
+
+  const handleError = useCallback((message: string) => {
+    setError(new Error(message))
+  }, [])
+
+  const handleUpdate = useCallback(async () => {
+    try {
+      await onSave()
+    } catch {
+      handleError('Kon gegevens niet bijwerken')
+    }
+  }, [onSave, handleError])
 
   const handleVisibilityToggle = async () => {
     try {
@@ -30,10 +42,10 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
         .eq('id', album.id)
 
       if (error) throw error
-      onUpdate()
+      handleUpdate()
     } catch (err) {
       console.error('Error toggling visibility:', err)
-      setError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
+      handleError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
     } finally {
       setLoading(false)
     }
@@ -56,10 +68,10 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
 
       // Update lokale state
       setPhotos(prev => prev.filter(p => p.id !== photoId))
-      onUpdate()
+      handleUpdate()
     } catch (err) {
       console.error('Error removing photo:', err)
-      setError('Er ging iets mis bij het verwijderen van de foto')
+      handleError('Er ging iets mis bij het verwijderen van de foto')
     } finally {
       setLoading(false)
     }
@@ -105,15 +117,15 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
 
       // Update lokale state
       setPhotos(prev => [...prev, ...(updatedPhotos || [])])
-      onUpdate()
+      handleUpdate()
     } catch (err) {
       console.error('Error adding photos:', err)
-      setError('Er ging iets mis bij het toevoegen van de foto\'s')
+      handleError('Er ging iets mis bij het toevoegen van de foto\'s')
     } finally {
       setLoading(false)
       setIsAddingPhotos(false)
     }
-  }, [album.id, onUpdate])
+  }, [album.id, handleError, handleUpdate])
 
   return (
     <div className={`fixed inset-0 bg-black/30 z-[${Z_INDEX.BASE_MODAL}]`}>
@@ -158,7 +170,7 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
           <div className="flex-1 overflow-y-auto p-6">
             {error && (
               <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md flex items-center justify-between">
-                <span>{error}</span>
+                <span>{error.message}</span>
                 <button 
                   onClick={() => setError(null)}
                   className="text-red-500 hover:text-red-700"
@@ -252,10 +264,10 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
                   photos={photos}
                   loading={loading}
                   error={error}
-                  onUpdate={onUpdate}
+                  onUpdate={handleUpdate}
                   setError={setError}
                   onPhotoRemove={handlePhotoRemove}
-                  view="grid"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
                 />
               )}
             </div>
@@ -268,7 +280,7 @@ export function AlbumDetailModal({ album, onClose, onUpdate }: AlbumDetailModalP
             album={album}
             onComplete={() => {
               setIsEditing(false)
-              onUpdate()
+              handleUpdate()
             }}
             onCancel={() => setIsEditing(false)}
           />

@@ -5,7 +5,9 @@ export function usePageTitle(title: string) {
   const { addToHistory } = useNavigationHistory()
   
   useEffect(() => {
-    addToHistory(title)
-    document.title = `DKL Admin - ${title}`
-  }, [title])
+    document.title = title
+    if (addToHistory) {
+      addToHistory(title)
+    }
+  }, [title, addToHistory])
 } 

@@ -1,24 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
-import { ErrorText } from '../../../components/typography'
-import { PhotoCard } from './PhotoCard'
-import { supabase } from '../../../lib/supabase'
-import type { Photo } from '../types'
-import type { Album } from '../../albums/types'
-import { deletePhoto } from '../../../features/services/photoService'
 import { Dialog } from '@headlessui/react'
 import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
+import type { Photo } from '../types'
 import clsx from 'clsx'
+import { supabase } from '../../../lib/supabase'
 
 interface PhotoGridProps {
   photos: Photo[]
   loading: boolean
-  error: string | null
-  onUpdate: () => void
-  setError: (error: string | null) => void
-  view?: 'grid' | 'list'
-  onPhotoRemove?: (photoId: string) => Promise<void>
+  error: Error | null
+  onUpdate: () => Promise<void>
+  setError: (error: Error | null) => void
+  onPhotoRemove?: (photoId: string) => void
   className?: string
 }
 
@@ -260,18 +255,21 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
   )
 }
 
-export function PhotoGrid({ 
-  photos, 
-  loading, 
-  error, 
+export function PhotoGrid({
+  photos,
+  loading,
+  error,
   onUpdate,
   setError,
-  view = 'grid',
   onPhotoRemove,
   className 
 }: PhotoGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+
+  const handleError = (message: string) => {
+    setError(new Error(message))
+  }
 
   const handleDelete = async (photo: Photo) => {
     if (!confirm(`Weet je zeker dat je deze foto wilt verwijderen?`)) {
@@ -295,7 +293,7 @@ export function PhotoGrid({
       onUpdate()
     } catch (err) {
       console.error('Error deleting photo:', err)
-      setError('Er ging iets mis bij het verwijderen van de foto')
+      handleError('Er ging iets mis bij het verwijderen van de foto')
     } finally {
       setIsDeleting(null)
     }
@@ -314,7 +312,7 @@ export function PhotoGrid({
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">{error}</p>
+        <p className="text-red-600">{error.message}</p>
       </div>
     )
   }

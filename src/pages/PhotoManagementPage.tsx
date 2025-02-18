@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PhotoGrid } from '../features/photos/components/PhotoGrid'
 import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal'
 import { supabase } from '../lib/supabase'
@@ -9,7 +9,7 @@ export function PhotoManagementPage() {
   useDocumentTitle("Foto's beheren")
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -42,11 +42,15 @@ export function PhotoManagementPage() {
       setPhotos(data || [])
     } catch (err) {
       console.error('Error loading photos:', err)
-      setError('Er ging iets mis bij het ophalen van de foto\'s')
+      setError(new Error('Er ging iets mis bij het ophalen van de foto\'s'))
     } finally {
       setLoading(false)
     }
   }
+
+  const handleError = useCallback((error: Error | null) => {
+    setError(error)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -76,7 +80,7 @@ export function PhotoManagementPage() {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{error}</p>
+              <p className="text-sm font-medium text-red-800">{error.message}</p>
             </div>
           </div>
         </div>
@@ -88,9 +92,8 @@ export function PhotoManagementPage() {
             photos={photos}
             loading={loading}
             error={error}
+            setError={handleError}
             onUpdate={handleRefresh}
-            setError={setError}
-            view="grid"
             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
           />
         </div>
