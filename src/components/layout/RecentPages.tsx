@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useNavigationHistory } from '../../contexts/NavigationHistoryContext'
+import { useNavigationHistory } from '../../contexts/navigation/useNavigationHistory'
 import { ClockIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 export function RecentPages() {
@@ -27,7 +27,7 @@ export function RecentPages() {
         )}
       </div>
       <nav className="space-y-1">
-        {recentPages.map((page) => (
+        {recentPages.map((page: { path: string; title: string }) => (
           <Link
             key={page.path}
             to={page.path}

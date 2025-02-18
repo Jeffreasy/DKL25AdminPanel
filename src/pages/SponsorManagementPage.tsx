@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { H1, SmallText } from '../components/typography'
 import { SponsorGrid } from '../features/sponsors/components'
 import { SponsorForm } from '../features/sponsors/components/SponsorForm'
-import { useNavigationHistory } from '../contexts/NavigationHistoryContext'
+import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
 
 export function SponsorManagementPage() {
   const [showForm, setShowForm] = useState(false)

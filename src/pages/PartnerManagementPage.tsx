@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { H1, SmallText } from '../components/typography'
 import { PartnersOverview } from '../features/partners/PartnersOverview'
 import { PartnerForm } from '../features/partners/components/PartnerForm'
-import { useNavigationHistory } from '../contexts/NavigationHistoryContext'
+import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
 
 export function PartnerManagementPage() {
   const [showAddPartner, setShowAddPartner] = useState(false)
