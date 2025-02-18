@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MantineProvider } from '@mantine/core'
 import { AuthProvider } from "../contexts/auth/AuthProvider"
 import { SidebarProvider } from '../contexts/SidebarContext'
-import { NavigationHistoryProvider } from '../contexts/NavigationHistoryContext'
+import { NavigationHistoryProvider } from '../contexts/navigation/useNavigationHistory'
 import { FavoritesProvider } from '../contexts/FavoritesContext'
 import { ErrorBoundary } from './ErrorBoundary'
 

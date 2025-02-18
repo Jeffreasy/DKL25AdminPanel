@@ -29,18 +29,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Navigation History State
   const [history, setHistory] = useState<string[]>([])
+  const [recentPages, setRecentPages] = useState<Array<{ path: string; title: string }>>([])
+  
   const addToHistory = useCallback((path: string) => {
     setHistory(prev => [...prev, path])
+    // Update recentPages when adding to history
+    setRecentPages(prev => {
+      const newPage = { path, title: path }  // Je kunt hier de title aanpassen indien nodig
+      return [newPage, ...prev.filter(p => p.path !== path)].slice(0, 5)
+    })
   }, [])
+  
   const clearHistory = useCallback(() => {
     setHistory([])
+    setRecentPages([])
   }, [])
 
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <NavigationHistoryContext.Provider value={{ history, addToHistory, clearHistory }}>
+          <NavigationHistoryContext.Provider value={{ history, addToHistory, clearHistory, recentPages }}>
             <FavoritesContext.Provider value={{ favorites, addFavorite, removeFavorite }}>
               <SidebarContext.Provider value={{ isOpen, toggle, close }}>
                 {children}
