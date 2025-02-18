@@ -99,13 +99,21 @@ export const adminEmailService = {
 
   // Database logging
   async logEmailEvent(event: EmailEventData) {
-    const { error } = await supabase
-      .from('email_events')
-      .insert({
-        ...event,
-        timestamp: event.timestamp || new Date().toISOString()
-      })
-    if (error) throw error
+    try {
+      const { error } = await supabase
+        .from('email_events')
+        .insert({
+          ...event,
+          timestamp: event.timestamp || new Date().toISOString(),
+          metadata: {}
+        })
+      
+      if (error) {
+        console.error('Failed to log email event:', error)
+      }
+    } catch (error) {
+      console.error('Error in logEmailEvent:', error)
+    }
   },
 
   // Email verificatie
