@@ -5,6 +5,13 @@ import { Email } from './types'
 // URLs uit environment variables
 const PROD_API_URL = import.meta.env.VITE_APP_URL
 const DEV_API_URL = import.meta.env.VITE_DEV_API_URL || 'http://localhost:5173'
+const API_KEY = import.meta.env.VITE_N8N_API_KEY
+
+// Helper functie voor het toevoegen van de API key
+const addApiKey = (url: string) => {
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}apikey=${API_KEY}`
+}
 
 interface EmailResponse {
   success: boolean
@@ -27,10 +34,14 @@ async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
     
     console.log('Request payload:', payload)
 
-    const response = await fetch(`${url}/api/email/send-confirmation`, {
+    // Gebruik de helper functie om de API key toe te voegen
+    const apiUrl = addApiKey(`${url}/api/email/send-confirmation`)
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': API_KEY
       },
       body: JSON.stringify(payload)
     })
@@ -118,7 +129,10 @@ export const emailService = {
 
     const { data, error } = await query
     
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching emails:', error)
+      throw error
+    }
     return data as Email[]
   },
 
