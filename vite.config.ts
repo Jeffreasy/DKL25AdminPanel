@@ -4,23 +4,35 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  root: path.resolve(__dirname),
-  assetsInclude: ['**/*.html'],
   build: {
     outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
-      input: path.resolve(__dirname, 'index.html'),
       output: {
-        assetFileNames: 'assets/[name].[ext]'
+        manualChunks: {
+          vendor: [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            '@tanstack/react-query',
+            '@supabase/supabase-js'
+          ],
+          ui: [
+            '@mantine/core',
+            '@mantine/hooks',
+            '@mantine/tiptap',
+            '@headlessui/react',
+            '@heroicons/react'
+          ]
+        }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      }
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
     }
   }
 })

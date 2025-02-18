@@ -25,8 +25,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json(data)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Email send error:', error)
-    return res.status(500).json({ error: error.message })
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message })
+    }
+    return res.status(500).json({ error: 'An unknown error occurred' })
   }
 } 
