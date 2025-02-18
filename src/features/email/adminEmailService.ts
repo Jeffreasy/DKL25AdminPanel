@@ -214,5 +214,37 @@ export const adminEmailService = {
 
     if (error) throw error
     return data
+  },
+
+  async markAsRead(id: string, read: boolean) {
+    const { error } = await supabase
+      .from('emails')
+      .update({ read })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error marking email as read:', error)
+      throw error
+    }
+  },
+
+  async getUnreadCount(account?: string) {
+    let query = supabase
+      .from('emails')
+      .select('*', { count: 'exact' })
+      .eq('read', false)
+
+    if (account) {
+      query = query.eq('account', account)
+    }
+
+    const { count, error } = await query
+
+    if (error) {
+      console.error('Error getting unread count:', error)
+      throw error
+    }
+
+    return count || 0
   }
 } 
