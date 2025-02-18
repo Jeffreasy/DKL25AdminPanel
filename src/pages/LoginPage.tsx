@@ -1,51 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/hooks/useAuth'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { signIn, error: authError, isLoading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setIsLoading(true)
 
     try {
-      console.log('Attempting login with URL:', import.meta.env.VITE_SUPABASE_URL)
-      
-      // Test de connectie eerst
-      const { error: testError } = await supabase.auth.getSession()
-      console.log('Connection test:', testError ? `Failed: ${testError.message}` : 'Success')
-
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password
-      })
-
-      if (loginError) throw loginError
-
-      // Check admin rechten
-      const { data: admin, error: adminError } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('user_id', data.user.id)
-        .single()
-
-      if (adminError || !admin) {
-        await supabase.auth.signOut()
-        throw new Error('Je hebt geen toegang tot het admin panel')
-      }
-
+      await signIn(email.trim(), password)
       navigate('/')
     } catch (err) {
-      console.error('Detailed login error:', err)
+      console.error('Login error:', err)
       setError(err instanceof Error ? err.message : 'Ongeldige inloggegevens')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -64,7 +37,7 @@ export function LoginPage() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
+          {(error || authError) && (
             <div className="rounded-md bg-red-500/10 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -73,7 +46,7 @@ export function LoginPage() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-red-400">{error}</p>
+                  <p className="text-sm font-medium text-red-400">{error || authError?.message}</p>
                 </div>
               </div>
             </div>
@@ -109,10 +82,10 @@ export function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={authLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {isLoading ? (
+              {authLoading ? (
                 <div className="flex items-center">
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
