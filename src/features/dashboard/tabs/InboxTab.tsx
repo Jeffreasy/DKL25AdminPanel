@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { supabase } from '../../../lib/supabase'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
+import { adminEmailService } from '../../email/adminEmailService'
 
 interface EmailMessage {
   id: string
@@ -52,6 +53,54 @@ export function InboxTab() {
   const [emails, setEmails] = useState<EmailMessage[]>([])
   const [error, setError] = useState<string | null>(null)
   const [selectedEmail, setSelectedEmail] = useState<EmailDetails | null>(null)
+  const [emailStats, setEmailStats] = useState({
+    total: 0,
+    delivered: 0,
+    opened: 0,
+    failed: 0
+  })
+
+  const loadEmailStats = useCallback(async () => {
+    try {
+      // Haal alle emails op
+      const emails = await adminEmailService.getEmailsByAccount('info')
+      
+      // Tel de verschillende statussen
+      const stats = emails.reduce((acc, email) => {
+        acc.total++
+        
+        // Check metadata voor delivery status
+        const isDelivered = !email.metadata?.['return-path']?.includes('bounce')
+        if (isDelivered) acc.delivered++
+        
+        // Check of email is geopend
+        if (email.read) acc.opened++
+        
+        // Check voor failures in metadata
+        const hasFailed = email.metadata?.['return-path']?.includes('bounce') || 
+                         email.metadata?.['content-type']?.includes('failure')
+        if (hasFailed) acc.failed++
+        
+        return acc
+      }, {
+        total: 0,
+        delivered: 0,
+        opened: 0,
+        failed: 0
+      })
+
+      setEmailStats(stats)
+    } catch (error) {
+      console.error('Error loading email stats:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadEmailStats()
+    // Ververs elke 5 minuten
+    const interval = setInterval(loadEmailStats, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loadEmailStats])
 
   useEffect(() => {
     loadEmails()
@@ -116,6 +165,28 @@ export function InboxTab() {
 
   return (
     <>
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Totaal verzonden</h3>
+          <p className="text-2xl font-bold">{emailStats.total}</p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Afgeleverd</h3>
+          <p className="text-2xl font-bold text-green-600">{emailStats.delivered}</p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Geopend</h3>
+          <p className="text-2xl font-bold text-blue-600">{emailStats.opened}</p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-gray-500 text-sm">Gefaald</h3>
+          <p className="text-2xl font-bold text-red-600">{emailStats.failed}</p>
+        </div>
+      </div>
+
       <div className="flex flex-col h-[calc(100vh-12rem)] max-w-full">
         <div className="flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div className="bg-white rounded-lg shadow px-4 py-5">
