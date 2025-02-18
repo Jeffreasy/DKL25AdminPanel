@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { verifyEmailAddress } from '../../api/email'
+import { adminEmailService } from '../../features/email/adminEmailService'
 
 interface EmailVerificationProps {
   email: string
@@ -14,7 +14,7 @@ export function EmailVerification({ email, onVerified }: EmailVerificationProps)
     try {
       setVerifying(true)
       setError(null)
-      await verifyEmailAddress(email)
+      await adminEmailService.verifyEmailAddress(email)
       onVerified()
     } catch (err) {
       console.error('Email verification failed:', err)
