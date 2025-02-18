@@ -1,4 +1,5 @@
 import type { Aanmelding } from '../aanmeldingen/types'
+import { supabase } from '../../lib/supabase'
 
 // URLs uit environment variables
 const PROD_API_URL = import.meta.env.VITE_APP_URL
@@ -100,5 +101,89 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
       `Development error: ${lastError?.message}. ` +
       `Production error: ${(error as Error).message}`
     )
+  }
+}
+
+interface EmailFilters {
+  account?: 'info' | 'inschrijving'
+  read?: boolean
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+interface Email {
+  id: string
+  sender: string
+  subject: string
+  body: string
+  html: string
+  account: 'info' | 'inschrijving'
+  message_id: string
+  attachments: Array<{
+    filename: string
+    content_type: string
+    size: number
+    url?: string
+  }>
+  read: boolean
+  created_at: string
+}
+
+export const emailService = {
+  async getEmails(filters: EmailFilters = {}) {
+    let query = supabase
+      .from('emails')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (filters.account) {
+      query = query.eq('account', filters.account)
+    }
+
+    if (filters.read !== undefined) {
+      query = query.eq('read', filters.read)
+    }
+
+    if (filters.search) {
+      query = query.or(`subject.ilike.%${filters.search}%,body.ilike.%${filters.search}%`)
+    }
+
+    if (filters.limit) {
+      query = query.limit(filters.limit)
+    }
+
+    if (filters.offset) {
+      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
+    }
+
+    const { data, error, count } = await query.select('*', { count: 'exact' })
+    
+    if (error) throw error
+    
+    return {
+      items: data as Email[],
+      total: count || 0
+    }
+  },
+
+  async markAsRead(id: string, read: boolean = true) {
+    const { error } = await supabase
+      .from('emails')
+      .update({ read, updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  async getEmailById(id: string) {
+    const { data, error } = await supabase
+      .from('emails')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data as Email
   }
 } 
