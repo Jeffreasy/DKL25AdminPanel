@@ -1,5 +1,6 @@
 import type { Aanmelding } from '../aanmeldingen/types'
 import { supabase } from '../../lib/supabase'
+import { Email } from './types'
 
 // URLs uit environment variables
 const PROD_API_URL = import.meta.env.VITE_APP_URL
@@ -104,82 +105,40 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
   }
 }
 
-interface EmailFilters {
-  account?: 'info' | 'inschrijving'
-  read?: boolean
-  search?: string
-  limit?: number
-  offset?: number
-}
-
-interface Email {
-  id: string
-  sender: string
-  subject: string
-  body: string
-  html: string
-  account: 'info' | 'inschrijving'
-  message_id: string
-  attachments: Array<{
-    filename: string
-    content_type: string
-    size: number
-    url?: string
-  }>
-  read: boolean
-  created_at: string
-}
-
 export const emailService = {
-  async getEmails(filters: EmailFilters = {}) {
-    try {
-      let query = supabase
-        .from('emails')
-        .select('*', { count: 'exact' })
-
-      if (filters.account) {
-        query = query.eq('account', filters.account)
-      }
-
-      if (filters.read !== undefined) {
-        query = query.eq('read', filters.read)
-      }
-
-      if (filters.search) {
-        query = query.or(`subject.ilike.%${filters.search}%,body.ilike.%${filters.search}%`)
-      }
-
-      query = query.order('created_at', { ascending: false })
-
-      if (filters.limit) {
-        query = query.limit(filters.limit)
-      }
-
-      if (filters.offset) {
-        query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
-      }
-
-      const { data, error, count } = await query
-
-      if (error) throw error
-      
-      return {
-        items: data as Email[],
-        total: count || 0
-      }
-    } catch (error) {
-      console.error('Error fetching emails:', error)
-      throw error
+  async getEmails(account?: string) {
+    let query = supabase
+      .from('emails')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (account) {
+      query = query.eq('account', account)
     }
+
+    const { data, error } = await query
+    
+    if (error) throw error
+    return data as Email[]
   },
 
-  async markAsRead(id: string, read: boolean = true) {
+  async markAsRead(id: string, read: boolean) {
     const { error } = await supabase
       .from('emails')
-      .update({ read, updated_at: new Date().toISOString() })
+      .update({ read })
       .eq('id', id)
 
     if (error) throw error
+  },
+
+  async getUnreadCount() {
+    const { count, error } = await supabase
+      .from('emails')
+      .select('*', { count: 'exact' })
+      .eq('read', false)
+
+    if (error) throw error
+    return count || 0
   },
 
   async getEmailById(id: string) {

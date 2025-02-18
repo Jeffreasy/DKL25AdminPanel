@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
-import type { AutoResponse } from './types'
+import type { AutoResponse, Email } from './types'
+import { emailService } from './emailService'
 
 interface SendEmailParams {
   to: string | string[]
@@ -183,5 +184,20 @@ export const adminEmailService = {
   // Helper functie
   replaceTemplateVariables(template: string, variables: Record<string, string>) {
     return template.replace(/\{(\w+)\}/g, (match, key) => variables[key] || match)
+  },
+
+  async getEmailsByAccount(account: 'info' | 'inschrijving') {
+    return emailService.getEmails(account)
+  },
+
+  async getEmailDetails(id: string): Promise<Email | null> {
+    const { data, error } = await supabase
+      .from('emails')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data
   }
 } 
