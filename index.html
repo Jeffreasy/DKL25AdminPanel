@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="DKL25 Admin Panel" />
     <title>DKL25 Admin</title>
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <!-- Laad Inter font via preconnect en stylesheet -->
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="preconnect" href="https://rsms.me/" crossorigin />
+    <link rel="preload" href="https://rsms.me/inter/inter.css" as="style" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" media="print" onload="this.media='all'" />
   </head>
   <body>
     <div id="root"></div>

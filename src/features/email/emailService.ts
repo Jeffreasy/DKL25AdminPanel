@@ -117,25 +117,28 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
 }
 
 export const emailService = {
+  // Haal emails op voor een specifiek account
   async getEmails(account?: string) {
     let query = supabase
       .from('emails')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (account) {
       query = query.eq('account', account)
     }
 
     const { data, error } = await query
-    
-    if (error) {
-      console.error('Error fetching emails:', error)
-      throw error
-    }
+    if (error) throw error
     return data as Email[]
   },
 
+  // Alias voor getEmails met account parameter voor backwards compatibility
+  async getEmailsByAccount(account: 'info' | 'inschrijving') {
+    return this.getEmails(account)
+  },
+
+  // Markeer een email als gelezen/ongelezen
   async markAsRead(id: string, read: boolean) {
     const { error } = await supabase
       .from('emails')
@@ -145,6 +148,7 @@ export const emailService = {
     if (error) throw error
   },
 
+  // Haal het aantal ongelezen emails op
   async getUnreadCount() {
     const { count, error } = await supabase
       .from('emails')
@@ -155,6 +159,7 @@ export const emailService = {
     return count || 0
   },
 
+  // Haal een specifieke email op
   async getEmailById(id: string) {
     const { data, error } = await supabase
       .from('emails')

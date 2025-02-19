@@ -1,18 +1,9 @@
-import { RegistrationItem } from '../../../components/RegistrationItem'
-import type { Aanmelding } from '../../aanmeldingen/types'
+import { RegistrationItem } from '../components/RegistrationItem'
+import { useOutletContext } from 'react-router-dom'
+import type { DashboardContext } from '../types/dashboard'
 
-interface AanmeldingenTabProps {
-  stats: {
-    totaal: number
-    rollen: Record<string, number>
-    afstanden: Record<string, number>
-    ondersteuning: Record<string, number>
-  }
-  aanmeldingen: Aanmelding[]
-  onUpdate: () => void
-}
-
-export function AanmeldingenTab({ stats, aanmeldingen, onUpdate }: AanmeldingenTabProps) {
+export function AanmeldingenTab() {
+  const { stats, aanmeldingen, handleUpdate } = useOutletContext<DashboardContext>()
   return (
     <div className="space-y-4">
       {/* Quick Stats */}
@@ -40,7 +31,7 @@ export function AanmeldingenTab({ stats, aanmeldingen, onUpdate }: AanmeldingenT
               <div key={aanmelding.id} className="px-4">
                 <RegistrationItem
                   registration={aanmelding}
-                  onStatusUpdate={onUpdate}
+                  onStatusUpdate={handleUpdate}
                 />
               </div>
             ))

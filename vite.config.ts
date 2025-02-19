@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => ({
   plugins: [react()],
   build: {
     outDir: 'dist',
@@ -34,5 +34,24 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  assetsInclude: ['**/*.html'],
+  server: {
+    port: parseInt(process.env.PORT || '3000'),
+    strictPort: true,
+    hmr: command === 'serve' ? {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 24678,
+      clientPort: 24678
+    } : false
+  },
+  optimizeDeps: {
+    force: true,
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom'
+    ]
   }
-})
+}))

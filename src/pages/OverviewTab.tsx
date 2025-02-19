@@ -1,13 +1,8 @@
-interface OverviewTabProps {
-  stats: {
-    totaal: number
-    rollen: Record<string, number>
-    afstanden: Record<string, number>
-    ondersteuning: Record<string, number>
-  }
-}
+import { useOutletContext } from 'react-router-dom'
+import type { DashboardContext } from '../types/dashboard'
 
-export function OverviewTab({ stats }: OverviewTabProps) {
+export function OverviewTab() {
+  const { stats } = useOutletContext<DashboardContext>()
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
@@ -20,7 +15,7 @@ export function OverviewTab({ stats }: OverviewTabProps) {
         {Object.entries(stats.rollen).map(([rol, aantal]) => (
           <div key={rol} className="bg-[#1B2B3A] rounded-lg p-4">
             <h3 className="text-xs font-medium text-gray-400">{rol}</h3>
-            <p className="mt-2 text-xl font-semibold text-white">{aantal}</p>
+            <p className="mt-2 text-xl font-semibold text-white">{String(aantal)}</p>
           </div>
         ))}
       </div>
@@ -33,7 +28,7 @@ export function OverviewTab({ stats }: OverviewTabProps) {
             {Object.entries(stats.afstanden).map(([afstand, aantal]) => (
               <div key={afstand} className="flex justify-between text-sm">
                 <span className="text-gray-400">{afstand}</span>
-                <span className="text-white font-medium">{aantal}</span>
+                <span className="text-white font-medium">{String(aantal)}</span>
               </div>
             ))}
           </div>
@@ -45,7 +40,7 @@ export function OverviewTab({ stats }: OverviewTabProps) {
             {Object.entries(stats.ondersteuning).map(([type, aantal]) => (
               <div key={type} className="flex justify-between text-sm">
                 <span className="text-gray-400">{type}</span>
-                <span className="text-white font-medium">{aantal}</span>
+                <span className="text-white font-medium">{String(aantal)}</span>
               </div>
             ))}
           </div>

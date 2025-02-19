@@ -10,6 +10,10 @@ import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { MainLayout } from './components/layout/MainLayout'
+import { OverviewTab } from './pages/OverviewTab'
+import { AanmeldingenTab } from './pages/AanmeldingenTab'
+import { ContactTab } from './pages/ContactTab'
+import { InboxTab } from './pages/InboxTab'
 
 export function App() {
   return (
@@ -22,8 +26,18 @@ export function App() {
           </AuthGuard>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/" element={<DashboardPage />}>
+          <Route index element={<OverviewTab />} />
+          <Route path="aanmeldingen" element={<AanmeldingenTab />} />
+          <Route path="contact" element={<ContactTab />} />
+          <Route path="inbox" element={<InboxTab />} />
+        </Route>
+        <Route path="/dashboard" element={<DashboardPage />}>
+          <Route index element={<OverviewTab />} />
+          <Route path="aanmeldingen" element={<AanmeldingenTab />} />
+          <Route path="contact" element={<ContactTab />} />
+          <Route path="inbox" element={<InboxTab />} />
+        </Route>
         <Route path="/photos" element={<PhotoManagementPage />} />
         <Route path="/albums" element={<AlbumManagementPage />} />
         <Route path="/videos" element={<VideoManagementPage />} />

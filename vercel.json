@@ -7,7 +7,8 @@
       "use": "@vercel/static-build",
       "config": {
         "buildCommand": "npm run build",
-        "outputDirectory": "dist"
+        "outputDirectory": "dist",
+        "devCommand": "vite --port $PORT --strictPort"
       }
     },
     {
@@ -22,9 +23,12 @@
       "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1",
-      "continue": true
+      "src": "^/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "^/node_modules/(.*)",
+      "dest": "/node_modules/$1"
     },
     {
       "handle": "filesystem"
@@ -33,5 +37,9 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_DEV_SERVER_HMR": "true",
+    "VITE_WS_PORT": "24678"
+  }
 }
