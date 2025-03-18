@@ -9,23 +9,8 @@ export default defineConfig(({ command, mode }) => ({
     emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            '@tanstack/react-query',
-            '@supabase/supabase-js'
-          ],
-          ui: [
-            '@mantine/core',
-            '@mantine/hooks',
-            '@mantine/tiptap',
-            '@headlessui/react',
-            '@heroicons/react'
-          ]
-        }
+      input: {
+        main: path.resolve(__dirname, 'index.html')
       }
     },
     chunkSizeWarningLimit: 1000
@@ -35,7 +20,6 @@ export default defineConfig(({ command, mode }) => ({
       '@': path.resolve(__dirname, './src')
     }
   },
-  assetsInclude: ['**/*.html'],
   server: {
     port: parseInt(process.env.PORT || '3000'),
     strictPort: true,
