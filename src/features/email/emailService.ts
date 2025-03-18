@@ -1,16 +1,49 @@
 import type { Aanmelding } from '../aanmeldingen/types'
-import { supabase } from '../../lib/supabase'
 import { Email } from './types'
 
-// URLs uit environment variables
-const PROD_API_URL = import.meta.env.VITE_APP_URL
-const DEV_API_URL = import.meta.env.VITE_DEV_API_URL || 'http://localhost:5173'
-const API_KEY = import.meta.env.VITE_N8N_API_KEY
+// API configuratie
+const API_BASE_URL = import.meta.env.VITE_EMAIL_API_URL || 'https://dklemailservice.onrender.com';
+const API_KEY = import.meta.env.VITE_EMAIL_API_KEY || '';
 
-// Helper functie voor het toevoegen van de API key
-const addApiKey = (url: string) => {
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}apikey=${API_KEY}`
+// Helper functie voor het toevoegen van de auth header
+const getAuthHeaders = () => {
+  // Basis headers
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  
+  // Voeg Authorization header toe als API_KEY niet leeg is
+  if (API_KEY && API_KEY.trim() !== '') {
+    headers['Authorization'] = `Bearer ${API_KEY}`;
+  } else {
+    console.warn('API key is leeg. Zorg ervoor dat VITE_EMAIL_API_KEY is ingesteld in de .env file.');
+  }
+  
+  return headers;
+};
+
+// Helper functie om te mappen van backend model naar frontend model
+function mapIncomingEmailToEmail(incomingEmail: any): Email {
+  return {
+    id: incomingEmail.id || incomingEmail.ID,
+    sender: incomingEmail.from || incomingEmail.From,
+    subject: incomingEmail.subject || incomingEmail.Subject,
+    body: incomingEmail.body || incomingEmail.Body,
+    html: (incomingEmail.content_type || incomingEmail.ContentType || '').includes('html')
+      ? incomingEmail.body || incomingEmail.Body
+      : '',
+    account: incomingEmail.account_type || incomingEmail.AccountType,
+    message_id: incomingEmail.message_id || incomingEmail.MessageID,
+    created_at: incomingEmail.received_at || incomingEmail.ReceivedAt,
+    read: incomingEmail.is_processed || incomingEmail.IsProcessed,
+    metadata: {
+      'return-path': incomingEmail.from || incomingEmail.From,
+      'delivered-to': incomingEmail.to || incomingEmail.To,
+      'content-type': incomingEmail.content_type || incomingEmail.ContentType,
+      'reply-to': incomingEmail.from || incomingEmail.From
+    },
+    created_at_system: incomingEmail.created_at || incomingEmail.CreatedAt
+  };
 }
 
 interface EmailResponse {
@@ -19,6 +52,7 @@ interface EmailResponse {
   error?: string
 }
 
+// Functie voor het versturen van bevestigingse-mails (behouden voor compatibiliteit)
 async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
   try {
     console.log(`Attempting to send email via ${url}`)
@@ -33,16 +67,11 @@ async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
     }
     
     console.log('Request payload:', payload)
-
-    // Gebruik de helper functie om de API key toe te voegen
-    const apiUrl = addApiKey(`${url}/api/email/send-confirmation`)
-
-    const response = await fetch(apiUrl, {
+    
+    const headers = getAuthHeaders();
+    const response = await fetch(`${url}/api/email/send-confirmation`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': API_KEY
-      },
+      headers,
       body: JSON.stringify(payload)
     })
 
@@ -82,6 +111,7 @@ async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
   }
 }
 
+// Behouden voor compatibiliteit
 export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<void> {
   console.log('Starting email send process for:', aanmelding.email)
 
@@ -89,6 +119,7 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
 
   // Probeer eerst development
   try {
+    const DEV_API_URL = import.meta.env.VITE_DEV_API_URL || 'http://localhost:5173'
     console.log('Attempting development server...')
     await sendEmail(DEV_API_URL, aanmelding)
     console.log('Successfully sent via development server')
@@ -100,6 +131,7 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
     
   // Probeer productie als fallback
   try {
+    const PROD_API_URL = import.meta.env.VITE_APP_URL
     console.log('Attempting production server...')
     await sendEmail(PROD_API_URL, aanmelding)
     console.log('Successfully sent via production server')
@@ -119,55 +151,89 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
 export const emailService = {
   // Haal emails op voor een specifiek account
   async getEmails(account?: string) {
-    let query = supabase
-      .from('emails')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (account) {
-      query = query.eq('account', account)
+    try {
+      const url = account 
+        ? `${API_BASE_URL}/api/mail/account/${account}`
+        : `${API_BASE_URL}/api/mail`;
+      
+      const headers = getAuthHeaders();
+      const response = await fetch(url, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching emails: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data) 
+        ? data.map(email => mapIncomingEmailToEmail(email))
+        : [];
+    } catch (error) {
+      console.error('Failed to fetch emails:', error);
+      throw error;
     }
-
-    const { data, error } = await query
-    if (error) throw error
-    return data as Email[]
   },
 
   // Alias voor getEmails met account parameter voor backwards compatibility
   async getEmailsByAccount(account: 'info' | 'inschrijving') {
-    return this.getEmails(account)
+    return this.getEmails(account);
   },
 
   // Markeer een email als gelezen/ongelezen
   async markAsRead(id: string, read: boolean) {
-    const { error } = await supabase
-      .from('emails')
-      .update({ read })
-      .eq('id', id)
-
-    if (error) throw error
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/mail/${id}/processed`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ processed: read })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error marking email as read: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to mark email as read:', error);
+      throw error;
+    }
   },
 
   // Haal het aantal ongelezen emails op
   async getUnreadCount() {
-    const { count, error } = await supabase
-      .from('emails')
-      .select('*', { count: 'exact' })
-      .eq('read', false)
-
-    if (error) throw error
-    return count || 0
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/mail/unprocessed`, {
+        headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching unread emails: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data) ? data.length : 0;
+    } catch (error) {
+      console.error('Failed to get unread count:', error);
+      throw error;
+    }
   },
 
   // Haal een specifieke email op
   async getEmailById(id: string) {
-    const { data, error } = await supabase
-      .from('emails')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) throw error
-    return data as Email
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, {
+        headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching email details: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return mapIncomingEmailToEmail(data);
+    } catch (error) {
+      console.error('Failed to fetch email details:', error);
+      throw error;
+    }
   }
 } 
