@@ -10,11 +10,11 @@ import { ProfilePage } from '../pages/ProfilePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { AuthGuard } from '../components/auth/AuthGuard'
 import { MainLayout } from '../components/layout/MainLayout'
-import { EmailInbox } from '../features/email/components/EmailInbox'
 import { OverviewTab } from '../pages/OverviewTab'
 import { AanmeldingenTab } from '../pages/AanmeldingenTab'
 import { ContactTab } from '../pages/ContactTab'
 import { InboxTab } from '../pages/InboxTab'
+import EmailInbox from '../features/email/components/EmailInbox'
 
 export const routes: RouteObject[] = [
   {

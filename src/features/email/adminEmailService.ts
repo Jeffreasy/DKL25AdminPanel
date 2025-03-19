@@ -201,50 +201,20 @@ export const adminEmailService = {
     return template.replace(/\{(\w+)\}/g, (match, key) => variables[key] || match)
   },
 
+  // Email inbox functies die doorverwijzen naar emailService
   async getEmailsByAccount(account: 'info' | 'inschrijving') {
     return emailService.getEmails(account)
   },
 
   async getEmailDetails(id: string): Promise<Email | null> {
-    const { data, error } = await supabase
-      .from('emails')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) throw error
-    return data
+    return emailService.getEmailById(id)
   },
 
   async markAsRead(id: string, read: boolean) {
-    const { error } = await supabase
-      .from('emails')
-      .update({ read })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error marking email as read:', error)
-      throw error
-    }
+    return emailService.markAsRead(id, read)
   },
 
   async getUnreadCount(account?: string) {
-    let query = supabase
-      .from('emails')
-      .select('*', { count: 'exact' })
-      .eq('read', false)
-
-    if (account) {
-      query = query.eq('account', account)
-    }
-
-    const { count, error } = await query
-
-    if (error) {
-      console.error('Error getting unread count:', error)
-      throw error
-    }
-
-    return count || 0
+    return emailService.getUnreadCount()
   }
 } 
