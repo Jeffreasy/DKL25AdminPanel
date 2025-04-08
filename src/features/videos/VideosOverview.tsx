@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase/supabaseClient'
-import { Video } from '../../types/video'
 import {
   DndContext,
   closestCenter,
@@ -18,12 +16,20 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { 
+  PlusIcon, 
+  EyeIcon, 
+  EyeSlashIcon,
+  PencilIcon,
+  TrashIcon 
+} from '@heroicons/react/24/outline'
 import { VideoPreviewModal } from './components/VideoPreviewModal'
 import { VideoForm } from './components/VideoForm'
+import { fetchVideos, updateVideo, deleteVideo, updateVideoOrder } from './services/videoService'
+import type { Video } from './types'
 
 function SortableVideo({ 
   video, 
-  index, 
   isSelected,
   onSelect,
   onPreview,
@@ -31,7 +37,6 @@ function SortableVideo({
   onToggleVisibility
 }: { 
   video: Video
-  index: number
   isSelected: boolean
   onSelect: (id: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => void
   onPreview: (video: Video) => void
@@ -57,7 +62,6 @@ function SortableVideo({
     <div
       ref={setNodeRef}
       style={style}
-      aria-label={`Video ${index + 1}: ${video.title}`}
       className={`
         bg-white dark:bg-gray-800 rounded-lg shadow-sm 
         transition-all duration-200
@@ -90,79 +94,58 @@ function SortableVideo({
           />
         </div>
 
-        {/* Video Thumbnail */}
-        <div className="relative flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden group bg-gray-100 dark:bg-gray-700">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <div 
+          className="relative flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden group 
+            bg-gray-100 dark:bg-gray-700 cursor-pointer"
+          onClick={() => onPreview(video)}
+        >
+          <div className="absolute inset-0 flex items-center justify-center 
+            bg-black/20 group-hover:bg-black/40 transition-colors">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full 
+              bg-white/90 group-hover:bg-white transition-colors">
+              <svg className="w-6 h-6 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        <div className="ml-4 flex-grow">
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {video.title}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(video.updated_at || '').toLocaleDateString('nl-NL')}
-              </span>
-            </div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {video.description}
+        <div className="ml-4 flex-grow min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-medium text-gray-900 dark:text-white truncate">
+              {video.title}
+            </h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-4">
+              {new Date(video.created_at).toLocaleDateString('nl-NL')}
             </span>
           </div>
+          {video.description && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+              {video.description}
+            </p>
+          )}
         </div>
 
-        <button
-          onClick={() => onEdit(video)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title="Video bewerken"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-
-        <button
-          onClick={() => onPreview(video)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title="Bekijk video"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-
-        <button
-          onClick={() => onToggleVisibility(video)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title={video.visible ? "Video verbergen" : "Video zichtbaar maken"}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {video.visible ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-            )}
-          </svg>
-        </button>
+        <div className="ml-4 flex items-center gap-2">
+          <button
+            onClick={() => onToggleVisibility(video)}
+            className={`p-2 rounded-lg transition-colors ${
+              video.visible
+                ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            {video.visible ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={() => onEdit(video)}
+            className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-50 
+              dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <PencilIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -173,10 +156,11 @@ export function VideosOverview() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
-  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
   const [showForm, setShowForm] = useState(false)
-  const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined)
+  const [editingVideo, setEditingVideo] = useState<Video | undefined>()
+  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
 
+  // DnD sensors setup
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -184,21 +168,20 @@ export function VideosOverview() {
     })
   )
 
+  // Laad videos bij mount
   useEffect(() => {
-    fetchVideos()
+    loadVideos()
   }, [])
 
-  const fetchVideos = async () => {
+  const loadVideos = async () => {
     try {
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .order('order_number')
-
+      setLoading(true)
+      const { data, error } = await fetchVideos()
       if (error) throw error
-      setVideos(data || [])
+      setVideos(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
+      console.error('Error loading videos:', err)
+      setError('Er ging iets mis bij het ophalen van de videos')
     } finally {
       setLoading(false)
     }
@@ -208,24 +191,42 @@ export function VideosOverview() {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    try {
-      const oldIndex = videos.findIndex(video => video.id === active.id)
-      const newIndex = videos.findIndex(video => video.id === over.id)
+    const oldIndex = videos.findIndex(v => v.id === active.id)
+    const newIndex = videos.findIndex(v => v.id === over.id)
 
-      // Optimistic update voor de UI
+    try {
+      // Update lokale state
       const newVideos = arrayMove(videos, oldIndex, newIndex)
       setVideos(newVideos)
 
-      // Update de volgorde via de specifieke stored procedure
-      const { error } = await supabase.rpc('reorder_videos', {
-        video_ids: newVideos.map(v => v.id)
-      })
-
+      // Update order in database
+      const updatedVideo = newVideos[newIndex]
+      const { error } = await updateVideoOrder(updatedVideo.id, newIndex + 1)
       if (error) throw error
-    } catch (error) {
-      console.error('Drag error:', error)
-      setError('Fout bij het updaten van de volgorde')
-      await fetchVideos()
+    } catch (err) {
+      console.error('Error updating order:', err)
+      // Herstel oude volgorde bij error
+      loadVideos()
+    }
+  }
+
+  const handleToggleVisibility = async (video: Video) => {
+    try {
+      const { error } = await updateVideo(video.id, { 
+        visible: !video.visible,
+        updated_at: new Date().toISOString()
+      })
+      if (error) throw error
+      
+      // Update lokale state
+      setVideos(videos.map(v => 
+        v.id === video.id 
+          ? { ...v, visible: !v.visible }
+          : v
+      ))
+    } catch (err) {
+      console.error('Error toggling visibility:', err)
+      setError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
     }
   }
 
@@ -250,24 +251,25 @@ export function VideosOverview() {
 
   const handleBulkDelete = async () => {
     if (selectedVideos.size === 0) return
-
-    if (!confirm(`Weet je zeker dat je ${selectedVideos.size} video's wilt verwijderen?`)) {
-      return
-    }
+    if (!confirm(`Weet je zeker dat je ${selectedVideos.size} video's wilt verwijderen?`)) return
 
     try {
-      const { error } = await supabase
-        .from('videos')
-        .delete()
-        .in('id', Array.from(selectedVideos))
+      // Verwijder alle geselecteerde videos
+      const deletePromises = Array.from(selectedVideos).map(id => deleteVideo(id))
+      const results = await Promise.allSettled(deletePromises)
+      
+      // Check voor errors
+      const errors = results.filter(r => r.status === 'rejected')
+      if (errors.length > 0) {
+        throw new Error(`${errors.length} video's konden niet worden verwijderd`)
+      }
 
-      if (error) throw error
-
-      await fetchVideos()
+      // Herlaad videos en reset selectie
+      await loadVideos()
       setSelectedVideos(new Set())
-    } catch (error) {
-      console.error('Delete error:', error)
-      setError('Fout bij het verwijderen van video\'s')
+    } catch (err) {
+      console.error('Error deleting videos:', err)
+      setError('Er ging iets mis bij het verwijderen van de video\'s')
     }
   }
 
@@ -281,34 +283,10 @@ export function VideosOverview() {
     setShowForm(true)
   }
 
-  const handleFormComplete = () => {
+  const handleFormComplete = async () => {
     setShowForm(false)
     setEditingVideo(undefined)
-    fetchVideos()
-  }
-
-  const handleToggleVisibility = async (video: Video) => {
-    try {
-      const { error } = await supabase
-        .from('videos')
-        .update({ 
-          visible: !video.visible,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', video.id)
-
-      if (error) throw error
-
-      // Update local state
-      setVideos(videos.map(v => 
-        v.id === video.id 
-          ? { ...v, visible: !v.visible }
-          : v
-      ))
-    } catch (error) {
-      console.error('Visibility toggle error:', error)
-      setError('Fout bij het wijzigen van de zichtbaarheid')
-    }
+    await loadVideos()
   }
 
   if (loading) return (
@@ -329,34 +307,36 @@ export function VideosOverview() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Video Beheer
             </h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Beheer de video's voor de DKL25 website
+              Beheer de video's voor de DKL25 website. Sleep om de volgorde aan te passen.
             </p>
           </div>
+
           <div className="flex flex-col sm:flex-row gap-4">
             {selectedVideos.size > 0 ? (
-              <>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {selectedVideos.size} video's geselecteerd
-                  </span>
-                  <button
-                    onClick={deselectAll}
-                    className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    Deselecteer alles
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                  >
-                    Verwijder geselecteerde
-                  </button>
-                </div>
-              </>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {selectedVideos.size} video{selectedVideos.size === 1 ? '' : '\'s'} geselecteerd
+                </span>
+                <button
+                  onClick={deselectAll}
+                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Deselecteer alles
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 
+                    hover:bg-red-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 
+                    focus:ring-red-500 transition-colors"
+                >
+                  <TrashIcon className="w-4 h-4 mr-2" />
+                  Verwijder geselecteerde
+                </button>
+              </div>
             ) : (
               <button
                 onClick={selectAll}
@@ -365,27 +345,22 @@ export function VideosOverview() {
                 Selecteer alles
               </button>
             )}
+
+            <button
+              onClick={handleAdd}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white 
+                bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 
+                focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Video Toevoegen
+            </button>
           </div>
-          <button
-            onClick={handleAdd}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Video Toevoegen
-          </button>
         </div>
       </div>
 
-      {/* Videos Grid Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-800 dark:text-white">
-            Video Overzicht
-          </h3>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Versleep video's om de volgorde aan te passen
-          </div>
-        </div>
-
+      {/* Videos List Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -395,13 +370,12 @@ export function VideosOverview() {
             items={videos.map(v => v.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2">
-              {videos.map((video, index) => (
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {videos.map((video) => (
                 <SortableVideo 
-                  key={video.id} 
-                  video={video} 
-                  index={index} 
-                  isSelected={selectedVideos.has(video.id)} 
+                  key={video.id}
+                  video={video}
+                  isSelected={selectedVideos.has(video.id)}
                   onSelect={toggleSelection}
                   onPreview={setSelectedVideo}
                   onEdit={handleEdit}
@@ -412,7 +386,7 @@ export function VideosOverview() {
           </SortableContext>
         </DndContext>
 
-        {videos.length === 0 && !loading && (
+        {videos.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
               Nog geen video's toegevoegd
@@ -421,7 +395,7 @@ export function VideosOverview() {
         )}
       </div>
 
-      {/* Forms & Modals */}
+      {/* Modals */}
       {showForm && (
         <VideoForm
           video={editingVideo}
@@ -429,9 +403,10 @@ export function VideosOverview() {
           onCancel={() => setShowForm(false)}
         />
       )}
+
       {selectedVideo && (
-        <VideoPreviewModal 
-          video={selectedVideo} 
+        <VideoPreviewModal
+          video={selectedVideo}
           onClose={() => setSelectedVideo(null)}
         />
       )}

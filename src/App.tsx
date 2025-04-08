@@ -1,98 +1,51 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { MantineProvider } from '@mantine/core'
-import { AuthProvider, useAuth } from './features/auth/AuthContext'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Routes, Route } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
-import { MainLayout } from './components/layout/MainLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { PhotoManagementPage } from './pages/PhotoManagementPage'
+import { AlbumManagementPage } from './pages/AlbumManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
-import { TitleSectionManagementPage } from './pages/TitleSectionManagementPage'
+import { SponsorManagementPage } from './pages/SponsorManagementPage'
+import { ProfilePage } from './pages/ProfilePage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { AuthGuard } from './components/auth/AuthGuard'
+import { MainLayout } from './components/layout/MainLayout'
+import { OverviewTab } from './pages/OverviewTab'
+import { AanmeldingenTab } from './pages/AanmeldingenTab'
+import { ContactTab } from './pages/ContactTab'
+import { InboxTab } from './pages/InboxTab'
 
-const queryClient = new QueryClient()
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return <div>Loading...</div>
-  }
-
-  if (!user) {
-    return <Navigate to="/login" />
-  }
-
-  return children
-}
-
-function App() {
+export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route
-                path="/"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <DashboardPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/photos"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <PhotoManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/videos"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <VideoManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/partners"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <PartnerManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/title-section"
-                element={
-                  <MainLayout>
-                    <ProtectedRoute>
-                      <TitleSectionManagementPage />
-                    </ProtectedRoute>
-                  </MainLayout>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </MantineProvider>
-    </QueryClientProvider>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        element={
+          <AuthGuard>
+            <MainLayout />
+          </AuthGuard>
+        }
+      >
+        <Route path="/" element={<DashboardPage />}>
+          <Route index element={<OverviewTab />} />
+          <Route path="aanmeldingen" element={<AanmeldingenTab />} />
+          <Route path="contact" element={<ContactTab />} />
+          <Route path="inbox" element={<InboxTab />} />
+        </Route>
+        <Route path="/dashboard" element={<DashboardPage />}>
+          <Route index element={<OverviewTab />} />
+          <Route path="aanmeldingen" element={<AanmeldingenTab />} />
+          <Route path="contact" element={<ContactTab />} />
+          <Route path="inbox" element={<InboxTab />} />
+        </Route>
+        <Route path="/photos" element={<PhotoManagementPage />} />
+        <Route path="/albums" element={<AlbumManagementPage />} />
+        <Route path="/videos" element={<VideoManagementPage />} />
+        <Route path="/partners" element={<PartnerManagementPage />} />
+        <Route path="/sponsors" element={<SponsorManagementPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
-}
-
-export default App 
+} 

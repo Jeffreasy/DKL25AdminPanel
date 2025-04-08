@@ -13,19 +13,16 @@ export interface Database {
         Row: {
           id: string
           name: string
-          description: string
-          logo: string
-          website: string | null
-          since: string
-          tier: 'bronze' | 'silver' | 'gold'
+          tier: 'GOLD' | 'SILVER' | 'BRONZE'
+          logo_url: string
+          website_url: string | null
           visible: boolean
           order_number: number
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['partners']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['partners']['Insert']>
       }
+      // Voeg andere tabellen toe als nodig
     }
   }
 } 

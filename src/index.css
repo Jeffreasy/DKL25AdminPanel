@@ -1,3 +1,5 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Zorg ervoor dat er geen lege regels of spaties aan het einde staan */

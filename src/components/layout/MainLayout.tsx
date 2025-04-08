@@ -1,61 +1,20 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../../features/auth/AuthContext'
-import { HomeIcon, PhotoIcon, VideoCameraIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { Outlet } from 'react-router-dom'
+import { Sidebar } from './Sidebar'
+import { Header } from './Header'
 
-const navigationItems = [
-  { label: 'Dashboard', path: '/', icon: HomeIcon },
-  { label: 'Foto\'s', path: '/photos', icon: PhotoIcon },
-  { label: 'Video\'s', path: '/videos', icon: VideoCameraIcon },
-  { label: 'Partners', path: '/partners', icon: UserGroupIcon },
-  { label: 'Titel Sectie', path: '/title-section', icon: DocumentTextIcon },
-]
-
-export function MainLayout({ children }: { children: React.ReactNode }) {
-  const { signOut } = useAuth()
-  const location = useLocation()
-
+export function MainLayout() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              {/* Navigation */}
-              <nav className="flex space-x-8">
-                {navigationItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      location.pathname === item.path
-                        ? 'border-indigo-500 text-gray-900 dark:text-white'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-
-            {/* Right side */}
-            <div className="flex items-center">
-              <button
-                onClick={() => signOut()}
-                className="ml-4 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-              >
-                Uitloggen
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-100">
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 relative">
+          <Header />
+          <main className="p-4">
+            <Outlet />
+          </main>
         </div>
-      </header>
-
-      {/* Main content */}
-      <main className="py-6">
-        {children}
-      </main>
+      </div>
+      <div id="mantine-modal-root" />
     </div>
   )
 } 

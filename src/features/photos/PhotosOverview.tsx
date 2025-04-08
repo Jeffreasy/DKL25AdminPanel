@@ -1,537 +1,356 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase/supabaseClient'
-import { Photo } from '../../types/photo'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { H2 } from '../../components/typography'
+import { PhotoGrid } from './components/PhotoGrid'
+import { PhotoUploadModal } from './components/PhotoUploadModal'
 import { BulkUploadButton } from './components/BulkUploadButton'
-import { PhotoForm } from './components/PhotoForm'
+import { fetchPhotos, fetchAllAlbums } from '../../features/services/photoService'
+import type { Photo, PhotoCount } from './types'
+import type { AlbumWithDetails } from '../albums/types'
+import { Link } from 'react-router-dom'
+import { 
+  ViewColumnsIcon, 
+  ListBulletIcon,
+  FolderIcon,
+  PhotoIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon
+} from '@heroicons/react/24/outline'
 
-function SortablePhoto({ 
-  photo, 
-  index, 
-  isSelected,
-  onSelect,
-  onPreview,
-  onEdit,
-  onToggleVisibility
-}: { 
-  photo: Photo
-  index: number
-  isSelected: boolean
-  onSelect: (id: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => void
-  onPreview: (photo: Photo) => void
-  onEdit: (photo: Photo) => void
-  onToggleVisibility: (photo: Photo) => void
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: photo.id })
+interface PhotosByYear {
+  [key: string]: Photo[]
+}
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 1 : 0
-  }
+interface CollapsibleSectionProps {
+  title: string
+  count: number
+  children: React.ReactNode
+  defaultOpen?: boolean
+  onToggle?: () => void
+}
 
-  const altText = `DKL 2024 foto ${index + 1}`
+function CollapsibleSection({ title, count, children, defaultOpen = true, onToggle }: CollapsibleSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`
-        bg-white dark:bg-gray-800 rounded-lg shadow-sm 
-        transition-all duration-200
-        ${isDragging ? 'shadow-xl scale-[1.02] bg-gray-50 dark:bg-gray-700' : 'hover:shadow-md'}
-        ${isSelected ? 'ring-2 ring-indigo-500' : ''}
-      `}
-    >
-      <div className="flex items-center p-4">
-        <div
-          {...attributes}
-          {...listeners}
-          className="flex items-center justify-center w-8 h-8 rounded-lg cursor-grab 
-            hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mr-3
-            text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-          title="Versleep om volgorde aan te passen"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
-        <div className="mr-4">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => onSelect(photo.id, e)}
-            className="w-4 h-4 text-indigo-600 rounded border-gray-300 
-              focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700
-              dark:checked:bg-indigo-600 transition-colors"
-          />
-        </div>
-        <div className="relative flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden group">
-          <img 
-            src={photo.url} 
-            alt={altText} 
-            className={`w-full h-full object-cover transition-transform duration-200
-              group-hover:scale-105 ${!photo.visible ? 'opacity-50' : ''}`}
-          />
-          {!photo.visible && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-              <span className="text-white text-sm font-medium px-2 py-1 rounded bg-black bg-opacity-50">
-                Verborgen
-              </span>
-            </div>
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen)
+          onToggle?.()
+        }}
+        className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {isOpen ? (
+            <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+          ) : (
+            <ChevronRightIcon className="w-5 h-5 text-gray-500" />
           )}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 
-            transition-opacity duration-200" />
+          <h3 className="font-medium text-gray-900">{title}</h3>
+          <span className="text-sm text-gray-500">({count})</span>
         </div>
-        <div className="ml-4 flex-grow">
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                Positie {index + 1}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(photo.updated_at).toLocaleDateString('nl-NL')}
-              </span>
-            </div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {altText}
-            </span>
-          </div>
+      </button>
+      {isOpen && (
+        <div className="p-4">
+          {children}
         </div>
-        <button
-          onClick={() => onEdit(photo)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title="Foto bewerken"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        <button
-          onClick={() => onPreview(photo)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title="Bekijk foto"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-        <button
-          onClick={() => onToggleVisibility(photo)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 
-            dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors"
-          title={photo.visible ? "Foto verbergen" : "Foto zichtbaar maken"}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {photo.visible ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-            )}
-          </svg>
-        </button>
-      </div>
+      )}
     </div>
   )
 }
 
 export function PhotosOverview() {
   const [photos, setPhotos] = useState<Photo[]>([])
+  const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
-  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
-  const [showForm, setShowForm] = useState(false)
-  const [editingPhoto, setEditingPhoto] = useState<Photo | undefined>(undefined)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
+  const [error, setError] = useState<Error | null>(null)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [activeTab, setActiveTab] = useState<'all' | 'unorganized'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetchPhotos()
+    loadData()
   }, [])
 
-  const fetchPhotos = async () => {
+  const loadData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .order('order_number')
-
-      if (error) throw error
-      setPhotos(data || [])
+      setLoading(true)
+      const [photosData, albumsData] = await Promise.all([
+        fetchPhotos(),
+        fetchAllAlbums()
+      ])
+      setPhotos(photosData)
+      setAlbums(albumsData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Er is een fout opgetreden')
+      console.error('Error loading data:', err)
+      setError(new Error('Er ging iets mis bij het ophalen van de gegevens'))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  // Filter photos that are not in any album
+  const unorganizedPhotos = photos.filter(photo => {
+    // Haal eerst alle foto IDs uit de album_photos relaties
+    const albumPhotoIds = albums.flatMap(album => 
+      (album.photos_count as PhotoCount[]).map(pc => pc.photo_id)
+    )
+    // Check of deze foto in een album zit
+    return !albumPhotoIds.includes(photo.id)
+  })
 
-    try {
-      const oldIndex = photos.findIndex(photo => photo.id === active.id)
-      const newIndex = photos.findIndex(photo => photo.id === over.id)
-
-      // Optimistic update voor de UI
-      const newPhotos = arrayMove(photos, oldIndex, newIndex)
-      setPhotos(newPhotos)
-
-      // Update de volgorde via de specifieke stored procedure
-      const { error } = await supabase.rpc('reorder_photos', {
-        photo_ids: newPhotos.map(p => p.id)
-      })
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Drag error:', error)
-      setError('Fout bij het updaten van de volgorde')
-      await fetchPhotos()
-    }
+  // Groepeer foto's per jaar
+  const groupPhotosByYear = (photoList: Photo[]): PhotosByYear => {
+    return photoList.reduce((acc: PhotosByYear, photo) => {
+      const year = String(photo.year || new Date(photo.created_at).getFullYear())
+      if (!acc[year]) {
+        acc[year] = []
+      }
+      acc[year].push(photo)
+      return acc
+    }, {})
   }
 
-  const PreviewModal = ({ photo, onClose }: { photo: Photo; onClose: () => void }) => {
-    const [zoomLevel, setZoomLevel] = useState(1)
-    const [isFullscreen, setIsFullscreen] = useState(false)
-
-    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 3))
-    const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5))
-    const handleReset = () => setZoomLevel(1)
-
-    const toggleFullscreen = () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen()
-        setIsFullscreen(true)
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId)
       } else {
-        document.exitFullscreen()
-        setIsFullscreen(false)
+        newSet.add(sectionId)
       }
+      return newSet
+    })
+  }
+
+  const filterPhotos = (photoList: Photo[]) => {
+    if (!searchQuery) return photoList
+
+    const query = searchQuery.toLowerCase()
+    return photoList.filter(photo => 
+      photo.title?.toLowerCase().includes(query) ||
+      photo.description?.toLowerCase().includes(query) ||
+      photo.alt?.toLowerCase().includes(query) ||
+      photo.year?.toString().includes(query)
+    )
+  }
+
+  const renderLibraryContent = () => {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="aspect-square animate-pulse bg-gray-200 rounded-lg" />
+          ))}
+        </div>
+      )
     }
 
+    if (error) {
+      return <div className="text-red-600 text-center py-8">{error.message}</div>
+    }
+
+    const photosByYear = groupPhotosByYear(
+      filterPhotos(activeTab === 'all' ? photos : unorganizedPhotos)
+    )
+    const years = Object.keys(photosByYear).sort((a, b) => Number(b) - Number(a))
+
     return (
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-        onClick={onClose}
-      >
-        <div 
-          className="bg-white rounded-lg max-w-6xl w-full"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="p-4 flex justify-between items-center border-b">
-            <h3 className="text-lg font-medium">{photo.alt}</h3>
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={handleZoomOut}
-                className="p-2 hover:bg-gray-100 rounded"
-                title="Zoom uit"
-              >
-                <span>-</span>
-              </button>
-              <button 
-                onClick={handleReset}
-                className="p-2 hover:bg-gray-100 rounded"
-                title="Reset zoom"
-              >
-                <span>{Math.round(zoomLevel * 100)}%</span>
-              </button>
-              <button 
-                onClick={handleZoomIn}
-                className="p-2 hover:bg-gray-100 rounded"
-                title="Zoom in"
-              >
-                <span>+</span>
-              </button>
-              <button 
-                onClick={toggleFullscreen}
-                className="p-2 hover:bg-gray-100 rounded"
-                title="Volledig scherm"
-              >
-                <span>{isFullscreen ? '⤓' : '⤢'}</span>
-              </button>
-              <button 
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded"
-                title="Sluiten"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div 
-            className="relative overflow-auto p-4"
-            style={{ maxHeight: 'calc(100vh - 200px)' }}
+      <div className="space-y-4">
+        {/* Recent Albums Sectie */}
+        {activeTab === 'all' && (
+          <CollapsibleSection 
+            title="Recent gebruikte albums" 
+            count={albums.length}
+            defaultOpen={expandedSections.has('albums')}
+            onToggle={() => toggleSection('albums')}
           >
-            <div 
-              className="transition-transform duration-200 ease-in-out"
-              style={{ 
-                transform: `scale(${zoomLevel})`,
-                transformOrigin: 'center center'
-              }}
-            >
-              <img 
-                src={photo.url} 
-                alt={photo.alt} 
-                className="w-full h-auto rounded"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {albums.slice(0, 4).map(album => (
+                <Link
+                  key={album.id}
+                  to={`/albums/${album.id}`}
+                  className="group relative aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500"
+                >
+                  {album.cover_photo ? (
+                    <img
+                      src={album.cover_photo.thumbnail_url || album.cover_photo.url}
+                      alt={album.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <FolderIcon className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                    <div>
+                      <h4 className="text-white font-medium">{album.title}</h4>
+                      <p className="text-sm text-gray-300">
+                        {album.photos_count[0]?.count || 0} foto's
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              <Link
+                to="/albums"
+                className="flex items-center justify-center aspect-[4/3] bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-gray-100 transition-colors group"
+              >
+                <div className="text-center">
+                  <FolderIcon className="w-8 h-8 mx-auto text-gray-400 group-hover:text-indigo-500" />
+                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                    Alle albums bekijken
+                  </span>
+                </div>
+              </Link>
             </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Foto's per jaar */}
+        {years.map(year => (
+          <CollapsibleSection
+            key={year}
+            title={`Foto's ${year}`}
+            count={photosByYear[year].length}
+            defaultOpen={expandedSections.has(`year-${year}`)}
+            onToggle={() => toggleSection(`year-${year}`)}
+          >
+            <PhotoGrid
+              photos={photosByYear[year]}
+              loading={false}
+              error={null}
+              setError={setError}
+              onUpdate={loadData}
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+            />
+          </CollapsibleSection>
+        ))}
+
+        {years.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            Geen foto's gevonden{searchQuery ? ' voor deze zoekopdracht' : ''}
           </div>
-        </div>
+        )}
       </div>
     )
   }
 
-  const toggleSelection = (photoId: string, event: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => {
-    event.stopPropagation() // Voorkom dat de preview modal opent
-    const newSelection = new Set(selectedPhotos)
-    if (newSelection.has(photoId)) {
-      newSelection.delete(photoId)
-    } else {
-      newSelection.add(photoId)
-    }
-    setSelectedPhotos(newSelection)
-  }
-
-  const selectAll = () => {
-    setSelectedPhotos(new Set(photos.map(p => p.id)))
-  }
-
-  const deselectAll = () => {
-    setSelectedPhotos(new Set())
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedPhotos.size === 0) return
-
-    if (!confirm(`Weet je zeker dat je ${selectedPhotos.size} foto's wilt verwijderen?`)) {
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('photos')
-        .delete()
-        .in('id', Array.from(selectedPhotos))
-
-      if (error) throw error
-
-      // Refresh de lijst en clear selectie
-      await fetchPhotos()
-      setSelectedPhotos(new Set())
-    } catch (error) {
-      console.error('Delete error:', error)
-      setError('Fout bij het verwijderen van foto\'s')
-    }
-  }
-
-  const handleEdit = (photo: Photo) => {
-    setEditingPhoto(photo)
-    setShowForm(true)
-  }
-
-  const handleFormComplete = () => {
-    setShowForm(false)
-    setEditingPhoto(undefined)
-    fetchPhotos()
-  }
-
-  const handleToggleVisibility = async (photo: Photo) => {
-    try {
-      // Log de huidige status
-      console.log('Toggling visibility for photo:', photo.id, 'Current visible:', photo.visible)
-
-      const { error } = await supabase
-        .from('photos')
-        .update({ 
-          visible: !photo.visible,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', photo.id)
-
-      if (error) throw error
-
-      // Update local state
-      setPhotos(photos.map(p => 
-        p.id === photo.id 
-          ? { ...p, visible: !p.visible }
-          : p
-      ))
-
-      // Log de nieuwe status
-      console.log('Visibility toggled successfully')
-    } catch (error) {
-      console.error('Visibility toggle error:', error)
-      setError('Fout bij het wijzigen van de zichtbaarheid')
-    }
-  }
-
-  if (loading) return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-    </div>
-  )
-  
-  if (error) return (
-    <div className="text-red-500 p-4 text-center bg-red-50 rounded-lg">
-      {error}
-    </div>
-  )
-
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
-      {/* Header Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8">
+      {/* Header met acties */}
+      <div className="bg-white shadow-sm rounded-lg p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-              Foto Beheer
-            </h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Beheer de foto's voor de DKL25 website
+            <H2>Foto bibliotheek</H2>
+            <p className="text-sm text-gray-500 mt-1">
+              Beheer hier alle foto's en albums
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            {selectedPhotos.size > 0 ? (
-              <>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {selectedPhotos.size} foto's geselecteerd
-                  </span>
-                  <button
-                    onClick={deselectAll}
-                    className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    Deselecteer alles
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                  >
-                    Verwijder geselecteerde
-                  </button>
-                </div>
-              </>
-            ) : (
-              <button
-                onClick={selectAll}
-                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                Selecteer alles
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Forms & Modals */}
-      {showForm && (
-        <PhotoForm
-          photo={editingPhoto}
-          onComplete={handleFormComplete}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
-
-      {/* Upload Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
-          Foto's Uploaden
-        </h3>
-        <BulkUploadButton onUploadComplete={fetchPhotos} />
-      </div>
-
-      {/* Photos Grid Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-800 dark:text-white">
-            Foto Overzicht
-          </h3>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Versleep foto's om de volgorde aan te passen
-          </div>
-        </div>
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={photos.map(p => p.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-2">
-              {photos.map((photo, index) => (
-                <SortablePhoto 
-                  key={photo.id} 
-                  photo={photo} 
-                  index={index} 
-                  isSelected={selectedPhotos.has(photo.id)} 
-                  onSelect={toggleSelection}
-                  onPreview={setSelectedPhoto}
-                  onEdit={handleEdit}
-                  onToggleVisibility={handleToggleVisibility}
-                />
-              ))}
+          
+          {/* Zoekbalk */}
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
             </div>
-          </SortableContext>
-        </DndContext>
-
-        {photos.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
-              Nog geen foto's geüpload
-            </p>
+            <input
+              type="search"
+              placeholder="Zoek in foto's..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
           </div>
-        )}
+
+          {/* View toggle */}
+          <div className="flex rounded-lg shadow-sm">
+            <button
+              onClick={() => setView('grid')}
+              className={`p-2 ${
+                view === 'grid'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-700 hover:text-gray-900 border border-gray-300'
+              } rounded-l-lg`}
+              title="Grid weergave"
+            >
+              <ViewColumnsIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setView('list')}
+              className={`p-2 ${
+                view === 'list'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-700 hover:text-gray-900 border border-l-0 border-gray-300'
+              } rounded-r-lg`}
+              title="Lijst weergave"
+            >
+              <ListBulletIcon className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Upload buttons */}
+          <div className="flex gap-2">
+            <BulkUploadButton
+              onUploadComplete={loadData}
+              className="bg-white shadow-sm"
+            />
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+            >
+              Foto toevoegen
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`
+                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
+                ${activeTab === 'all' 
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+              `}
+            >
+              <PhotoIcon className="w-5 h-5" />
+              Alle foto's ({photos.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('unorganized')}
+              className={`
+                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
+                ${activeTab === 'unorganized'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+              `}
+            >
+              <FolderIcon className="w-5 h-5" />
+              Niet in album ({unorganizedPhotos.length})
+            </button>
+          </nav>
+        </div>
       </div>
 
-      {/* Preview Modal */}
-      {selectedPhoto && (
-        <PreviewModal 
-          photo={selectedPhoto} 
-          onClose={() => setSelectedPhoto(null)}
-        />
-      )}
+      {/* Library Content */}
+      <div className="bg-white shadow-sm rounded-lg p-6">
+        {renderLibraryContent()}
+      </div>
+
+      <PhotoUploadModal
+        open={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onComplete={() => {
+          setShowUploadModal(false)
+          loadData()
+        }}
+      />
     </div>
   )
 } 

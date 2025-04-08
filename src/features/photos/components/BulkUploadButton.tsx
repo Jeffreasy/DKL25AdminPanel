@@ -1,142 +1,168 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { supabase } from '../../../lib/supabase/supabaseClient'
+import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
+import { supabase } from '../../../lib/supabase'
+import type { CloudinaryUploadResponse } from '../../../lib/cloudinary/types'
 
 interface BulkUploadButtonProps {
   onUploadComplete: () => void
+  className?: string
+  maxFiles?: number
+  maxFileSize?: number
 }
 
-export function BulkUploadButton({ onUploadComplete }: BulkUploadButtonProps) {
+const savePhotoToAPI = async (params: {
+  url: string
+  alt: string
+  order_number: number
+  thumbnail_url?: string
+}): Promise<void> => {
+  const { error } = await supabase
+    .from('photos')
+    .insert([{
+      url: params.url,
+      alt: params.alt,
+      thumbnail_url: params.thumbnail_url || params.url,
+      order_number: params.order_number,
+      visible: true,
+      year: new Date().getFullYear()
+    }])
+
+  if (error) throw error
+}
+
+const getLastOrderNumber = async (): Promise<number> => {
+  const { data, error } = await supabase
+    .from('photos')
+    .select('order_number')
+    .order('order_number', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) return 0
+  return (data?.order_number || 0) + 1
+}
+
+export function BulkUploadButton({ onUploadComplete, className = '', maxFiles = 20, maxFileSize = 5242880 }: BulkUploadButtonProps) {
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState<{[key: string]: number}>({})
   const [error, setError] = useState<string | null>(null)
 
-  const handleFiles = useCallback(async (files: File[]) => {
-    setUploading(true)
-    setError(null)
-
-    try {
-      for (const file of files) {
-        // Check if file is an image
-        if (!file.type.startsWith('image/')) {
-          throw new Error('Alleen afbeeldingen zijn toegestaan')
-        }
-
-        // Upload to Cloudinary
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('upload_preset', 'dkl25_photos')
-
-        const response = await fetch(
-          'https://api.cloudinary.com/v1_1/dgfuv7wif/image/upload',
-          {
-            method: 'POST',
-            body: formData
-          }
-        )
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Upload naar Cloudinary mislukt')
-        }
-
-        // Save to Supabase
-        const { error: dbError } = await supabase
-          .from('photos')
-          .insert([
-            {
-              url: data.secure_url,
-              alt: file.name.split('.')[0],
-              visible: true,
-              order_number: 9999  // Will be reordered by drag & drop
-            }
-          ])
-
-        if (dbError) throw dbError
-      }
-
-      onUploadComplete()
-    } catch (err) {
-      console.error('Upload error:', err)
-      setError(err instanceof Error ? err.message : 'Upload mislukt')
-    } finally {
-      setUploading(false)
-    }
-  }, [onUploadComplete])
-
-  // Dropzone setup
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    handleFiles(acceptedFiles)
-  }, [handleFiles])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-    onDrop,
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     accept: {
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+    },
+    multiple: true,
+    disabled: uploading,
+    maxFiles: maxFiles,
+    maxSize: maxFileSize,
+    onDrop: async (acceptedFiles) => {
+      setUploading(true)
+      setProgress({})
+      setError(null)
+
+      try {
+        const startOrderNumber = await getLastOrderNumber()
+
+        for (let i = 0; i < acceptedFiles.length; i += 3) {
+          const batch = acceptedFiles.slice(i, i + 3)
+          await Promise.all(batch.map(async (file, index) => {
+            try {
+              const result: CloudinaryUploadResponse = await uploadToCloudinary(
+                file,
+                (progressEvent) => {
+                  setProgress(prev => ({
+                    ...prev,
+                    [file.name]: Math.round((progressEvent.loaded / progressEvent.total) * 100)
+                  }))
+                }
+              )
+
+              await savePhotoToAPI({
+                url: result.secure_url,
+                thumbnail_url: result.secure_url,
+                alt: file.name.split('.')[0],
+                order_number: startOrderNumber + i + index,
+              })
+            } catch (err) {
+              console.error(`Error uploading ${file.name}:`, err)
+              throw err
+            }
+          }))
+        }
+
+        onUploadComplete()
+      } catch (err) {
+        console.error('Upload error:', err)
+        setError(err instanceof Error ? err.message : 'Upload failed')
+      } finally {
+        setUploading(false)
+        setProgress({})
+      }
     }
   })
 
-  // Paste handler
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    const files: File[] = []
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
-        const file = item.getAsFile()
-        if (file) files.push(file)
-      }
-    }
-
-    if (files.length > 0) {
-      e.preventDefault()
-      handleFiles(files)
-    }
-  }, [handleFiles])
-
-  // Add paste event listener using useEffect
-  useEffect(() => {
-    document.addEventListener('paste', handlePaste)
-    return () => document.removeEventListener('paste', handlePaste)
-  }, [handlePaste])
+  // Bereken totale voortgang
+  const totalProgress = Object.values(progress).reduce((sum, value) => sum + value, 0) / 
+    (Object.keys(progress).length || 1)
 
   return (
-    <div>
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-          transition-colors duration-200
-          ${isDragActive 
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10' 
-            : 'border-gray-300 dark:border-gray-700 hover:border-indigo-400'
-          }
-        `}
-      >
-        <input {...getInputProps()} />
-        <div className="space-y-2">
-          <div className="text-gray-600 dark:text-gray-400">
-            {uploading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mr-2" />
-                <span>Uploading...</span>
+    <div
+      {...getRootProps()}
+      className={`
+        relative p-4 border-2 border-dashed rounded-lg transition-all duration-200
+        ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'}
+        ${isDragReject ? 'border-red-500 bg-red-50' : ''}
+        ${uploading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-400'}
+        ${className}
+      `}
+    >
+      <input {...getInputProps()} />
+      <div className="flex flex-col items-center space-y-3">
+        {/* Upload Icon */}
+        <div className={`
+          w-12 h-12 rounded-lg flex items-center justify-center
+          ${uploading ? 'bg-indigo-100' : 'bg-indigo-50'}
+        `}>
+          <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        </div>
+
+        {/* Status Text met gedetailleerde voortgang */}
+        <div className="text-sm text-center">
+          {uploading ? (
+            <div className="space-y-2">
+              <div className="text-indigo-600">
+                Uploading... {Math.round(totalProgress)}%
               </div>
-            ) : isDragActive ? (
-              <span>Drop de foto's hier...</span>
-            ) : (
-              <>
-                <p>Sleep foto's hierheen of klik om te uploaden</p>
-                <p className="text-sm">Je kunt ook foto's plakken (Ctrl+V)</p>
-              </>
-            )}
-          </div>
-          {error && (
-            <div className="text-red-500 text-sm">
-              {error}
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 transition-all duration-300"
+                  style={{ width: `${totalProgress}%` }}
+                />
+              </div>
+            </div>
+          ) : isDragActive ? (
+            <div className="text-indigo-600">
+              Drop de bestanden hier...
+            </div>
+          ) : (
+            <div className="text-gray-600">
+              Sleep foto's hierheen of klik om te uploaden
+              <div className="text-xs text-gray-500 mt-1">
+                Max {maxFiles} bestanden, {(maxFileSize / (1024 * 1024)).toFixed(1)}MB per bestand
+              </div>
             </div>
           )}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   )
