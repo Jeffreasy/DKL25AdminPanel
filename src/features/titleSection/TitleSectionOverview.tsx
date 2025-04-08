@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase/supabaseClient'
+import { supabase } from '../../lib//supabase/supabaseClient'
 import { TitleSection } from '../../types/titleSection'
 import { TitleSectionForm } from './components/TitleSectionForm'
 
