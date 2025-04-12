@@ -306,21 +306,18 @@ export default function EmailInbox({ account = 'info' }: Props) {
                 </Typography>
               </Box>
             ) : (
-              <>
-                {console.log('[EmailInbox] Rendering sortedEmails:', sortedEmails)}
-                {sortedEmails.map(email => (
-                  <EmailItem
-                    key={email.id}
-                    email={email}
-                    isSelected={selectedEmailId === email.id}
-                    onClick={() => setSelectedEmailId(email.id)}
-                    formattedDate={formatDistanceToNow(new Date(email.created_at), {
-                      addSuffix: true,
-                      locale: nl
-                    })}
-                  />
-                ))}
-              </>
+              sortedEmails.map(email => (
+                <EmailItem
+                  key={email.id}
+                  email={email}
+                  isSelected={selectedEmailId === email.id}
+                  onClick={() => setSelectedEmailId(email.id)}
+                  formattedDate={formatDistanceToNow(new Date(email.created_at), {
+                    addSuffix: true,
+                    locale: nl
+                  })}
+                />
+              ))
             )}
           </Box>
           {/* Pagination (Fixed at the bottom of the list) */}

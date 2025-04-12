@@ -177,63 +177,72 @@ interface FetchResponse {
   saved_count: number;
 }
 
-export const adminEmailService = {
-  // N8N email functie
-  async sendViaN8N(params: SendEmailParams) {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || ''
-      
-      if (!apiUrl) {
-        throw new Error('API URL not configured')
-      }
+interface SendAdminMailPayload {
+  to: string; // Comma-separated if multiple
+  subject: string;
+  body: string; // Assumed to be HTML
+}
 
-      const response = await fetch(`${apiUrl}/api/email/send`, {
+export const adminEmailService = {
+  // N8N email functie - VERWIJDERD
+  // async sendViaN8N(params: SendEmailParams) { ... }
+
+  // Admin email versturen (nu via custom backend API)
+  async sendAdminEmail(params: SendEmailParams): Promise<{ success: boolean; id?: string }> {
+    try {
+      // Aanroep naar de custom backend API
+      const url = `${API_BASE_URL}/api/mail/send`; // Aanname: endpoint bestaat
+      const headers = getAuthHeaders();
+      
+      const payload = {
+        from: params.from,
+        to: Array.isArray(params.to) ? params.to.join(',') : params.to,
+        subject: params.subject,
+        html: params.body || '', // Gebruik html ipv body? Of beide?
+        replyTo: params.replyTo,
+        template: params.template, // Ondersteunt backend templates?
+        templateVariables: params.template_variables // Ondersteunt backend dit?
+      };
+
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: params.from,
-          to: Array.isArray(params.to) ? params.to.join(',') : params.to,
-          subject: params.subject,
-          html: params.body || '',
-          replyTo: params.replyTo,
-          template: params.template,
-          templateVariables: params.template_variables
-        })
-      })
+        headers,
+        body: JSON.stringify(payload)
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to send email via N8N')
+        const errorText = await response.text().catch(() => 'Failed to get error details');
+        let errorMessage = `Error sending email via backend: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+        } catch (e) { /* Ignore parsing error */ }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json()
-      return result
-    } catch (error) {
-      console.error('Failed to send email:', error)
-      throw error
-    }
-  },
+      const result = await response.json(); // Wat retourneert de backend?
+      const emailId = result?.id || result?.messageId || undefined; // Probeer een ID te vinden voor logging
 
-  // Admin email versturen
-  async sendAdminEmail(params: SendEmailParams) {
-    try {
-      const result = await this.sendViaN8N(params)
+      // Log het event als het versturen succesvol leek
       await this.logEmailEvent({
         event_type: 'sent',
         from_email: params.from,
         to_email: Array.isArray(params.to) ? params.to.join(', ') : params.to,
         subject: params.subject,
-        email_id: result.id
-      })
-      return { success: true, id: result.id }
+        email_id: emailId || 'unknown' // Gebruik ID van backend response indien beschikbaar
+      });
+
+      return { success: true, id: emailId };
+
     } catch (error) {
-      console.error('Failed to send email:', error)
-      throw error
+      console.error('Failed to send admin email:', error);
+      // Loggen dat het versturen mislukt is?
+      // await this.logEmailEvent({ event_type: 'send_failed', ... });
+      throw error; // Re-throw voor de UI
     }
   },
 
-  // Autoresponse functies
+  // Autoresponse functies (blijven werken via aangepaste sendAdminEmail)
   async sendAutoResponse(triggerEvent: string, variables: Record<string, string>) {
     const { data: autoResponse } = await supabase
       .from('email_autoresponse')
@@ -244,12 +253,13 @@ export const adminEmailService = {
 
     if (!autoResponse) return
 
+    // Roep de aangepaste sendAdminEmail aan
     return this.sendAdminEmail({
       to: variables.email,
-      from: 'no-reply@dekoninklijkeloop.nl',
+      from: 'no-reply@dekoninklijkeloop.nl', // Moet dit configureerbaar zijn?
       subject: autoResponse.subject,
-      template: autoResponse.name,
-      template_variables: variables
+      template: autoResponse.name, // Backend moet dit ondersteunen
+      template_variables: variables // Backend moet dit ondersteunen
     })
   },
 
@@ -279,39 +289,9 @@ export const adminEmailService = {
     }
   },
 
-  // Email verificatie
-  async verifyEmailAddress(email: string) {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || ''
-      
-      if (!apiUrl) {
-        throw new Error('API URL not configured')
-      }
-
-      const response = await fetch(`${apiUrl}/api/email/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
-      if (!response.ok) {
-        throw new Error('Failed to verify email via N8N')
-      }
-      return { success: true }
-    } catch (error) {
-      console.error('Failed to verify email:', error)
-      throw error
-    }
-  },
-
-  async checkEmailVerification(email: string): Promise<boolean> {
-    try {
-      const result = await this.verifyEmailAddress(email)
-      return result.success
-    } catch (error) {
-      console.error('Email verification check failed:', error)
-      return false
-    }
-  },
+  // Email verificatie - VERWIJDERD
+  // async verifyEmailAddress(email: string) { ... }
+  // async checkEmailVerification(email: string): Promise<boolean> { ... }
 
   // Autoresponse management
   async getAutoResponses() {
@@ -512,6 +492,71 @@ export const adminEmailService = {
     } catch (error) {
       console.error('Failed to trigger email fetch:', error);
       throw error; // Re-throw voor de UI laag
+    }
+  },
+
+  // NIEUW: Functie om email te versturen als ingelogde admin (via JWT)
+  async sendMailAsAdmin(payload: SendAdminMailPayload): Promise<{ success: boolean }> {
+    console.log('[sendMailAsAdmin] Attempting to send email:', payload);
+    try {
+      // 1. Haal de huidige Supabase sessie en token op
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('[sendMailAsAdmin] Error getting session:', sessionError);
+        throw new Error('Kon gebruikerssessie niet ophalen.');
+      }
+      if (!session) {
+        console.error('[sendMailAsAdmin] No active session found.');
+        throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in.');
+      }
+      const token = session.access_token;
+
+      // 2. Haal de basis URL van de Vercel/Supabase backend op
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) {
+        console.error('[sendMailAsAdmin] VITE_API_URL is not configured.');
+        throw new Error('API URL niet geconfigureerd.');
+      }
+
+      // 3. Bouw de headers met JWT
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
+      // 4. Maak de API call naar het nieuwe endpoint
+      const url = `${apiUrl}/api/admin/mail/send`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          to: payload.to, // Backend verwacht komma-gescheiden string
+          subject: payload.subject,
+          body: payload.body // Backend verwacht HTML body
+        })
+      });
+      console.log(`[sendMailAsAdmin] Response status from ${url}: ${response.status}`);
+
+      // 5. Handel de response af
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Failed to get error details');
+        let errorMessage = `Error sending email via ${url}: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+        } catch (e) { /* Ignore parsing error */ }
+        console.error(`[sendMailAsAdmin] Error response: ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
+
+      // Success
+      console.log('[sendMailAsAdmin] Email sent successfully.');
+      return { success: true };
+
+    } catch (error) {
+      console.error('[sendMailAsAdmin] Failed:', error);
+      throw error; // Re-throw voor de UI laag om af te handelen
     }
   }
 } 

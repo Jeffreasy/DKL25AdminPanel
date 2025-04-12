@@ -34,17 +34,15 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
 
   const handleSendEmail = async (data: { subject: string; body: string; from: string }) => {
     try {
-      await adminEmailService.sendAdminEmail({
+      await adminEmailService.sendMailAsAdmin({
         to: message.email,
         subject: data.subject,
-        body: data.body,
-        from: data.from,
-        replyTo: 'info@dekoninklijkeloop.nl'
+        body: data.body
       })
       await updateMessageStatus(message.id, 'afgehandeld')
       onStatusUpdate()
     } catch (error) {
-      console.error('Failed to send email:', error)
+      console.error('Failed to send email via admin endpoint:', error)
       throw error
     }
   }

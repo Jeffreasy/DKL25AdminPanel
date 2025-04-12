@@ -1,11 +1,9 @@
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState } from 'react'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import { RichTextEditor } from '@mantine/tiptap'
-import { adminEmailService } from '../../features/email/adminEmailService'
-import { EmailVerification } from './EmailVerification'
 
 interface EmailDialogProps {
   isOpen: boolean
@@ -83,19 +81,11 @@ export function EmailDialog({ isOpen, onClose, recipient, onSend }: EmailDialogP
   const [subject, setSubject] = useState<string>(EMAIL_TEMPLATES.default.subject)
   const [sending, setSending] = useState(false)
   const [senderEmail, setSenderEmail] = useState<SenderEmailValue>(SENDER_EMAILS[0].value)
-  const [needsVerification, setNeedsVerification] = useState(false)
 
   const editor = useEditor({
     extensions: [StarterKit, Link],
     content: EMAIL_TEMPLATES[selectedTemplate].content(recipient.name)
   })
-
-  useEffect(() => {
-    // Check of het geselecteerde email adres geverifieerd is
-    adminEmailService.checkEmailVerification(senderEmail)
-      .then((isVerified: boolean) => setNeedsVerification(!isVerified))
-      .catch(console.error)
-  }, [senderEmail])
 
   // Update content when template changes
   const handleTemplateChange = (template: TemplateKey) => {
@@ -249,12 +239,6 @@ export function EmailDialog({ isOpen, onClose, recipient, onSend }: EmailDialogP
           </div>
         </div>
       </Dialog>
-      {needsVerification && (
-        <EmailVerification 
-          email={senderEmail} 
-          onVerified={() => setNeedsVerification(false)}
-        />
-      )}
     </Transition>
   )
 } 

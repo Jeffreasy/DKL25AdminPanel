@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MantineProvider } from '@mantine/core'
 import { AuthProvider } from './contexts/auth/AuthProvider'
 import { NavigationHistoryContext } from './contexts/navigation/NavigationHistoryContext'
 import { FavoritesContext } from './contexts/favorites/FavoritesContext'
@@ -9,6 +10,8 @@ import { SidebarContext } from './contexts/sidebar/SidebarContext'
 import { App } from './App'
 import './index.css'
 import './styles/scrollbars.css'
+import '@mantine/core/styles.css';
+import '@mantine/tiptap/styles.css';
 
 const queryClient = new QueryClient()
 
@@ -48,15 +51,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <NavigationHistoryContext.Provider value={{ history, addToHistory, clearHistory, recentPages }}>
-            <FavoritesContext.Provider value={{ favorites, addFavorite, removeFavorite }}>
-              <SidebarContext.Provider value={{ isOpen, toggle, close }}>
-                {children}
-              </SidebarContext.Provider>
-            </FavoritesContext.Provider>
-          </NavigationHistoryContext.Provider>
-        </AuthProvider>
+        <MantineProvider>
+          <AuthProvider>
+            <NavigationHistoryContext.Provider value={{ history, addToHistory, clearHistory, recentPages }}>
+              <FavoritesContext.Provider value={{ favorites, addFavorite, removeFavorite }}>
+                <SidebarContext.Provider value={{ isOpen, toggle, close }}>
+                  {children}
+                </SidebarContext.Provider>
+              </FavoritesContext.Provider>
+            </NavigationHistoryContext.Provider>
+          </AuthProvider>
+        </MantineProvider>
       </QueryClientProvider>
     </BrowserRouter>
   )
