@@ -40,13 +40,13 @@ export function UserMenu() {
               alt=""
             />
           ) : (
-            <UserCircleIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
+            <UserCircleIcon className="h-8 w-8 text-gray-500 dark:text-gray-400" aria-hidden="true" />
           )}
           <div className="hidden lg:flex lg:items-center">
-            <span className="text-sm font-semibold leading-6 text-gray-900">
+            <span className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100">
               {displayName}
             </span>
-            <ChevronDownIcon className="ml-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+            <ChevronDownIcon className="ml-2 h-5 w-5 text-gray-500 dark:text-gray-400" aria-hidden="true" />
           </div>
         </div>
       </Menu.Button>
@@ -59,10 +59,10 @@ export function UserMenu() {
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
-          <div className="px-3 py-2 text-sm text-gray-900 border-b border-gray-100">
-            <div className="font-medium">{displayName}</div>
-            <div className="text-gray-500 text-xs truncate">{user.email}</div>
+        <Menu.Items className="absolute right-0 z-10 mt-2.5 w-auto min-w-[10rem] origin-top-right rounded-md bg-white dark:bg-gray-800 py-2 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none">
+          <div className="px-3 py-2 text-sm border-b border-gray-100 dark:border-gray-700">
+            <div className="font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
+            <div className="text-gray-500 dark:text-gray-400 text-xs truncate">{user.email}</div>
           </div>
           
           <Menu.Item>
@@ -70,12 +70,12 @@ export function UserMenu() {
               <Link
                 to="/profile"
                 className={classNames(
-                  active ? 'bg-gray-50' : '',
-                  'block px-3 py-1 text-sm leading-6 text-gray-900'
+                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
+                  'block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
                 )}
               >
                 <div className="flex items-center">
-                  <UserCircleIcon className="h-4 w-4 mr-2" />
+                  <UserCircleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                   Profiel
                 </div>
               </Link>
@@ -87,12 +87,12 @@ export function UserMenu() {
               <Link
                 to="/settings"
                 className={classNames(
-                  active ? 'bg-gray-50' : '',
-                  'block px-3 py-1 text-sm leading-6 text-gray-900'
+                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
+                  'block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
                 )}
               >
                 <div className="flex items-center">
-                  <Cog6ToothIcon className="h-4 w-4 mr-2" />
+                  <Cog6ToothIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                   Instellingen
                 </div>
               </Link>
@@ -104,12 +104,12 @@ export function UserMenu() {
               <button
                 onClick={handleLogout}
                 className={classNames(
-                  active ? 'bg-gray-50' : '',
-                  'block w-full text-left px-3 py-1 text-sm leading-6 text-gray-900'
+                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
+                  'block w-full text-left px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
                 )}
               >
                 <div className="flex items-center">
-                  <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+                  <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                   Uitloggen
                 </div>
               </button>

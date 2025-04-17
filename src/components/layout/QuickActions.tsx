@@ -79,7 +79,7 @@ export function QuickActions() {
   return (
     <>
       <Menu as="div" className="relative">
-        <Menu.Button className="rounded-full p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+        <Menu.Button className="rounded-full p-1 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
           <span className="sr-only">Open snelle acties</span>
           <PlusIcon className="h-6 w-6" aria-hidden="true" />
         </Menu.Button>
@@ -93,13 +93,13 @@ export function QuickActions() {
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="absolute right-0 z-10 mt-2 w-96 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-            <div className="px-4 py-2">
-              <p className="text-sm font-medium text-gray-900">Snelle acties</p>
-              <p className="text-sm text-gray-500">Voer snel taken uit</p>
+          <Menu.Items className="absolute right-0 z-10 mt-2 w-full origin-top-right rounded-md bg-white dark:bg-gray-800 py-2 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none sm:w-96">
+            <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Snelle acties</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Voer snel taken uit</p>
             </div>
 
-            <div className="mt-2 divide-y divide-gray-100">
+            <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
               {quickActions.map((action) => (
                 <Menu.Item key={action.name}>
                   {({ active }) => (
@@ -107,18 +107,18 @@ export function QuickActions() {
                       onClick={() => handleAction(action.action, action.href)}
                       className={`
                         flex w-full items-center px-4 py-3 text-left
-                        ${active ? 'bg-gray-50' : ''}
+                        ${active ? 'bg-gray-100 dark:bg-gray-700' : ''}
                       `}
                     >
                       <action.icon
-                        className="h-6 w-6 text-gray-400"
+                        className="h-6 w-6 text-gray-500 dark:text-gray-400"
                         aria-hidden="true"
                       />
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {action.name}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {action.description}
                         </p>
                       </div>
