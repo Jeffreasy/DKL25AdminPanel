@@ -195,11 +195,11 @@ export const adminEmailService = {
       const headers = getAuthHeaders();
       
       const payload = {
-        from: params.from,
-        to: Array.isArray(params.to) ? params.to.join(',') : params.to,
-        subject: params.subject,
+          from: params.from,
+          to: Array.isArray(params.to) ? params.to.join(',') : params.to,
+          subject: params.subject,
         html: params.body || '', // Gebruik html ipv body? Of beide?
-        replyTo: params.replyTo,
+          replyTo: params.replyTo,
         template: params.template, // Ondersteunt backend templates?
         templateVariables: params.template_variables // Ondersteunt backend dit?
       };
