@@ -12,7 +12,10 @@ export interface Video {
   deleted_at?: string
 }
 
-export interface VideoInsert extends Omit<Video, 'id' | 'created_at' | 'updated_at' | 'deleted_at'> {}
+export interface VideoInsert extends Omit<Video, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'video_id' | 'thumbnail_url'> {
+  video_id?: string; 
+  thumbnail_url?: string | null;
+}
 
 // export interface VideoMetadata {
 //   duration?: number
