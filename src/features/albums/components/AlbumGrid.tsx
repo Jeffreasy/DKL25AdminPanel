@@ -47,7 +47,7 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
               url,
               thumbnail_url,
               title,
-              alt,
+              alt_text,
               visible
             )
           ),
