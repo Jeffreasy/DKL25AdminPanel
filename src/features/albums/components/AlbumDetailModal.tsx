@@ -267,7 +267,6 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
                   onUpdate={handleUpdate}
                   setError={setError}
                   onPhotoRemove={handlePhotoRemove}
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
                 />
               )}
             </div>
