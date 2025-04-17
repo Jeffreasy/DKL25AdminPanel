@@ -14,11 +14,20 @@ import {
   Button,
   Pagination,
   Alert,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  useMediaQuery,
+  useTheme as useMuiTheme,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload'; // Icon for fetch
 import DeleteIcon from '@mui/icons-material/Delete'; // Icon for delete
+import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import type { Email } from '../types'
 import { adminEmailService } from '../adminEmailService'
 import EmailItem from './EmailItem'
@@ -52,6 +61,10 @@ export default function EmailInbox({ account = 'info' }: Props) {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalEmails, setTotalEmails] = useState(0); // Needs backend support
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const theme = useMuiTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // Use md breakpoint
 
   const totalPages = Math.ceil(totalEmails / EMAILS_PER_PAGE);
 
@@ -171,9 +184,14 @@ export default function EmailInbox({ account = 'info' }: Props) {
     if (selectedEmailId) {
       fetchEmailDetail(selectedEmailId)
     } else {
+      // If no ID selected (e.g., after deleting last viewed email), clear detail
       setSelectedEmail(null)
+      // Also close modal if it was open and the selected email disappeared
+      if(isModalOpen) {
+          setIsModalOpen(false);
+      }
     }
-  }, [selectedEmailId])
+  }, [selectedEmailId]) // Dependency array is correct, no need to add isModalOpen here
 
   // Filter en sorteer emails - sorting remains client-side for the current page
   const sortedEmails = useMemo(() => {
@@ -208,6 +226,45 @@ export default function EmailInbox({ account = 'info' }: Props) {
      setFetchStatus({ ...fetchStatus, open: false });
    };
 
+  const handleEmailClick = (id: string) => {
+    setSelectedEmailId(id);
+    if (isMobile) {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    // Optionally deselect email when closing modal, or keep it selected 
+    // setSelectedEmailId(null); 
+  };
+
+  // --- Previous/Next Logic --- 
+  const currentEmailIndex = useMemo(() => {
+    if (!selectedEmailId) return -1;
+    return sortedEmails.findIndex(email => email.id === selectedEmailId);
+  }, [selectedEmailId, sortedEmails]);
+
+  const canGoPrevious = currentEmailIndex > 0;
+  const canGoNext = currentEmailIndex !== -1 && currentEmailIndex < sortedEmails.length - 1;
+
+  const handlePreviousEmail = () => {
+    if (canGoPrevious) {
+      const previousEmail = sortedEmails[currentEmailIndex - 1];
+      setSelectedEmailId(previousEmail.id);
+      // Detail fetching will be triggered by useEffect watching selectedEmailId
+    }
+  };
+
+  const handleNextEmail = () => {
+    if (canGoNext) {
+      const nextEmail = sortedEmails[currentEmailIndex + 1];
+      setSelectedEmailId(nextEmail.id);
+      // Detail fetching will be triggered by useEffect watching selectedEmailId
+    }
+  };
+  // --- End Previous/Next Logic ---
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -218,12 +275,15 @@ export default function EmailInbox({ account = 'info' }: Props) {
       {/* Header Area */}
       <Box sx={{ 
         display: 'flex', 
+        // Responsive direction and alignment for the whole header
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'flex-start', sm: 'center' },
         justifyContent: 'space-between', 
-        alignItems: 'center', 
         p: 2, 
         flexShrink: 0 
       }}>
-        <Typography variant="h5" fontWeight="bold">
+        {/* Add margin-bottom only on xs */}
+        <Typography variant="h5" fontWeight="bold" sx={{ mb: { xs: 1.5, sm: 0 } }}>
           Inbox
           {/* Note: unreadCount now only reflects the current page */}
           {/* Consider fetching total unread count separately if needed globally */}
@@ -236,7 +296,13 @@ export default function EmailInbox({ account = 'info' }: Props) {
           )}
         </Typography>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{
+           display: 'flex', 
+           alignItems: 'center', 
+           gap: { xs: 0.5, sm: 1 }, // Responsive gap
+           flexWrap: 'wrap',        // Allow wrapping
+           justifyContent: { xs: 'flex-start', sm: 'flex-end' } // Responsive alignment
+          }}>
            {/* Fetch New Emails Button */}
           <Button
             variant="outlined"
@@ -248,7 +314,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
             Nieuwe Ophalen
           </Button>
 
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 150 } }}> {/* Responsive minWidth */}
             <InputLabel id="account-select-label">Account</InputLabel>
             <Select
               labelId="account-select-label"
@@ -274,21 +340,24 @@ export default function EmailInbox({ account = 'info' }: Props) {
       
       <Divider />
       
-      {/* Main Content Area */}
+      {/* Main Content Area - Revert to original side-by-side flex layout */}
       <Box sx={{ 
         display: 'flex', 
-        flexGrow: 1, // Allow this area to grow
+        // NO flexDirection override
+        flexGrow: 1, 
         overflow: 'hidden' 
       }}>
-        {/* Email list */}
+        {/* Email list - Revert to fixed width */}
         <Box sx={{ 
-          width: '350px', 
-          borderRight: '1px solid',
+          width: '350px', // Fixed width always
+          borderRight: '1px solid', // Always show border
+          // NO borderBottom override
           borderColor: 'divider',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          height: '100%'
+          height: '100%', 
+          // NO flexShrink or maxHeight overrides
         }}>
           {/* Email List Items (Scrollable) */}
           <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
@@ -310,8 +379,8 @@ export default function EmailInbox({ account = 'info' }: Props) {
                 <EmailItem
                   key={email.id}
                   email={email}
-                  isSelected={selectedEmailId === email.id}
-                  onClick={() => setSelectedEmailId(email.id)}
+                  isSelected={!isMobile && selectedEmailId === email.id} // Only show selection highlight on desktop
+                  onClick={() => handleEmailClick(email.id)} // Use new handler
                   formattedDate={formatDistanceToNow(new Date(email.created_at), {
                     addSuffix: true,
                     locale: nl
@@ -320,7 +389,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
               ))
             )}
           </Box>
-          {/* Pagination (Fixed at the bottom of the list) */}
+          {/* Pagination */}
           {totalPages > 1 && !isLoading && (
              <Box sx={{ p: 1, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
                <Pagination 
@@ -335,54 +404,112 @@ export default function EmailInbox({ account = 'info' }: Props) {
           )}
         </Box>
         
-        {/* Email detail */} 
-        <Box sx={{ flex: 1, overflow: 'auto', p: 2, height: '100%' }}>
-          {selectedEmailId ? (
-            isFetchingDetail ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                <CircularProgress />
-              </Box>
-            ) : selectedEmail ? (
-               <>
-                 {/* Delete Button in Detail View */}
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                     <IconButton 
-                       aria-label="Verwijder e-mail"
-                       onClick={() => handleDeleteEmail(selectedEmail.id)}
-                       color="error"
-                       size="small"
-                     >
-                       <DeleteIcon />
-                     </IconButton>
-                   </Box>
-                 <EmailDetail email={selectedEmail} />
-               </>
-            ) : error ? (
-                 // Show error specific to detail fetching if any
-                  <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>
-              ) : (
-               <Typography>Fout bij het laden van e-mail.</Typography>
-             )
-          ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%',
-              flexDirection: 'column',
-              color: 'text.secondary'
+        {/* Email detail Pane - Content only visible on desktop */} 
+        <Box sx={{
+             flex: 1, 
+             overflow: 'auto', 
+             p: 2, 
+             height: '100%', 
+             // Hide content on mobile, keep pane for layout
+             display: { xs: 'none', md: 'block' } 
             }}>
-              {error && (
-                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-              )}
-              <Typography variant="h6">Selecteer een e-mail</Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Klik op een e-mail in de lijst om deze te bekijken
-              </Typography>
-            </Box>
+          {/* Render detail content ONLY if not mobile */}
+          {!isMobile && (
+              selectedEmailId ? (
+                isFetchingDetail ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <CircularProgress />
+                  </Box>
+                ) : selectedEmail ? (
+                   <>
+                     {/* Delete Button in Detail View */}
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                         <IconButton 
+                           aria-label="Verwijder e-mail"
+                           onClick={() => handleDeleteEmail(selectedEmail.id)}
+                           color="error"
+                           size="small"
+                         >
+                           <DeleteIcon />
+                         </IconButton>
+                       </Box>
+                     <EmailDetail email={selectedEmail} />
+                   </>
+                ) : error ? (
+                     <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>
+                  ) : (
+                   <Typography>Fout bij het laden van e-mail.</Typography>
+                 )
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: '100%',
+                  flexDirection: 'column',
+                  color: 'text.secondary'
+                }}>
+                  {error && (
+                      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                  )}
+                  <Typography variant="h6">Selecteer een e-mail</Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    Klik op een e-mail in de lijst om deze te bekijken
+                  </Typography>
+                </Box>
+              )
           )}
         </Box>
       </Box>
+
+      {/* Email Detail Modal for Mobile */}
+      <Dialog 
+        open={isModalOpen} 
+        onClose={handleCloseModal} 
+        fullScreen={isMobile} // Make modal fullscreen on mobile
+        aria-labelledby="email-detail-title"
+      >
+        <DialogTitle id="email-detail-title" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" noWrap sx={{ maxWidth: 'calc(100% - 100px)' }}>
+             {selectedEmail?.subject || 'Laden...'}
+          </Typography>
+          <IconButton onClick={handleCloseModal} aria-label="Sluiten">
+              <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers> {/* Add dividers for padding */} 
+          {isFetchingDetail ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+               <CircularProgress />
+             </Box>
+          ) : selectedEmail ? (
+             <EmailDetail email={selectedEmail} />
+           ) : error ? (
+              <Alert severity="error">{error}</Alert>
+           ) : (
+            <Typography>Kon email niet laden.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+            <Button 
+              onClick={handlePreviousEmail} 
+              disabled={!canGoPrevious}
+              startIcon={<ArrowBackIcon />}
+            >
+              Vorige
+            </Button>
+            <Button 
+              onClick={handleNextEmail} 
+              disabled={!canGoNext}
+              endIcon={<ArrowForwardIcon />}
+            >
+              Volgende
+            </Button>
+            <Button onClick={handleCloseModal} sx={{ ml: 'auto' }}>
+              Sluiten
+            </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for fetch status */}
        <Snackbar
