@@ -17,9 +17,9 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
 
   const getStatusBadgeClass = () => {
     switch (message.status) {
-      case 'nieuw': return 'bg-green-100 text-green-800'
-      case 'in_behandeling': return 'bg-orange-100 text-orange-800'
-      case 'afgehandeld': return 'bg-blue-100 text-blue-800'
+      case 'nieuw': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+      case 'in_behandeling': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+      case 'afgehandeld': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
     }
   }
 
@@ -32,7 +32,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
     }
   }
 
-  const handleSendEmail = async (data: { subject: string; body: string; from: string }) => {
+  const handleSendEmail = async (data: { subject: string; body: string }) => {
     try {
       await adminEmailService.sendMailAsAdmin({
         to: message.email,
@@ -58,7 +58,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
             </span>
           </div>
           <p className={cc.listItem.subtitle}>{message.email}</p>
-          <p className="mt-2 text-gray-700">{message.bericht}</p>
+          <p className="mt-2 text-gray-700 dark:text-gray-300">{message.bericht}</p>
           <p className={cc.listItem.metadata}>
             Ontvangen op {format(new Date(message.created_at), 'dd MMMM yyyy HH:mm', { locale: nl })}
           </p>

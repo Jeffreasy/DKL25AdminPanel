@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import { Modal, TextInput } from '@mantine/core'
 import { RichTextEditor } from '@mantine/tiptap'
+import { componentClasses as cc } from '../../styles/shared'
 
 interface EmailModalProps {
   isOpen: boolean
@@ -58,14 +59,14 @@ export function EmailModal({ isOpen, onClose, recipient, onSend }: EmailModalPro
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Aan</label>
-          <div className="mt-1 px-3 py-2 bg-gray-50 rounded-md">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Aan</label>
+          <div className="mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-md">
             {recipient.name} ({recipient.email})
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Onderwerp</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Onderwerp</label>
           <TextInput
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
@@ -75,8 +76,8 @@ export function EmailModal({ isOpen, onClose, recipient, onSend }: EmailModalPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Bericht</label>
-          <div className="border rounded-md">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bericht</label>
+          <div className="border dark:border-gray-600 rounded-md">
             <RichTextEditor editor={editor}>
               <RichTextEditor.Toolbar sticky stickyOffset={60}>
                 <RichTextEditor.ControlsGroup>
@@ -104,14 +105,14 @@ export function EmailModal({ isOpen, onClose, recipient, onSend }: EmailModalPro
         <div className="flex justify-end gap-3 pt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className={cc.button.secondary}
           >
             Annuleren
           </button>
           <button
             onClick={handleSend}
             disabled={!subject.trim() || !editor?.getText().trim() || sending}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            className={cc.button.primary}
           >
             {sending ? 'Versturen...' : 'Verstuur'}
           </button>

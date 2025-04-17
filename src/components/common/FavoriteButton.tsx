@@ -26,10 +26,10 @@ export function FavoriteButton({ name, path, icon }: FavoriteButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className="ml-auto p-1 text-gray-400 hover:text-yellow-400"
+      className="ml-auto p-1 text-gray-400 dark:text-gray-500 hover:text-yellow-400 dark:hover:text-yellow-500"
     >
       {favorite ? (
-        <StarIconSolid className="h-5 w-5 text-yellow-400" />
+        <StarIconSolid className="h-5 w-5 text-yellow-400 dark:text-yellow-500" />
       ) : (
         <StarIcon className="h-5 w-5" />
       )}

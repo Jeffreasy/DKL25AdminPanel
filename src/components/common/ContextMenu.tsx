@@ -88,7 +88,7 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
                           }}
                           className={`
                             ${active ? 'bg-gray-100 dark:bg-gray-700' : ''}
-                            ${item.danger ? 'text-red-600' : 'text-gray-700 dark:text-gray-200'}
+                            ${item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-200'}
                             group flex w-full items-center px-4 py-2 text-sm
                           `}
                         >
