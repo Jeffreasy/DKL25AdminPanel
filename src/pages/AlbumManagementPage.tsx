@@ -5,6 +5,8 @@ import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
 import { supabase } from '../lib/supabase'
+import { H1, SmallText } from '../components/typography'
+import { componentClasses as cc } from '../styles/shared'
 
 export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
@@ -41,15 +43,15 @@ export function AlbumManagementPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Albums</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <H1>Albums</H1>
+          <SmallText className="mt-1">
             Beheer hier je foto albums. Elk album kan worden getoond op de hoofdpagina.
-          </p>
+          </SmallText>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setIsCreating(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className={cc.button.primary}
           >
             Nieuw album
           </button>

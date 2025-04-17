@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase'
+import { componentClasses as cc } from '../styles/shared'
 
 // Password strength types en utilities
 type PasswordStrength = 'weak' | 'medium' | 'strong'
@@ -351,21 +352,21 @@ export function ResetPasswordPage() {
   // Als er geen access_token is, toon een foutmelding
   if (!accessToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="rounded-md bg-red-50 p-4">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800/50">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                   Ongeldige of verlopen reset link
                 </h3>
-                <div className="mt-2 text-sm text-red-700">
+                <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                   <p>Deze link is niet meer geldig. Vraag een nieuwe reset link aan via de login pagina.</p>
                 </div>
                 <div className="mt-4">
                   <button
                     onClick={() => navigate('/login')}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-800/30 hover:bg-red-200 dark:hover:bg-red-700/50"
                   >
                     Terug naar login
                   </button>
@@ -421,29 +422,29 @@ export function ResetPasswordPage() {
 
       <div className="max-w-md w-full mx-auto space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             Wachtwoord resetten
           </h2>
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-4">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800/50">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">{error}</h3>
               </div>
             </div>
           </div>
         )}
 
         {success ? (
-          <div className="rounded-md bg-green-50 p-4">
+          <div className="rounded-md bg-green-50 dark:bg-green-900/30 p-4 border border-green-200 dark:border-green-800/50">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-800">
+                <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
                   Wachtwoord succesvol gewijzigd
                 </h3>
-                <p className="text-sm text-green-700 mt-2">
+                <p className="text-sm text-green-700 dark:text-green-300 mt-2">
                   Je wordt doorgestuurd naar de login pagina...
                 </p>
               </div>
@@ -453,7 +454,7 @@ export function ResetPasswordPage() {
           <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Nieuw wachtwoord
                 </label>
                 <div className="mt-1 relative">
@@ -462,20 +463,20 @@ export function ResetPasswordPage() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     {...rest}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     aria-describedby="password-requirements"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300"
                   >
                     {showPassword ? (
-                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       </svg>
                     ) : (
-                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
@@ -486,7 +487,7 @@ export function ResetPasswordPage() {
                 {/* Password strength indicator */}
                 {passwordStrength && (
                   <div className="mt-2">
-                    <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div 
                         className={`h-full transition-all duration-300 ${strengthColors[passwordStrength]}`}
                         style={{ 
@@ -496,8 +497,8 @@ export function ResetPasswordPage() {
                       />
                     </div>
                     <p className={`mt-1 text-sm ${
-                      passwordStrength === 'weak' ? 'text-red-600' :
-                      passwordStrength === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                      passwordStrength === 'weak' ? 'text-red-600 dark:text-red-400' :
+                      passwordStrength === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
                     }`}>
                       {strengthMessages[passwordStrength]}
                     </p>
@@ -510,15 +511,15 @@ export function ResetPasswordPage() {
                     <div
                       key={req.text}
                       className={`flex items-center text-sm ${
-                        req.met ? 'text-green-600' : 'text-gray-500'
+                        req.met ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {req.met ? (
-                        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="h-4 w-4 mr-2 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       ) : (
-                        <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <circle cx="12" cy="12" r="10" strokeWidth="2" />
                         </svg>
                       )}
@@ -528,12 +529,12 @@ export function ResetPasswordPage() {
                 </div>
 
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Bevestig wachtwoord
                 </label>
                 <div className="mt-1">
@@ -541,11 +542,11 @@ export function ResetPasswordPage() {
                     id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
                     {...register('confirmPassword')}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
                 )}
               </div>
             </div>
@@ -554,7 +555,7 @@ export function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className={cc.button.primary + " group relative w-full flex justify-center disabled:opacity-50"}
               >
                 {isSubmitting ? 'Bezig met opslaan...' : 'Wachtwoord wijzigen'}
               </button>

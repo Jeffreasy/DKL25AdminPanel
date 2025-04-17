@@ -21,10 +21,10 @@ export function SettingsPage() {
           </h3>
           
           {success && (
-            <div className="mt-4 rounded-md bg-green-50 p-4">
+            <div className="mt-4 rounded-md bg-green-50 dark:bg-green-900/30 p-4 border border-green-200 dark:border-green-800/50">
               <div className="flex">
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-green-800">{success}</p>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">{success}</p>
                 </div>
               </div>
             </div>
