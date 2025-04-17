@@ -36,6 +36,12 @@ export default defineConfig(({ command, mode }) => ({
       'react',
       'react-dom',
       'react-router-dom'
+    ],
+    exclude: [
+      'react-hook-form',
+      '@hookform/resolvers/zod',
+      'zod',
+      'dompurify'
     ]
   }
 }))

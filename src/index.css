@@ -2,4 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove CSS override */
+/*
+.dark .mantine-Card-root {
+  background-color: #075985 !important; 
+  border-color: #0369a1 !important;     
+}
+*/
+
 /* Zorg ervoor dat er geen lege regels of spaties aan het einde staan */
