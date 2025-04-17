@@ -4,6 +4,8 @@ import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal
 import { supabase } from '../lib/supabase'
 import type { Photo } from '../features/photos/types'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { XCircleIcon } from '@heroicons/react/24/solid'
+import { componentClasses as cc } from '../styles/shared'
 
 export function PhotoManagementPage() {
   useDocumentTitle("Foto's beheren")
@@ -56,15 +58,15 @@ export function PhotoManagementPage() {
     <div className="space-y-6">
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Foto's</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Foto's</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Beheer hier je foto's. Foto's kunnen worden toegevoegd aan albums.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className={cc.button.primary}
           >
             Foto's uploaden
           </button>
@@ -72,21 +74,19 @@ export function PhotoManagementPage() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
+        <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800/50">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+              <XCircleIcon className="h-5 w-5 text-red-400 dark:text-red-500" aria-hidden="true" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{error.message}</p>
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">{error.message}</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
         <div className="p-6">
           <PhotoGrid
             photos={photos}
@@ -94,7 +94,6 @@ export function PhotoManagementPage() {
             error={error}
             setError={handleError}
             onUpdate={handleRefresh}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
           />
         </div>
       </div>

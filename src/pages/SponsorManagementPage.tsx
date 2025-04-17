@@ -3,6 +3,7 @@ import { H1, SmallText } from '../components/typography'
 import { SponsorGrid } from '../features/sponsors/components'
 import { SponsorForm } from '../features/sponsors/components/SponsorForm'
 import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { componentClasses as cc } from '../styles/shared'
 
 export function SponsorManagementPage() {
   const [showForm, setShowForm] = useState(false)
@@ -14,18 +15,20 @@ export function SponsorManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white shadow rounded-lg">
+      {/* Header - Adapted for dark mode */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
           <div>
+            {/* H1 and SmallText now use dark variants internally */}
             <H1 className="mb-1">Sponsors</H1>
             <SmallText>
               Beheer de sponsors van de Koninklijke Loop
             </SmallText>
           </div>
+          {/* Button now uses dark variants from shared classes */}
           <button
             onClick={() => setShowForm(true)}
-            className="btn-primary flex items-center gap-2"
+            className={`${cc.button.primary} flex items-center gap-2`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -36,12 +39,12 @@ export function SponsorManagementPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="bg-white shadow rounded-lg">
+      {/* Content - Adapted for dark mode */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
         <SponsorGrid />
       </div>
 
-      {/* Modal voor nieuwe sponsor */}
+      {/* Modal for new sponsor */}
       {showForm && (
         <SponsorForm
           onComplete={() => {
