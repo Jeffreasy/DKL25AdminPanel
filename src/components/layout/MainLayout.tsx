@@ -7,7 +7,7 @@ export function MainLayout() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="flex">
         <Sidebar />
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           <Header />
           <main className="p-4">
             <Outlet />

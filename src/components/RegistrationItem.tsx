@@ -60,8 +60,7 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
       padding="lg" 
       radius="md"
       withBorder
-      my="md" 
-      maw={rem(800)} 
+      w="100%"
     >
       <Stack gap="md">
         <Group justify="space-between" align="start">
