@@ -4,6 +4,12 @@ import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldinge
 import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
 import type { Aanmelding } from '../features/aanmeldingen/types'
 import type { ContactMessage, ContactStats } from '../features/contact/types'
+import { 
+  UsersIcon, 
+  ChatBubbleLeftEllipsisIcon, 
+  EnvelopeOpenIcon, 
+  ClockIcon 
+} from '@heroicons/react/24/outline'
 
 interface DashboardStats {
   totaal: number
@@ -111,10 +117,10 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Tab navigatie */}
-      <div className="bg-white shadow">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-4">
+      {/* Tab navigatie - Adjusted for dark mode */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-md">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex space-x-8 px-4 overflow-x-auto">
             {tabs.map(tab => (
               <NavLink
                 key={tab.id}
@@ -122,8 +128,8 @@ export function DashboardPage() {
                 className={({ isActive }) => `
                   whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
                   ${isActive 
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
                 end={tab.path === '/dashboard'}
@@ -135,23 +141,22 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Alleen statistieken tonen op de overzicht pagina */}
+      {/* Statistieken Grid (alleen op /dashboard) - Adjusted for dark mode */}
       {currentPath === '/dashboard' && (
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Stat Card Example - Applied dark mode styling */}
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
+                  <UsersIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                       Aanmeldingen
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">
+                    <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                       {stats.totaal}
                     </dd>
                   </dl>
@@ -160,20 +165,18 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
+                  <ChatBubbleLeftEllipsisIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Berichten
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                      Berichten Totaal
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">
+                    <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                       {contactStats.counts.total}
                     </dd>
                   </dl>
@@ -182,20 +185,18 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <EnvelopeOpenIcon className="h-6 w-6 text-green-500 dark:text-green-400" /> 
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                       Nieuwe berichten
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">
+                    <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                       {contactStats.counts.new}
                     </dd>
                   </dl>
@@ -204,20 +205,18 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <ClockIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                       Gem. reactietijd
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">
+                    <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                       {Math.round(contactStats.avgResponseTime)} min
                     </dd>
                   </dl>
@@ -228,7 +227,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Content voor de huidige tab */}
+      {/* Content voor de huidige tab (Outlet) */}
       <Outlet context={{ 
         stats,
         contactStats,
