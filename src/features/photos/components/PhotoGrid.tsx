@@ -6,6 +6,7 @@ import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import clsx from 'clsx'
 import { supabase } from '../../../lib/supabase'
+import { componentClasses as cc } from '../../../styles/shared'
 
 interface PhotoGridProps {
   photos: Photo[]
@@ -14,7 +15,6 @@ interface PhotoGridProps {
   onUpdate: () => Promise<void>
   setError: (error: Error | null) => void
   onPhotoRemove?: (photoId: string) => void
-  className?: string
 }
 
 interface PhotoDetailsModalProps {
@@ -261,8 +261,7 @@ export function PhotoGrid({
   error,
   onUpdate,
   setError,
-  onPhotoRemove,
-  className 
+  onPhotoRemove
 }: PhotoGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
@@ -301,7 +300,7 @@ export function PhotoGrid({
 
   if (loading) {
     return (
-      <div className={className}>
+      <div className={cc.grid}>
         {[...Array(12)].map((_, i) => (
           <LoadingSkeleton key={i} className="aspect-square rounded-lg" />
         ))}
@@ -332,12 +331,12 @@ export function PhotoGrid({
 
   return (
     <>
-      <div className={className}>
+      <div className={cc.grid}>
         {photos.map(photo => (
           <div
             key={photo.id}
             className={clsx(
-              "group relative aspect-square rounded-lg overflow-hidden bg-gray-100",
+              "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800",
               isDeleting === photo.id && "opacity-50"
             )}
           >
