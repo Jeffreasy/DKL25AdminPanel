@@ -18,56 +18,45 @@ const savePhotoToAPI = async (params: {
   description?: string
   thumbnail_url?: string
   visible: boolean
-  order_number: number
   year: number
 }): Promise<void> => {
   if (params.id) {
     // Update bestaande foto
-    const { error } = await supabase
-      .from('photos')
-      .update({
+    const updateData: Record<string, any> = {
         url: params.url,
         alt_text: params.alt_text,
         title: params.title,
         description: params.description,
         thumbnail_url: params.thumbnail_url,
         visible: params.visible,
-        order_number: params.order_number,
         year: String(params.year),
         updated_at: new Date().toISOString()
-      })
+    };
+    
+    const { error } = await supabase
+      .from('photos')
+      .update(updateData)
       .eq('id', params.id)
 
     if (error) throw error
   } else {
     // Nieuwe foto toevoegen
-    const { error } = await supabase
-      .from('photos')
-      .insert([{
+    const insertData: Record<string, any> = {
         url: params.url,
         alt_text: params.alt_text,
         title: params.title,
         description: params.description,
         thumbnail_url: params.thumbnail_url,
         visible: params.visible,
-        order_number: params.order_number,
         year: String(params.year)
-      }])
+    };
+    
+    const { error } = await supabase
+      .from('photos')
+      .insert([insertData])
 
     if (error) throw error
   }
-}
-
-const getLastOrderNumber = async (): Promise<number> => {
-  const { data, error } = await supabase
-    .from('photos')
-    .select('order_number')
-    .order('order_number', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error) return 0
-  return (data?.order_number || 0) + 1
 }
 
 export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
@@ -77,7 +66,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
     description: photo?.description || '',
     year: photo?.year || new Date().getFullYear(),
     visible: photo?.visible ?? true,
-    order_number: photo?.order_number || 0
   })
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -104,8 +92,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
         throw new Error('Foto is verplicht')
       }
 
-      const orderNumber = photo?.order_number || await getLastOrderNumber()
-
       await savePhotoToAPI({
         id: photo?.id,
         url,
@@ -114,7 +100,6 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
         description: formData.description,
         thumbnail_url,
         visible: formData.visible,
-        order_number: orderNumber,
         year: Number(formData.year)
       })
 

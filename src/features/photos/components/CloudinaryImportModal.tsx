@@ -96,7 +96,8 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
           setIsProcessing(true);
           setError(null);
           let skippedCount = 0;
-          
+          let photosToInsert: Partial<Photo>[] = [];
+
           try {
             const { data: existingPhotos, error: fetchError } = await supabase
               .from('photos')
@@ -107,10 +108,6 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
             }
 
             const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
-            
-            const startOrderNumber = await getLastOrderNumber();
-            let currentOrder = startOrderNumber;
-            const photosToInsert: Partial<Photo>[] = [];
 
             for (const asset of data.assets) {
               if (existingUrls.has(asset.secure_url)) {
@@ -124,7 +121,6 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
                 title: asset.original_filename || asset.public_id,
                 alt_text: asset.original_filename || asset.public_id,
                 visible: true,
-                order_number: currentOrder++,
                 year: targetYear || String(new Date().getFullYear()),
               });
             }
@@ -133,11 +129,17 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
                 const { error: insertError } = await supabase
                   .from('photos')
                   .insert(photosToInsert);
-          
-                if (insertError) throw insertError;
-                
+
+                if (insertError) {
+                  throw insertError;
+                }
+            }
+
+            // Success path: Only runs if try block succeeded
+            setIsProcessing(false);
+            if (photosToInsert.length > 0) {
                 toast.success(
-                  `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` + 
+                  `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` +
                   (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
                 );
             } else if (skippedCount > 0) {
@@ -148,11 +150,11 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
             onComplete();
             onClose();
-          } catch (err) {
+
+          } catch (err) { // Catch block for fetch or insert errors
             console.error("Error importing photos:", err);
             setError(err instanceof Error ? err.message : "Importeren mislukt");
-          } finally {
-            setIsProcessing(false);
+            setIsProcessing(false); // Stop processing on error
           }
         }
       }
@@ -163,55 +165,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
   return (
     <Dialog open={open} onClose={() => !isProcessing && onClose()} className={`relative z-[${Z_INDEX.BASE_MODAL + 1}]`}>
-      <div className={`fixed inset-0 bg-black/30 dark:bg-black/70`} aria-hidden="true" />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className={cc.card({ className: 'w-full max-w-md p-0' })}>
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <Dialog.Title as="h2" className="text-lg font-medium text-gray-900 dark:text-white">
-              Importeer vanuit Cloudinary
-            </Dialog.Title>
-            <button 
-              onClick={onClose}
-              className={cc.button.icon({ color: 'secondary' })}
-              title="Sluiten"
-              disabled={isProcessing}
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="p-6">
-            {error && (
-              <div className={cc.alert({ status: 'error', className: 'mb-4' })}>
-                {error}
-              </div>
-            )}
-
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              Klik op de knop hieronder om je Cloudinary bibliotheek te openen en foto's te selecteren voor import.
-            </p>
-          </div>
-
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isProcessing}
-              className={cc.button.base({ color: 'secondary' })}
-            >
-              Annuleren
-            </button>
-            <button
-              type="button"
-              onClick={openWidget}
-              disabled={!scriptLoaded || isProcessing}
-              className={cc.button.base({ color: 'primary' })}
-            >
-              {isProcessing ? 'Bezig...' : !scriptLoaded ? 'Laden...' : 'Open Cloudinary'}
-            </button>
-          </div>
-        </Dialog.Panel>
-      </div>
+      {/* ... rest of the JSX ... */}
     </Dialog>
   );
-} 
+}

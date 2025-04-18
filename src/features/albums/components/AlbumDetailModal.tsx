@@ -2,12 +2,15 @@ import { useState, useCallback } from 'react'
 import { PhotoGrid } from '../../photos/components/PhotoGrid'
 import { PhotoSelector } from './PhotoSelector'
 import { AlbumForm } from './AlbumForm'
+import { CoverPhotoSelector } from './CoverPhotoSelector'
 import type { AlbumWithDetails } from '../types'
 import type { Photo } from '../../photos/types'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { Z_INDEX } from '../../../constants/zIndex'
 import { PhotoOrderer } from './PhotoOrderer'
+import { cc } from '../../../styles/shared'
+import { toast } from 'react-hot-toast'
 
 interface AlbumDetailModalProps {
   album: AlbumWithDetails
@@ -18,6 +21,7 @@ interface AlbumDetailModalProps {
 export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isAddingPhotos, setIsAddingPhotos] = useState(false)
+  const [showCoverSelector, setShowCoverSelector] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [photos, setPhotos] = useState(album.photos?.map(ap => ap.photo) || [])
@@ -126,6 +130,33 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
     }
   }, [album.id, handleError, handleUpdate])
 
+  // Handler for selecting cover photo
+  const handleCoverPhotoSelect = async (photoId: string | null) => {
+    if (photoId === null) {
+      setShowCoverSelector(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const { error } = await supabase
+        .from('albums')
+        .update({ cover_photo_id: photoId })
+        .eq('id', album.id);
+  
+      if (error) throw error;
+  
+      toast.success('Cover foto bijgewerkt');
+      handleUpdate(); // Refresh data
+    } catch (err) {
+      console.error('Error updating cover photo:', err);
+      setError(new Error(err instanceof Error ? err.message : 'Kon cover foto niet bijwerken'));
+    } finally {
+      setLoading(false);
+      setShowCoverSelector(false);
+    }
+  };
+
   return (
     <div className={`fixed inset-0 bg-black/30 dark:bg-black/60 z-[${Z_INDEX.BASE_MODAL}]`}> 
       <div className={`fixed inset-0 flex items-center justify-center p-4 z-[${Z_INDEX.BASE_MODAL}]`}>
@@ -185,13 +216,28 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             {/* Album Info */}
             <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
               <div className="flex items-start gap-6">
-                {album.cover_photo && (
+                <div className="relative flex-shrink-0">
                   <img
-                    src={album.cover_photo.thumbnail_url || album.cover_photo.url}
+                    src={album.cover_photo?.thumbnail_url || album.cover_photo?.url || ''}
                     alt={album.title}
-                    className="w-48 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                    className="w-48 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700"
+                    onError={(e) => {
+                       e.currentTarget.onerror = null;
+                       e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239CA3AF' width='48' height='48'%3E%3Cpath d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm16.5-1.5H3.75V6h16.5v13.5z'/%3E%3C/svg%3E`;
+                       e.currentTarget.classList.add('p-4');
+                    }}
                   />
-                )}
+                  <button 
+                    onClick={() => setShowCoverSelector(true)}
+                    className={cc.button.icon({ size: 'sm', color: 'secondary', className: 'absolute bottom-1 right-1 bg-white/70 dark:bg-gray-900/70'})}
+                    title="Cover foto wijzigen"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                    </svg>
+                  </button>
+                </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {album.title}
@@ -215,7 +261,7 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Foto's toevoegen/verwijderen
+                Foto's toevoegen
               </button>
               <button
                 onClick={() => setIsEditing(true)}
@@ -230,7 +276,7 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Foto's in dit album (Klik om volgorde aan te passen of te verwijderen)
+                  Album Foto's (Sleep = sorteer, Klik 🗑️ = verwijder)
                 </h3>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {photos.length} foto's
@@ -259,7 +305,11 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
                   </button>
                 </div>
               ) : (
-                <PhotoOrderer album={album} onOrderChange={handleUpdate} />
+                <PhotoOrderer 
+                  album={album} 
+                  onOrderChange={handleUpdate} 
+                  onPhotoRemove={handlePhotoRemove}
+                />
               )}
             </div>
           </div>
@@ -283,6 +333,15 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
               existingPhotoIds={photos.map(p => p.id)}
               onComplete={handlePhotosAdd}
               onCancel={() => setIsAddingPhotos(false)}
+            />
+          )}
+
+          {/* Cover Photo Selector Modal */}
+          {showCoverSelector && (
+            <CoverPhotoSelector
+              albumId={album.id}
+              currentCoverPhotoId={album.cover_photo_id ?? null}
+              onSelect={handleCoverPhotoSelect}
             />
           )}
         </div>

@@ -42,16 +42,6 @@ export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModal
       setIsUploading(true)
       setError(null)
 
-      // Get last order number
-      const { data: lastPhoto } = await supabase
-        .from('photos')
-        .select('order_number')
-        .order('order_number', { ascending: false })
-        .limit(1)
-        .single()
-
-      let orderNumber = (lastPhoto?.order_number || 0) + 1
-
       // Upload all files
       for (const file of Array.from(files)) {
         try {
@@ -60,14 +50,13 @@ export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModal
           // Create thumbnail URL
           const thumbnailUrl = result.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/')
 
-          // Save to Supabase
+          // Save to Supabase - without order_number
           await supabase.from('photos').insert([{
             url: result.secure_url,
             thumbnail_url: thumbnailUrl,
             title: file.name.split('.')[0],
             alt_text: file.name.split('.')[0],
             visible: true,
-            order_number: orderNumber++,
             year: selectedYear
           }])
         } catch (err) {

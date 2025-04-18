@@ -22,9 +22,10 @@ import { SortablePhoto } from './SortablePhoto'
 interface PhotoOrdererProps {
   album: AlbumWithDetails
   onOrderChange: () => Promise<void>
+  onPhotoRemove: (photoId: string) => void
 }
 
-export function PhotoOrderer({ album, onOrderChange }: PhotoOrdererProps) {
+export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrdererProps) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -122,7 +123,11 @@ export function PhotoOrderer({ album, onOrderChange }: PhotoOrdererProps) {
       >
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
           {photos.map(photo => (
-            <SortablePhoto key={photo.id} photo={photo} />
+            <SortablePhoto 
+              key={photo.id} 
+              photo={photo} 
+              onRemove={onPhotoRemove}
+            />
           ))}
         </div>
       </SortableContext>

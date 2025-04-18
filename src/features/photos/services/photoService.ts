@@ -12,7 +12,7 @@ export async function fetchPhotos(): Promise<Photo[]> {
   const { data, error } = await supabase
     .from('photos')
     .select('*')
-    .order('order_number')
+    .order('created_at', { ascending: false })
 
   if (error) throw error
   return data
@@ -44,15 +44,6 @@ export async function updatePhotoVisibility(photoId: string, visible: boolean): 
   const { error } = await supabase
     .from('photos')
     .update({ visible })
-    .eq('id', photoId)
-
-  if (error) throw error
-}
-
-export async function updatePhotoOrder(photoId: string, newOrder: number): Promise<void> {
-  const { error } = await supabase
-    .from('photos')
-    .update({ order_number: newOrder })
     .eq('id', photoId)
 
   if (error) throw error

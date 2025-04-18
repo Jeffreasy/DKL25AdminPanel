@@ -5,10 +5,8 @@ export interface Photo {
   title: string
   alt_text?: string
   visible: boolean
-  order_number?: number
   description?: string
   year?: string
-  album_id?: string | null
   created_at: string
   updated_at: string
   album_photos?: {
