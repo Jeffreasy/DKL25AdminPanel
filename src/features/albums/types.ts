@@ -24,4 +24,5 @@ export interface AlbumPhoto {
 export type AlbumWithDetails = Album & {
   photos?: AlbumPhoto[];
   cover_photo?: import('../photos/types').Photo;
+  album_photos?: { photo_id: string }[];
 }; 

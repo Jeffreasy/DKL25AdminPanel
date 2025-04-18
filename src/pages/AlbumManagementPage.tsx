@@ -6,7 +6,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
 import { supabase } from '../lib/supabase'
 import { H1, SmallText } from '../components/typography'
-import { componentClasses as cc } from '../styles/shared'
+import { cc } from '../styles/shared'
 
 export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
@@ -51,7 +51,7 @@ export function AlbumManagementPage() {
         <div className="flex gap-3">
           <button
             onClick={() => setIsCreating(true)}
-            className={cc.button.primary}
+            className={cc.button.base({ color: 'primary' })}
           >
             Nieuw album
           </button>

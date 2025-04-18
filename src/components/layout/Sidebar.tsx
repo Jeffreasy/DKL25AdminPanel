@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { Transition } from '@headlessui/react'
 import { Fragment } from 'react'
-import { Divider } from '@mantine/core'
 import { FavoritePages } from './FavoritePages'
 import { RecentPages } from './RecentPages'
 
@@ -150,8 +149,8 @@ function SidebarContent({ isCollapsed, onClose }: { isCollapsed: boolean, onClos
       {/* Divider and Optional Sections */}
       {!isCollapsed && (
         <div className="px-2 py-4 flex-shrink-0">
-          {/* Adjusted divider color for dark mode */}
-          <Divider my="sm" className="border-gray-700 dark:border-gray-700" /> 
+          {/* Replace Mantine Divider with hr */}
+          <hr className="my-4 border-gray-600 dark:border-gray-700" /> 
           <FavoritePages />
           <RecentPages />
         </div>

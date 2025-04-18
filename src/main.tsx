@@ -9,50 +9,36 @@ import { FavoritesProvider } from './contexts/FavoritesContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { App } from './App'
 import { useTheme } from './hooks/useTheme'
-import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import './index.css'
 import './styles/scrollbars.css'
-import '@mantine/core/styles.css';
 import '@mantine/tiptap/styles.css';
+import '@mantine/core/styles.css';
 
 const queryClient = new QueryClient()
 
 function ThemedApp() {
   const { isDarkMode } = useTheme();
 
-  const muiTheme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: isDarkMode ? 'dark' : 'light',
-        },
-      }),
-    [isDarkMode],
-  );
-
   return (
-    <MuiThemeProvider theme={muiTheme}>
-      <CssBaseline />
-      <MantineProvider>
-          <AuthProvider>
-            <SidebarProvider>
-              <FavoritesProvider>
-                <NavigationHistoryProvider>
-                  <App />
-                </NavigationHistoryProvider>
-              </FavoritesProvider>
-            </SidebarProvider>
-          </AuthProvider>
-      </MantineProvider>
-    </MuiThemeProvider>
+    <AuthProvider>
+      <SidebarProvider>
+        <FavoritesProvider>
+          <NavigationHistoryProvider>
+            <App />
+          </NavigationHistoryProvider>
+        </FavoritesProvider>
+      </SidebarProvider>
+    </AuthProvider>
   );
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <QueryClientProvider client={queryClient}>
-         <ThemedApp />
+        <MantineProvider>
+          <ThemedApp />
+        </MantineProvider>
       </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useNavigate, Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from "../contexts/hooks/useAuth"
+import { useAuth } from "../contexts/auth/useAuth"
 import { supabase } from '../lib/supabase'
 import { 
   EyeIcon, 
@@ -22,7 +22,7 @@ import {
 } from '../utils/validation'
 import DOMPurify from 'dompurify'
 import { useTheme } from '../hooks/useTheme'
-import { componentClasses as cc } from '../styles/shared'
+import { cc } from '../styles/shared'
 
 const profileSchema = z.object({
   email: z.string().email('Ongeldig email adres'),
@@ -353,27 +353,27 @@ export function ProfilePage() {
 
             <div className="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
               <div className="sm:col-span-4">
-                <label htmlFor="email" className={cc.form.label}>Email</label>
+                <label htmlFor="email" className={cc.form.label()}>Email</label>
                 <input 
                   id="email" 
                   type="email" 
                   {...register('email')} 
-                  className={cc.form.input} 
+                  className={cc.form.input()} 
                   readOnly
                   disabled 
                 />
-                {errors.email && <p className={cc.form.error}>{errors.email.message}</p>}
+                {errors.email && <p className={cc.form.error()}>{errors.email.message}</p>}
               </div>
 
               <div className="sm:col-span-4">
-                <label htmlFor="currentPassword" className={cc.form.label}>Huidig Wachtwoord</label>
+                <label htmlFor="currentPassword" className={cc.form.label()}>Huidig Wachtwoord</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <input
                     id="currentPassword"
                     type={showCurrentPassword ? 'text' : 'password'}
                     {...register('currentPassword')}
                     ref={currentPasswordRef}
-                    className={`${cc.form.input} pr-10`}
+                    className={cc.form.input({ className: "pr-10" })}
                     required
                     autoComplete="current-password"
                     disabled={isLocked || isSubmitting}
@@ -393,20 +393,20 @@ export function ProfilePage() {
                   </div>
                 </div>
                  {errors.currentPassword ? (
-                    <p className={cc.form.error}>{errors.currentPassword.message}</p>
+                    <p className={cc.form.error()}>{errors.currentPassword.message}</p>
                  ) : error === 'Huidig wachtwoord is onjuist' ? (
-                   <p className={cc.form.error}>{error}</p>
+                   <p className={cc.form.error()}>{error}</p>
                  ) : null}
               </div>
 
               <div className="sm:col-span-4">
-                <label htmlFor="newPassword" className={cc.form.label}>Nieuw Wachtwoord (optioneel)</label>
+                <label htmlFor="newPassword" className={cc.form.label()}>Nieuw Wachtwoord (optioneel)</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <input
                     id="newPassword"
                     type={showNewPassword ? 'text' : 'password'}
                     {...register('newPassword')}
-                    className={`${cc.form.input} pr-10`}
+                    className={cc.form.input({ className: "pr-10" })}
                     autoComplete="new-password"
                     disabled={isLocked || isSubmitting}
                   />
@@ -424,7 +424,7 @@ export function ProfilePage() {
                     </button>
                   </div>
                 </div>
-                 {errors.newPassword && <p className={cc.form.error}>{errors.newPassword.message}</p>}
+                 {errors.newPassword && <p className={cc.form.error()}>{errors.newPassword.message}</p>}
               </div>
 
               {newPassword && (
@@ -455,17 +455,17 @@ export function ProfilePage() {
 
               {newPassword && (
                 <div className="sm:col-span-4">
-                  <label htmlFor="confirmPassword" className={cc.form.label}>Bevestig Nieuw Wachtwoord</label>
+                  <label htmlFor="confirmPassword" className={cc.form.label()}>Bevestig Nieuw Wachtwoord</label>
                   <input
                     id="confirmPassword"
                     type="password"
                     {...register('confirmPassword')}
-                    className={cc.form.input}
+                    className={cc.form.input()}
                     required={!!newPassword}
                     autoComplete="new-password"
                     disabled={isLocked || isSubmitting}
                   />
-                  {errors.confirmPassword && <p className={cc.form.error}>{errors.confirmPassword.message}</p>}
+                  {errors.confirmPassword && <p className={cc.form.error()}>{errors.confirmPassword.message}</p>}
                 </div>
               )}
             </div>
@@ -476,14 +476,14 @@ export function ProfilePage() {
                <button 
                  type="button" 
                  onClick={handleCancel}
-                 className={cc.button.secondary}
+                 className={cc.button.base({ color: 'secondary' })}
                  disabled={isSubmitting}
                >
                  Annuleren
                </button>
                <button 
                  type="submit" 
-                 className={cc.button.primary}
+                 className={cc.button.base({ color: 'primary' })}
                  disabled={isSubmitting || isLocked || !formIsDirty}
                >
                  {isSubmitting ? 'Opslaan...' : 'Wijzigingen Opslaan'}

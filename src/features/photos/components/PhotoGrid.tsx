@@ -6,7 +6,7 @@ import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import clsx from 'clsx'
 import { supabase } from '../../../lib/supabase'
-import { componentClasses as cc } from '../../../styles/shared'
+import { cc } from '../../../styles/shared'
 
 interface PhotoGridProps {
   photos: Photo[]
@@ -29,7 +29,7 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
   const [formData, setFormData] = useState({
     title: photo.title,
     description: photo.description || '',
-    alt: photo.alt || '',
+    alt_text: photo.alt_text || '',
     visible: photo.visible,
     year: photo.year || ''
   })
@@ -59,7 +59,7 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
         .update({
           title: formData.title,
           description: formData.description || null,
-          alt: formData.alt || null,
+          alt_text: formData.alt_text || null,
           year: formData.year || null,
           updated_at: new Date().toISOString()
         })
@@ -77,31 +77,31 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
 
   return (
     <Dialog open={true} onClose={onClose} className={`relative z-[${Z_INDEX.PHOTO_SELECTOR}]`}>
-      <div className={`fixed inset-0 bg-black/30 z-[${Z_INDEX.PHOTO_SELECTOR}]`} aria-hidden="true" />
+      <div className={`fixed inset-0 bg-black/30 dark:bg-black/60 z-[${Z_INDEX.PHOTO_SELECTOR}]`} aria-hidden="true" />
       
       <div className={`fixed inset-0 flex items-center justify-center p-4 z-[${Z_INDEX.PHOTO_SELECTOR}]`}>
-        <Dialog.Panel className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden">
+        <Dialog.Panel className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl overflow-hidden">
           <div className="flex h-[32rem]">
             {/* Foto preview */}
-            <div className="w-2/3 bg-gray-900 relative">
+            <div className="w-2/3 bg-gray-900 dark:bg-black relative">
               <img
                 src={photo.url}
-                alt={photo.alt || photo.title}
+                alt={photo.alt_text || photo.title}
                 className="absolute inset-0 w-full h-full object-contain"
               />
             </div>
 
             {/* Details/edit form */}
-            <div className="w-1/3 flex flex-col border-l border-gray-200">
-              <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">
+            <div className="w-1/3 flex flex-col border-l border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   Foto details
                 </h2>
                 <div className="flex gap-2">
                   <button
                     onClick={handleVisibilityToggle}
                     disabled={loading}
-                    className="p-1.5 text-gray-500 hover:text-gray-700 rounded-md"
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                     title={photo.visible ? 'Verbergen' : 'Zichtbaar maken'}
                   >
                     {photo.visible ? (
@@ -113,13 +113,13 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                   <button
                     onClick={() => setIsEditing(!isEditing)}
                     disabled={loading}
-                    className="p-1.5 text-gray-500 hover:text-gray-700 rounded-md"
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <PencilIcon className="w-5 h-5" />
                   </button>
                   <button
                     onClick={onClose}
-                    className="p-1.5 text-gray-500 hover:text-gray-700 rounded-md"
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <span className="sr-only">Sluiten</span>
                     <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -133,7 +133,7 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                 {isEditing ? (
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Titel
                       </label>
                       <input
@@ -141,11 +141,11 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                         id="title"
                         value={formData.title}
                         onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className={cc.form.input()}
                       />
                     </div>
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Beschrijving
                       </label>
                       <textarea
@@ -153,23 +153,23 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                         value={formData.description}
                         onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className={cc.form.input()}
                       />
                     </div>
                     <div>
-                      <label htmlFor="alt" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="alt_text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Alt tekst
                       </label>
                       <input
                         type="text"
-                        id="alt"
-                        value={formData.alt}
-                        onChange={e => setFormData(prev => ({ ...prev, alt: e.target.value }))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        id="alt_text"
+                        value={formData.alt_text}
+                        onChange={e => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
+                        className={cc.form.input()}
                       />
                     </div>
                     <div>
-                      <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Jaar
                       </label>
                       <input
@@ -177,42 +177,42 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                         id="year"
                         value={formData.year}
                         onChange={e => setFormData(prev => ({ ...prev, year: e.target.value }))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className={cc.form.input()}
                       />
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700">Titel</h3>
-                      <p className="mt-1 text-sm text-gray-900">{photo.title}</p>
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Titel</h3>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.title}</p>
                     </div>
                     {photo.description && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700">Beschrijving</h3>
-                        <p className="mt-1 text-sm text-gray-900">{photo.description}</p>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Beschrijving</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.description}</p>
                       </div>
                     )}
-                    {photo.alt && (
+                    {photo.alt_text && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700">Alt tekst</h3>
-                        <p className="mt-1 text-sm text-gray-900">{photo.alt}</p>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Alt tekst</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.alt_text}</p>
                       </div>
                     )}
                     {photo.year && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700">Jaar</h3>
-                        <p className="mt-1 text-sm text-gray-900">{photo.year}</p>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Jaar</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.year}</p>
                       </div>
                     )}
                     {photo.album_photos && photo.album_photos.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700">Albums</h3>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Albums</h3>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {photo.album_photos.map(({ album }) => (
                             <span
                               key={album.id}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                             >
                               {album.title}
                             </span>
@@ -221,8 +221,8 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                       </div>
                     )}
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700">Toegevoegd op</h3>
-                      <p className="mt-1 text-sm text-gray-900">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Toegevoegd op</h3>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
                         {new Date(photo.created_at).toLocaleDateString('nl-NL')}
                       </p>
                     </div>
@@ -231,17 +231,17 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
               </div>
 
               {isEditing && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex justify-end gap-2">
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800"
+                    className={cc.button.base({ color: 'secondary' })}
                   >
                     Annuleren
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                    className={cc.button.base({ color: 'primary' })}
                   >
                     Opslaan
                   </button>
@@ -300,9 +300,9 @@ export function PhotoGrid({
 
   if (loading) {
     return (
-      <div className={cc.grid}>
+      <div className={cc.grid()}>
         {[...Array(12)].map((_, i) => (
-          <LoadingSkeleton key={i} className="aspect-square rounded-lg" />
+          <LoadingSkeleton key={i} className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -311,7 +311,7 @@ export function PhotoGrid({
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">{error.message}</p>
+        <p className="text-red-600 dark:text-red-400">{error.message}</p>
       </div>
     )
   }
@@ -319,10 +319,10 @@ export function PhotoGrid({
   if (photos.length === 0) {
     return (
       <div className="text-center py-12">
-        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Nog geen foto's geüpload
         </p>
       </div>
@@ -331,7 +331,7 @@ export function PhotoGrid({
 
   return (
     <>
-      <div className={cc.grid}>
+      <div className={cc.grid()}>
         {photos.map(photo => (
           <div
             key={photo.id}
@@ -342,17 +342,17 @@ export function PhotoGrid({
           >
             <img
               src={photo.thumbnail_url || photo.url}
-              alt={photo.alt || photo.title}
+              alt={photo.alt_text || photo.title}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
             />
             
             {/* Overlay met acties */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors">
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 dark:group-hover:bg-black/70 transition-colors">
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
                   onClick={() => setSelectedPhoto(photo)}
-                  className="p-1.5 text-white hover:text-gray-200 rounded-md"
+                  className="p-1.5 text-white hover:text-gray-200 rounded-md bg-black/20 hover:bg-black/40"
                   title="Details bekijken"
             >
                   <PencilIcon className="w-5 h-5" />
@@ -360,7 +360,7 @@ export function PhotoGrid({
             <button
                   onClick={() => handleDelete(photo)}
                   disabled={isDeleting === photo.id}
-                  className="p-1.5 text-white hover:text-gray-200 rounded-md disabled:opacity-50"
+                  className="p-1.5 text-white hover:text-gray-200 rounded-md bg-black/20 hover:bg-black/40 disabled:opacity-50"
                   title="Foto verwijderen"
                 >
                   <TrashIcon className="w-5 h-5" />
@@ -373,10 +373,10 @@ export function PhotoGrid({
                   {photo.album_photos.map(({ album }) => (
                     <span
                       key={album.id}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-900 truncate max-w-[150px]"
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 dark:bg-gray-900/80 text-gray-900 dark:text-gray-200 truncate max-w-[150px] shadow"
                       title={album.title}
                     >
-                      <svg className="w-3 h-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3 h-3 mr-1 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       {album.title}
@@ -386,7 +386,7 @@ export function PhotoGrid({
               )}
 
               {!photo.visible && (
-                <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full">
+                <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-yellow-900 text-xs font-medium rounded-full shadow">
                   Verborgen
             </div>
               )}

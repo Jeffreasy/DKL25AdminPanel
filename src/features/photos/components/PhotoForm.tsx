@@ -13,7 +13,7 @@ interface PhotoFormProps {
 const savePhotoToAPI = async (params: {
   id?: string
   url: string
-  alt: string
+  alt_text: string
   title: string
   description?: string
   thumbnail_url?: string
@@ -27,13 +27,13 @@ const savePhotoToAPI = async (params: {
       .from('photos')
       .update({
         url: params.url,
-        alt: params.alt,
+        alt_text: params.alt_text,
         title: params.title,
         description: params.description,
         thumbnail_url: params.thumbnail_url,
         visible: params.visible,
         order_number: params.order_number,
-        year: params.year,
+        year: String(params.year),
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)
@@ -45,13 +45,13 @@ const savePhotoToAPI = async (params: {
       .from('photos')
       .insert([{
         url: params.url,
-        alt: params.alt,
+        alt_text: params.alt_text,
         title: params.title,
         description: params.description,
         thumbnail_url: params.thumbnail_url,
         visible: params.visible,
         order_number: params.order_number,
-        year: params.year
+        year: String(params.year)
       }])
 
     if (error) throw error
@@ -73,7 +73,7 @@ const getLastOrderNumber = async (): Promise<number> => {
 export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
   const [formData, setFormData] = useState({
     title: photo?.title || '',
-    alt: photo?.alt || '',
+    alt_text: photo?.alt_text || '',
     description: photo?.description || '',
     year: photo?.year || new Date().getFullYear(),
     visible: photo?.visible ?? true,
@@ -109,7 +109,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
       await savePhotoToAPI({
         id: photo?.id,
         url,
-        alt: formData.alt || formData.title,
+        alt_text: formData.alt_text || formData.title,
         title: formData.title,
         description: formData.description,
         thumbnail_url,
@@ -129,9 +129,9 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg shadow-xl">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
             {photo ? 'Foto bewerken' : 'Nieuwe foto'}
           </h2>
         </div>
@@ -139,7 +139,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Titel */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Titel *
             </label>
             <input
@@ -147,43 +147,43 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="title"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
           </div>
 
           {/* Alt text */}
           <div>
-            <label htmlFor="alt" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="alt_text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Alt tekst *
             </label>
             <input
               type="text"
-              id="alt"
-              value={formData.alt}
-              onChange={(e) => setFormData(prev => ({ ...prev, alt: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              id="alt_text"
+              value={formData.alt_text}
+              onChange={(e) => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
           </div>
 
           {/* Beschrijving */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Beschrijving
             </label>
             <textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
             />
           </div>
 
           {/* Jaar */}
           <div>
-            <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Jaar *
             </label>
             <input
@@ -191,7 +191,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="year"
               value={formData.year}
               onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               min={2000}
               max={new Date().getFullYear()}
               required
@@ -200,7 +200,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
           {/* Foto upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Foto {!photo && '*'}
             </label>
             <div className="mt-2 flex items-center space-x-4">
@@ -208,17 +208,17 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
                 <img
                   src={photo.thumbnail_url || photo.url}
                   alt="Preview"
-                  className="w-20 h-20 object-cover rounded-lg"
+                  className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                 />
               )}
               <input
                 type="file"
                 ref={fileInputRef}
                 accept="image/*"
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900/50 file:text-indigo-700 dark:file:text-indigo-300 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900"
               />
             </div>
-            <SmallText>
+            <SmallText className="text-gray-500 dark:text-gray-400">
               Maximum 5MB, alleen afbeeldingen
             </SmallText>
           </div>
@@ -230,9 +230,9 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="visible"
               checked={formData.visible}
               onChange={(e) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-gray-100 dark:bg-gray-700"
             />
-            <label htmlFor="visible" className="text-sm text-gray-700">
+            <label htmlFor="visible" className="text-sm text-gray-700 dark:text-gray-300">
               Zichtbaar op website
             </label>
           </div>
@@ -243,7 +243,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600"
             >
               Annuleren
             </button>

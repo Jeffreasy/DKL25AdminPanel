@@ -3,7 +3,7 @@ import { H1, SmallText } from '../components/typography'
 import { SponsorGrid } from '../features/sponsors/components'
 import { SponsorForm } from '../features/sponsors/components/SponsorForm'
 import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
-import { componentClasses as cc } from '../styles/shared'
+import { cc } from '../styles/shared'
 
 export function SponsorManagementPage() {
   const [showForm, setShowForm] = useState(false)
@@ -28,7 +28,7 @@ export function SponsorManagementPage() {
           {/* Button now uses dark variants from shared classes */}
           <button
             onClick={() => setShowForm(true)}
-            className={`${cc.button.primary} flex items-center gap-2`}
+            className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />

@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase'
 import type { AutoResponse, Email } from './types'
-import { emailService } from './emailService'
 import type { Aanmelding } from '../aanmeldingen/types'
 
 interface SendEmailParams {
@@ -45,9 +44,11 @@ const getAuthHeaders = () => {
 
 // Helper functie om te mappen van backend model naar frontend model
 function mapIncomingEmailToEmail(incomingEmail: any): Email {
+  // TODO: Standardize backend API field names (e.g., id vs ID, subject vs Subject, etc.)
+  // Updated to use 'sender' and 'read' from backend response
   return {
-    id: incomingEmail.id || incomingEmail.ID,
-    sender: incomingEmail.from || incomingEmail.From,
+    id: incomingEmail.id || incomingEmail.ID, // Keep handling id/ID inconsistency for now
+    sender: incomingEmail.sender, // Use standardized 'sender'
     subject: incomingEmail.subject || incomingEmail.Subject,
     body: incomingEmail.body || incomingEmail.Body,
     html: (incomingEmail.content_type || incomingEmail.ContentType || '').includes('html')
@@ -56,12 +57,12 @@ function mapIncomingEmailToEmail(incomingEmail: any): Email {
     account: incomingEmail.account_type || incomingEmail.AccountType,
     message_id: incomingEmail.message_id || incomingEmail.MessageID,
     created_at: incomingEmail.received_at || incomingEmail.ReceivedAt,
-    read: incomingEmail.is_processed || incomingEmail.IsProcessed,
+    read: incomingEmail.read, // Use standardized 'read'
     metadata: {
-      'return-path': incomingEmail.from || incomingEmail.From,
+      'return-path': incomingEmail.sender, // Use standardized 'sender'
       'delivered-to': incomingEmail.to || incomingEmail.To,
       'content-type': incomingEmail.content_type || incomingEmail.ContentType,
-      'reply-to': incomingEmail.from || incomingEmail.From
+      'reply-to': incomingEmail.sender // Use standardized 'sender'
     },
     created_at_system: incomingEmail.created_at || incomingEmail.CreatedAt,
     // Map IsProcessed and ProcessedAt if needed later, currently only using 'read'
@@ -338,7 +339,7 @@ export const adminEmailService = {
   },
 
   // Haal emails op voor een specifiek account met paginering
-  async getEmailsByAccount(account: 'info' | 'inschrijving', limit: number = 50, offset: number = 0) {
+  async getEmailsByAccount(account: 'info' | 'inschrijving', limit: number = 50, offset: number = 0): Promise<{ emails: Email[], totalCount: number }> { // Updated return type
     console.log(`[getEmailsByAccount] Fetching for ${account}, limit=${limit}, offset=${offset}`);
     try {
       // Backend endpoint met pagination parameters
@@ -352,28 +353,24 @@ export const adminEmailService = {
         throw new Error(`Error fetching emails: ${response.statusText}`);
       }
       
-      // BELANGRIJK: Backend retourneert waarschijnlijk direct de array
-      const data = await response.json();
+      // Backend now returns an object { emails: [], totalCount: number }
+      const data = await response.json(); 
       console.log('[getEmailsByAccount] Raw data received:', data);
       
-      // Check if the response is indeed an array (as expected from the backend currently)
-      if (!Array.isArray(data)) {
-          console.error("[getEmailsByAccount] API response is not an array:", data);
+      // Basic validation of the expected structure
+      if (!data || typeof data !== 'object' || !Array.isArray(data.emails) || typeof data.totalCount !== 'number') {
+          console.error("[getEmailsByAccount] API response is not in the expected format { emails: [], totalCount: number }:", data);
           throw new Error("Onverwacht formaat ontvangen van de email API.");
       }
 
-      // TODO: Backend moet ook het totaal aantal emails teruggeven voor correcte paginering
-      // We simuleren hier een placeholder voor totalCount
-      const emailsArray = data.map(mapIncomingEmailToEmail);
+      // Map the emails array
+      const emailsArray = data.emails.map(mapIncomingEmailToEmail);
       console.log('[getEmailsByAccount] Mapped emailsArray:', emailsArray);
 
-      const placeholderTotalCount = emailsArray.length < limit ? offset + emailsArray.length : offset + emailsArray.length + limit; // Simple guess
-      console.log(`[getEmailsByAccount] Placeholder totalCount: ${placeholderTotalCount}`);
-
+      // Return the structured data
       return {
         emails: emailsArray,
-        // Stuur een placeholder totalCount terug totdat de backend dit levert
-        totalCount: placeholderTotalCount 
+        totalCount: data.totalCount 
       };
     } catch (error) {
       console.error('[getEmailsByAccount] Failed to fetch emails:', error);

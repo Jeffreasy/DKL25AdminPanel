@@ -4,6 +4,7 @@ import { Dialog } from '@headlessui/react'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import type { Photo } from '../../photos/types'  // Import from photos/types instead of albums/types
 import { Z_INDEX } from '../../../constants/zIndex'
+import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface PhotoSelectorProps {
   albumId: string  // We keep this for future use
@@ -12,7 +13,7 @@ interface PhotoSelectorProps {
   onCancel: () => void
 }
 
-export function PhotoSelector({ existingPhotoIds, onComplete, onCancel }: PhotoSelectorProps) {
+export function PhotoSelector({ albumId, existingPhotoIds, onComplete, onCancel }: PhotoSelectorProps) {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
   const [availablePhotos, setAvailablePhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)

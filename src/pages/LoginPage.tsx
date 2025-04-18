@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/hooks/useAuth'
+import { useAuth } from '../contexts/auth/useAuth'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -13,8 +13,16 @@ export function LoginPage() {
     e.preventDefault()
     setError(null)
 
+    // Construct full email
+    const username = email.trim() // Rename variable for clarity
+    if (!username) {
+      setError('Gebruikersnaam is verplicht');
+      return;
+    }
+    const fullEmail = `${username}@dekoninklijkeloop.nl`;
+
     try {
-      await signIn(email.trim(), password)
+      await signIn(fullEmail, password)
       navigate('/')
     } catch (err) {
       console.error('Login error:', err)
@@ -54,15 +62,15 @@ export function LoginPage() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">Email</label>
+              <label htmlFor="username" className="sr-only">Gebruikersnaam</label>
               <input
-                id="email"
-                type="email"
+                id="username"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700/50 backdrop-blur-sm"
-                placeholder="Email"
+                placeholder="Gebruikersnaam"
               />
             </div>
             <div>

@@ -7,7 +7,7 @@ import {
   ArrowRightOnRectangleIcon,
   ChevronDownIcon 
 } from '@heroicons/react/24/outline'
-import { useAuth } from '../../contexts/hooks/useAuth'
+import { useAuth } from '../../contexts/auth/useAuth'
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')

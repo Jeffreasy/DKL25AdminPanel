@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { componentClasses as cc } from '../styles/shared'
+import { cc } from '../styles/shared'
 
 export function NotFoundPage() {
   return (
@@ -9,7 +9,7 @@ export function NotFoundPage() {
         <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Pagina niet gevonden</p>
         <Link 
           to="/" 
-          className={`mt-4 inline-block ${cc.button.primary}`}
+          className={cc.button.base({ color: 'primary', className: "mt-4 inline-block" })}
         >
           Terug naar Dashboard
         </Link>

@@ -3,11 +3,12 @@ export interface Photo {
   url: string
   thumbnail_url?: string
   title: string
-  alt?: string
+  alt_text?: string
   visible: boolean
   order_number?: number
   description?: string
   year?: string
+  album_id?: string | null
   created_at: string
   updated_at: string
   album_photos?: {
@@ -21,7 +22,7 @@ export interface Photo {
 // Voor gebruik in forms
 export interface PhotoFormData {
   title: string
-  alt: string
+  alt_text: string
   description: string
   year: number
   visible: boolean
@@ -41,5 +42,4 @@ export interface PhotoAlbumRelation {
 
 export interface PhotoCount {
   count: number
-  photo_id: string
 } 

@@ -5,7 +5,7 @@ import { ErrorText, H1, SmallText } from '../components/typography'
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../features/videos/services/videoService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { Video, VideoInsert } from '../features/videos/types'
-import { componentClasses as cc } from '../styles/shared'
+import { cc } from '../styles/shared'
 import { XCircleIcon } from '@heroicons/react/24/solid'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
@@ -286,7 +286,7 @@ export function VideoManagementPage() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className={`${cc.button.primary} flex items-center gap-2`}
+            className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             <span className="hidden sm:inline">Video Toevoegen</span>
@@ -321,7 +321,7 @@ export function VideoManagementPage() {
                 placeholder="Zoeken op titel of beschrijving..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`${cc.form.input} pl-10`}
+                className={cc.form.input({ className: "pl-10" })}
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
@@ -330,14 +330,14 @@ export function VideoManagementPage() {
             <div className="flex items-center gap-4 flex-shrink-0">
               <button
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className={cc.button.secondary}
+                className={cc.button.base({ color: 'secondary' })}
               >
                 Sorteer {sortOrder === 'asc' ? '↑' : '↓'}
               </button>
               {selectedVideos.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  className={`${cc.button.secondary} text-red-600 dark:text-red-400 border-red-300 dark:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center`}
+                  className={cc.button.base({ color: 'secondary', className: "text-red-600 dark:text-red-400 border-red-300 dark:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center" })}
                   title={`Verwijder ${selectedVideos.size} video's`}
                 >
                   <TrashIcon className="h-5 w-5 mr-1" /> Verwijder ({selectedVideos.size})
@@ -403,7 +403,7 @@ export function VideoManagementPage() {
                     <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">{video.description || '-'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleToggleVisibility(video)} className={`${cc.button.icon} rounded-full p-1`}>
+                    <button onClick={() => handleToggleVisibility(video)} className={cc.button.icon({ className: "rounded-full p-1" })}>
                       {video.visible ? 
                         <EyeIcon className="h-5 w-5 text-green-500" /> : 
                         <EyeSlashIcon className="h-5 w-5 text-red-500" />
@@ -411,10 +411,10 @@ export function VideoManagementPage() {
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
-                    <button onClick={() => handleEdit(video)} className={cc.button.icon} title="Bewerken">
+                    <button onClick={() => handleEdit(video)} className={cc.button.icon({ color: 'secondary'})} title="Bewerken">
                       <PencilIcon className="h-5 w-5" />
                     </button>
-                     <button onClick={() => handleDelete(video.id)} className={`${cc.button.icon} text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300`} title="Verwijderen">
+                     <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger({ className:"rounded-md" })} title="Verwijderen">
                        <TrashIcon className="h-5 w-5" />
                     </button>
                   </td>
@@ -443,41 +443,41 @@ export function VideoManagementPage() {
                  <button 
                     type="button" 
                     onClick={handleCloseForm} 
-                    className={cc.button.icon}
+                    className={cc.button.icon({ color: 'secondary' })}
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                </div>
                <div className="p-6 space-y-4">
                  <div>
-                   <label htmlFor="title" className={cc.form.label}>Titel</label>
+                   <label htmlFor="title" className={cc.form.label()}>Titel</label>
                    <input 
                      type="text" 
                      id="title" 
                      value={formData.title}
                      onChange={(e) => setFormData({...formData, title: e.target.value})}
-                     className={cc.form.input}
+                     className={cc.form.input()}
                      required 
                    />
                  </div>
                  <div>
-                   <label htmlFor="description" className={cc.form.label}>Beschrijving (optioneel)</label>
+                   <label htmlFor="description" className={cc.form.label()}>Beschrijving (optioneel)</label>
                    <textarea 
                      id="description" 
                      value={formData.description}
                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                     className={cc.form.input}
+                     className={cc.form.input()}
                      rows={3}
                    />
                  </div>
                  <div>
-                   <label htmlFor="url" className={cc.form.label}>Video URL (YouTube, Vimeo, Streamable)</label>
+                   <label htmlFor="url" className={cc.form.label()}>Video URL (YouTube, Vimeo, Streamable)</label>
                    <input 
                      type="url" 
                      id="url" 
                      value={formData.url}
                      onChange={(e) => setFormData({...formData, url: e.target.value})}
-                     className={cc.form.input}
+                     className={cc.form.input()}
                      required 
                      placeholder="https://www.youtube.com/watch?v=..."
                    />
@@ -499,27 +499,20 @@ export function VideoManagementPage() {
                      <ErrorText>{error}</ErrorText> 
                   )}
                </div>
-               <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 sticky bottom-0 rounded-b-lg">
-                 <button 
-                   type="button" 
-                   onClick={handleCloseForm} 
-                   className={cc.button.secondary}
-                   disabled={isSubmitting}
-                 >
-                   Annuleren
-                 </button>
-                 <button 
-                   type="submit" 
-                   className={cc.button.primary}
-                   disabled={isSubmitting || !isValidVideoUrl(formData.url) || !formData.title.trim()}
-                 >
-                   {isSubmitting ? 'Opslaan...' : (editingVideo ? 'Wijzigingen Opslaan' : 'Video Opslaan')}
-                 </button>
+               <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-gray-800 rounded-b-lg z-10">
+                 <button type="button" className={cc.button.base({ color: 'secondary' })} onClick={handleCloseForm}>
+                    Annuleren
+                  </button>
+                  <button type="submit" className={cc.button.base({ color: 'primary' })} disabled={isSubmitting || !isValidVideoUrl(formData.url)}>
+                    {isSubmitting ? 'Opslaan...' : (editingVideo ? 'Wijzigingen Opslaan' : 'Video Opslaan')}
+                  </button>
                </div>
              </form>
            </div>
         </div>
       )}
+
+      <Toaster position="bottom-center" />
     </div>
   )
 } 

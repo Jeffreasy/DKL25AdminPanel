@@ -1,125 +1,131 @@
-import { useState } from 'react'
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, arrayMove } from '@dnd-kit/sortable'
+import { useState, useEffect, useCallback } from 'react'
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  DragEndEvent 
+} from '@dnd-kit/core'
+import { 
+  arrayMove, 
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  rectSortingStrategy 
+} from '@dnd-kit/sortable'
 import { supabase } from '../../../lib/supabase'
+import type { AlbumWithDetails } from '../types'
 import type { Photo } from '../../photos/types'
 import { SortablePhoto } from './SortablePhoto'
 
 interface PhotoOrdererProps {
-  albumId: string
-  photos: Photo[]
-  onUpdate: () => void
-  onClose: () => void
+  album: AlbumWithDetails
+  onOrderChange: () => Promise<void>
 }
 
-export function PhotoOrderer({ albumId, photos, onUpdate, onClose }: PhotoOrdererProps) {
-  const [orderedPhotos, setOrderedPhotos] = useState(photos)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function PhotoOrderer({ album, onOrderChange }: PhotoOrdererProps) {
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const fetchPhotos = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('album_photos')
+        .select('photo:photos(*)')
+        .eq('album_id', album.id)
+        .order('order_number', { ascending: true })
+
+      if (fetchError) throw fetchError
+      const photosData = data?.map(item => item.photo as any).filter(p => p && typeof p === 'object') || []
+      setPhotos(photosData as Photo[])
+    } catch (err) {
+      console.error('Error fetching photos for ordering:', err)
+      setError('Kon foto\'s niet laden')
+    } finally {
+      setLoading(false)
+    }
+  }, [album.id])
+
+  useEffect(() => {
+    fetchPhotos()
+  }, [fetchPhotos])
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) return
 
-    const oldIndex = orderedPhotos.findIndex(p => p.id === active.id)
-    const newIndex = orderedPhotos.findIndex(p => p.id === over.id)
-
-    setOrderedPhotos(arrayMove(orderedPhotos, oldIndex, newIndex))
-  }
-
-  const handleSave = async () => {
-    try {
+    if (over && active.id !== over.id) {
+      const oldIndex = photos.findIndex((p) => p.id === active.id)
+      const newIndex = photos.findIndex((p) => p.id === over.id)
+      const newOrderedPhotos = arrayMove(photos, oldIndex, newIndex)
+      setPhotos(newOrderedPhotos)
+      
       setIsSubmitting(true)
       setError(null)
+      try {
+        const updates = newOrderedPhotos.map((photo, index) => ({
+          album_id: album.id,
+          photo_id: photo.id,
+          order_number: index + 1,
+        }))
 
-      const updates = orderedPhotos.map((photo, index) => ({
-        album_id: albumId,
-        photo_id: photo.id,
-        order_number: index + 1
-      }))
+        const { error: updateError } = await supabase
+          .from('album_photos')
+          .upsert(updates, { onConflict: 'album_id, photo_id' })
 
-      const { error } = await supabase
-        .from('album_photos')
-        .upsert(updates, { onConflict: 'album_id,photo_id' })
+        if (updateError) throw updateError
+        
+        await onOrderChange()
 
-      if (error) throw error
-
-      onUpdate()
-      onClose()
-    } catch (err) {
-      console.error('Error saving photo order:', err)
-      setError('Er ging iets mis bij het opslaan van de volgorde')
-    } finally {
-      setIsSubmitting(false)
+      } catch (err) {
+        console.error('Error updating photo order:', err)
+        setError('Kon volgorde niet opslaan')
+        setPhotos(photos) 
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
+  if (loading) {
+    return <p className="text-gray-500 dark:text-gray-400 text-center py-4">Foto's laden...</p>
+  }
+
+  if (error) {
+    return <p className="text-red-600 dark:text-red-400 text-center py-4">{error}</p>
+  }
+
+  if (photos.length === 0) {
+    return <p className="text-gray-500 dark:text-gray-400 text-center py-4">Nog geen foto's in dit album.</p>
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-4xl shadow-xl">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Foto's Ordenen</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
-          >
-            <span className="sr-only">Sluiten</span>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <DndContext 
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext 
+        items={photos.map(p => p.id)}
+        strategy={rectSortingStrategy}
+      >
+        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+          {photos.map(photo => (
+            <SortablePhoto key={photo.id} photo={photo} />
+          ))}
         </div>
-
-        <div className="p-6">
-          <DndContext
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={orderedPhotos.map(p => p.id)}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {orderedPhotos.map((photo) => (
-                  <SortablePhoto
-                    key={photo.id}
-                    photo={photo}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-
-          {error && (
-            <div className="mt-4 rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-red-800">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Annuleren
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSubmitting ? 'Bezig met opslaan...' : 'Volgorde opslaan'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      </SortableContext>
+    </DndContext>
   )
 } 

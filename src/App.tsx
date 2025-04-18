@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
-import { PhotoManagementPage } from './pages/PhotoManagementPage'
+import { PhotosOverview } from './features/photos/PhotosOverview'
 import { AlbumManagementPage } from './pages/AlbumManagementPage'
 import { VideoManagementPage } from './pages/VideoManagementPage'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
@@ -10,10 +10,10 @@ import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { MainLayout } from './components/layout/MainLayout'
-import { OverviewTab } from './pages/OverviewTab'
-import { AanmeldingenTab } from './pages/AanmeldingenTab'
-import { ContactTab } from './pages/ContactTab'
-import { InboxTab } from './pages/InboxTab'
+import { OverviewTab } from './features/dashboard/components/OverviewTab'
+import { AanmeldingenTab } from './features/aanmeldingen/components/AanmeldingenTab'
+import { ContactTab } from './features/contact/components/ContactTab'
+import { InboxTab } from './features/email/components/InboxTab'
 
 export function App() {
   return (
@@ -38,7 +38,7 @@ export function App() {
           <Route path="contact" element={<ContactTab />} />
           <Route path="inbox" element={<InboxTab />} />
         </Route>
-        <Route path="/photos" element={<PhotoManagementPage />} />
+        <Route path="/photos" element={<PhotosOverview />} />
         <Route path="/albums" element={<AlbumManagementPage />} />
         <Route path="/videos" element={<VideoManagementPage />} />
         <Route path="/partners" element={<PartnerManagementPage />} />

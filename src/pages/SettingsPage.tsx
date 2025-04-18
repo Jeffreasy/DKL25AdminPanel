@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTheme } from '../hooks/useTheme'
-import { Switch } from '@mantine/core'
+import { Switch as HeadlessSwitch } from '@headlessui/react'
+import { cl } from '../styles/shared'
 
 export function SettingsPage() {
   const { isDarkMode, toggleTheme } = useTheme()
@@ -13,7 +14,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className={`max-w-2xl mx-auto ${isDarkMode ? 'dark' : ''}`}>
+    <div className="max-w-2xl mx-auto">
       <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
@@ -40,13 +41,23 @@ export function SettingsPage() {
                   Schakel tussen licht en donker thema
                 </p>
               </div>
-              <Switch
+              <HeadlessSwitch
                 checked={isDarkMode}
                 onChange={handleThemeChange}
-                color="indigo"
-                size="md"
-                label={isDarkMode ? 'Aan' : 'Uit'}
-              />
+                className={cl(
+                  isDarkMode ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600',
+                  'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800'
+                )}
+              >
+                <span className="sr-only">Use setting</span>
+                <span
+                  aria-hidden="true"
+                  className={cl(
+                    isDarkMode ? 'translate-x-5' : 'translate-x-0',
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+                  )}
+                />
+              </HeadlessSwitch>
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-6">

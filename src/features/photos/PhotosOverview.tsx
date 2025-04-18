@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, ChangeEvent } from 'react'
 import { H2 } from '../../components/typography'
 import { PhotoGrid } from './components/PhotoGrid'
 import { PhotoUploadModal } from './components/PhotoUploadModal'
 import { BulkUploadButton } from './components/BulkUploadButton'
-import { fetchPhotos, fetchAllAlbums } from '../../features/services/photoService'
+import { CloudinaryImportModal } from './components/CloudinaryImportModal'
+import { fetchPhotos, fetchAllAlbums } from './services/photoService'
 import type { Photo, PhotoCount } from './types'
 import type { AlbumWithDetails } from '../albums/types'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,8 @@ import {
   PhotoIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  CloudArrowDownIcon
 } from '@heroicons/react/24/outline'
 
 interface PhotosByYear {
@@ -33,22 +35,22 @@ function CollapsibleSection({ title, count, children, defaultOpen = true, onTogg
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
       <button
         onClick={() => {
           setIsOpen(!isOpen)
           onToggle?.()
         }}
-        className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+            <ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           ) : (
-            <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+            <ChevronRightIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           )}
-          <h3 className="font-medium text-gray-900">{title}</h3>
-          <span className="text-sm text-gray-500">({count})</span>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+          <span className="text-sm text-gray-500 dark:text-gray-400">({count})</span>
         </div>
       </button>
       {isOpen && (
@@ -61,15 +63,24 @@ function CollapsibleSection({ title, count, children, defaultOpen = true, onTogg
 }
 
 export function PhotosOverview() {
+  console.log("--- PhotosOverview component mounted! ---");
+
   const [photos, setPhotos] = useState<Photo[]>([])
   const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showCloudinaryImportModal, setShowCloudinaryImportModal] = useState(false)
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [activeTab, setActiveTab] = useState<'all' | 'unorganized'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+
+  const currentYear = String(new Date().getFullYear())
+  const [selectedYear, setSelectedYear] = useState<string>(currentYear)
+
+  const availableYears = [currentYear, String(parseInt(currentYear) - 1), String(parseInt(currentYear) + 1), '2023']
+  const yearOptions = useMemo(() => [...new Set(availableYears)].sort((a, b) => parseInt(b) - parseInt(a)), [availableYears])
 
   useEffect(() => {
     loadData()
@@ -94,9 +105,9 @@ export function PhotosOverview() {
 
   // Filter photos that are not in any album
   const unorganizedPhotos = photos.filter(photo => {
-    // Haal eerst alle foto IDs uit de album_photos relaties
+    // Use album_photos (which contains photo_id) instead of photos_count
     const albumPhotoIds = albums.flatMap(album => 
-      (album.photos_count as PhotoCount[]).map(pc => pc.photo_id)
+      album.album_photos ? album.album_photos.map(ap => ap.photo_id) : []
     )
     // Check of deze foto in een album zit
     return !albumPhotoIds.includes(photo.id)
@@ -133,7 +144,7 @@ export function PhotosOverview() {
     return photoList.filter(photo => 
       photo.title?.toLowerCase().includes(query) ||
       photo.description?.toLowerCase().includes(query) ||
-      photo.alt?.toLowerCase().includes(query) ||
+      photo.alt_text?.toLowerCase().includes(query) ||
       photo.year?.toString().includes(query)
     )
   }
@@ -143,14 +154,14 @@ export function PhotosOverview() {
       return (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="aspect-square animate-pulse bg-gray-200 rounded-lg" />
+            <div key={i} className="aspect-square animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg" />
           ))}
         </div>
       )
     }
 
     if (error) {
-      return <div className="text-red-600 text-center py-8">{error.message}</div>
+      return <div className="text-red-600 dark:text-red-400 text-center py-8">{error.message}</div>
     }
 
     const photosByYear = groupPhotosByYear(
@@ -173,7 +184,7 @@ export function PhotosOverview() {
                 <Link
                   key={album.id}
                   to={`/albums/${album.id}`}
-                  className="group relative aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500"
+                  className="group relative aspect-[4/3] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500"
                 >
                   {album.cover_photo ? (
                     <img
@@ -183,14 +194,14 @@ export function PhotosOverview() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <FolderIcon className="w-12 h-12 text-gray-400" />
+                      <FolderIcon className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
                     <div>
                       <h4 className="text-white font-medium">{album.title}</h4>
                       <p className="text-sm text-gray-300">
-                        {album.photos_count[0]?.count || 0} foto's
+                        {album.album_photos?.length || 0} foto's
                       </p>
                     </div>
                   </div>
@@ -198,11 +209,11 @@ export function PhotosOverview() {
               ))}
               <Link
                 to="/albums"
-                className="flex items-center justify-center aspect-[4/3] bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-gray-100 transition-colors group"
+                className="flex items-center justify-center aspect-[4/3] bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
               >
                 <div className="text-center">
-                  <FolderIcon className="w-8 h-8 mx-auto text-gray-400 group-hover:text-indigo-500" />
-                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                  <FolderIcon className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400" />
+                  <span className="mt-2 block text-sm font-medium text-gray-900 dark:text-gray-200">
                     Alle albums bekijken
                   </span>
                 </div>
@@ -231,7 +242,7 @@ export function PhotosOverview() {
         ))}
 
         {years.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             Geen foto's gevonden{searchQuery ? ' voor deze zoekopdracht' : ''}
           </div>
         )}
@@ -242,11 +253,11 @@ export function PhotosOverview() {
   return (
     <div className="space-y-8">
       {/* Header met acties */}
-      <div className="bg-white shadow-sm rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <H2>Foto bibliotheek</H2>
-            <p className="text-sm text-gray-500 mt-1">
+            <H2 className="text-gray-900 dark:text-gray-100">Foto bibliotheek</H2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Beheer hier alle foto's en albums
             </p>
           </div>
@@ -254,26 +265,26 @@ export function PhotosOverview() {
           {/* Zoekbalk */}
           <div className="relative flex-1 max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
             <input
               type="search"
               placeholder="Zoek in foto's..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             />
           </div>
 
           {/* View toggle */}
-          <div className="flex rounded-lg shadow-sm">
+          <div className="flex rounded-lg shadow-sm border border-gray-300 dark:border-gray-600">
             <button
               onClick={() => setView('grid')}
               className={`p-2 ${
                 view === 'grid'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-700 hover:text-gray-900 border border-gray-300'
-              } rounded-l-lg`}
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              } rounded-l-md`}
               title="Grid weergave"
             >
               <ViewColumnsIcon className="w-5 h-5" />
@@ -283,8 +294,8 @@ export function PhotosOverview() {
               className={`p-2 ${
                 view === 'list'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-700 hover:text-gray-900 border border-l-0 border-gray-300'
-              } rounded-r-lg`}
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              } rounded-r-md`}
               title="Lijst weergave"
             >
               <ListBulletIcon className="w-5 h-5" />
@@ -292,30 +303,58 @@ export function PhotosOverview() {
           </div>
 
           {/* Upload buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label htmlFor="bulk-year-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Kies jaar voor bulk upload
+              </label>
+              <select
+                id="bulk-year-select"
+                name="bulk-year"
+                value={selectedYear}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
             <BulkUploadButton
+              targetYear={selectedYear}
               onUploadComplete={loadData}
-              className="bg-white shadow-sm"
+              className="w-auto h-10 flex-shrink-0"
             />
             <button
               onClick={() => setShowUploadModal(true)}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+              className="h-10 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md flex-shrink-0 flex items-center gap-1.5"
             >
+              <PhotoIcon className="w-5 h-5" />
               Foto toevoegen
+            </button>
+            <button
+              onClick={() => setShowCloudinaryImportModal(true)}
+              className="h-10 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md flex-shrink-0 flex items-center gap-1.5"
+              title="Importeer vanuit Cloudinary"
+            >
+              <CloudArrowDownIcon className="w-5 h-5" />
+              Importeer
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="mt-6 border-b border-gray-200">
+        <div className="mt-6 border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('all')}
               className={`
                 flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
                 ${activeTab === 'all' 
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'}
               `}
             >
               <PhotoIcon className="w-5 h-5" />
@@ -326,8 +365,8 @@ export function PhotosOverview() {
               className={`
                 flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
                 ${activeTab === 'unorganized'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'}
               `}
             >
               <FolderIcon className="w-5 h-5" />
@@ -338,7 +377,7 @@ export function PhotosOverview() {
       </div>
 
       {/* Library Content */}
-      <div className="bg-white shadow-sm rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
         {renderLibraryContent()}
       </div>
 
@@ -349,6 +388,16 @@ export function PhotosOverview() {
           setShowUploadModal(false)
           loadData()
         }}
+      />
+
+      <CloudinaryImportModal
+        open={showCloudinaryImportModal}
+        onClose={() => setShowCloudinaryImportModal(false)}
+        onComplete={() => {
+          setShowCloudinaryImportModal(false)
+          loadData()
+        }}
+        targetYear={selectedYear}
       />
     </div>
   )

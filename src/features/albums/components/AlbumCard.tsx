@@ -10,16 +10,18 @@ import {
   EyeSlashIcon, 
   PencilIcon, 
   TrashIcon,
-  PhotoIcon
+  PhotoIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline'
 import { cl } from '../../../styles/shared'
 import { CoverPhotoSelector } from './CoverPhotoSelector'
+import clsx from 'clsx'
 
 interface AlbumCardProps {
   album: AlbumWithDetails
   onUpdate: () => void
   isSelected?: boolean
-  onSelect?: () => void
+  onSelect?: (albumId: string) => void
 }
 
 const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E`
@@ -145,21 +147,22 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     }
   }
 
+  const photoCount = album.photos_count?.[0]?.count || 0
+
   return (
     <>
       <div
         ref={setNodeRef}
         style={style}
-        className={cl(
-          "bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow",
-          isSelected && "ring-2 ring-indigo-500",
-          isDeleting && "opacity-50"
+        className={clsx(
+          "group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer",
+          "transition-all duration-200 ease-in-out shadow-sm hover:shadow-md",
+          isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-100 dark:ring-offset-gray-900' : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600',
+          'bg-gray-100 dark:bg-gray-800'
         )}
+        onClick={() => onSelect?.(album.id)}
       >
-        <div 
-          className="aspect-[4/3] bg-gray-100 relative group cursor-pointer"
-          onClick={() => onSelect?.()}
-        >
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700">
           {getCoverPhotoUrl() !== PLACEHOLDER_SVG ? (
             <img
               src={getCoverPhotoUrl()}
@@ -172,93 +175,39 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
               }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-50">
-              <div className="flex flex-col items-center gap-2">
-                <PhotoIcon className="w-12 h-12 text-gray-300" />
-                <span className="text-sm text-gray-400">Geen foto's</span>
-              </div>
-            </div>
-          )}
-
-          <div
-            {...attributes}
-            {...listeners}
-            className="absolute top-2 left-2 p-1.5 bg-black/20 rounded cursor-move opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </div>
-
-          <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 rounded-full text-white text-xs font-medium">
-            {(album.photos_count?.[0]?.count ?? 0)} foto's
-          </div>
-
-          {!album.visible && (
-            <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500 rounded-full text-white text-xs font-medium">
-              Verborgen
+            <div className="flex items-center justify-center h-full">
+              <FolderIcon className="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
           )}
         </div>
 
-        <div className="p-4">
-          <h3 className="font-medium text-gray-900 truncate">{album.title}</h3>
-          {album.description && (
-            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{album.description}</p>
-          )}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/50 to-transparent" />
+        <div className="absolute inset-0 flex flex-col justify-end p-4">
+          <h3 className="text-white text-lg font-semibold truncate group-hover:underline">{album.title}</h3>
+          <p className="text-sm text-gray-300 mt-0.5">
+            {photoCount} foto{photoCount !== 1 ? 's' : ''}
+          </p>
         </div>
 
-        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
-          <button
-            onClick={handleVisibilityToggle}
-            disabled={isUpdating}
-            className={cl(
-              "p-1.5 text-gray-500 rounded-lg transition-colors",
-              isUpdating 
-                ? "opacity-50 cursor-not-allowed" 
-                : "hover:text-gray-600 hover:bg-gray-100"
-            )}
-            title={album.visible ? 'Verbergen' : 'Zichtbaar maken'}
-          >
-            {isUpdating ? (
-              <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-            ) : album.visible ? (
-              <EyeIcon className="w-5 h-5" />
-            ) : (
-              <EyeSlashIcon className="w-5 h-5" />
-            )}
-          </button>
-          <button
-            onClick={() => setShowPhotos(true)}
-            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="Foto's beheren"
-          >
-            <PhotoIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowEdit(true)}
-            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="Album bewerken"
-          >
-            <PencilIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-            title="Album verwijderen"
-          >
-            <TrashIcon className="w-5 h-5" />
-          </button>
+        {!album.visible && (
+          <div className="absolute top-2 left-2 px-2 py-0.5 bg-yellow-500 text-white text-xs font-medium rounded-full shadow">
+            Verborgen
+          </div>
+        )}
+
+        <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 rounded-full text-white text-xs font-medium">
+          {photoCount} foto's
         </div>
 
-        <button
-          onClick={() => setShowCoverSelector(true)}
-          className="absolute top-2 right-2 p-1.5 bg-black/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          title="Cover foto kiezen"
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 p-1.5 bg-black/20 rounded cursor-move opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <PhotoIcon className="w-5 h-5 text-white" />
-        </button>
+          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </div>
       </div>
 
       {showEdit && (
@@ -283,9 +232,15 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
 
       {showCoverSelector && (
         <CoverPhotoSelector
-          album={album}
-          onSelect={handleCoverPhotoSelect}
-          onClose={() => setShowCoverSelector(false)}
+          albumId={album.id}
+          currentCoverPhotoId={album.cover_photo_id ?? null}
+          onSelect={(photoId) => {
+            if (photoId) {
+              handleCoverPhotoSelect(photoId)
+            } else {
+              setShowCoverSelector(false)
+            }
+          }}
         />
       )}
     </>
