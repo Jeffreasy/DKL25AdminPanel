@@ -3,23 +3,22 @@ import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
 import { supabase } from '../../../lib/supabase'
 import { cc } from '../../../styles/shared'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import type { AlbumWithDetails } from '../../albums/types' // Import Album type
+import { addPhotosToAlbums } from '../services/photoService' // Import the new service function
 
 interface PhotoUploadModalProps {
   open: boolean
   onClose: () => void
   onComplete: () => void
+  albums: AlbumWithDetails[] // Add albums prop
 }
 
-export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModalProps) {
+export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUploadModalProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
-  const currentYear = String(new Date().getFullYear())
-  const [selectedYear, setSelectedYear] = useState<string>(currentYear)
+  const [selectedAlbumIds, setSelectedAlbumIds] = useState<string[]>([]) // State for selected albums
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const availableYears = [currentYear, String(parseInt(currentYear) - 1), String(parseInt(currentYear) + 1), '2023']
-  const yearOptions = [...new Set(availableYears)].sort((a, b) => parseInt(b) - parseInt(a))
 
   if (!open) return null
 
@@ -37,32 +36,57 @@ export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModal
     }
   }
 
+  // Function to handle album selection
+  const handleAlbumSelect = (albumId: string) => {
+    setSelectedAlbumIds(prev =>
+      prev.includes(albumId)
+        ? prev.filter(id => id !== albumId)
+        : [...prev, albumId]
+    )
+  }
+
   const handleUpload = async (files: FileList) => {
     try {
       setIsUploading(true)
       setError(null)
 
-      // Upload all files
+      const uploadedPhotoIds: string[] = []
+
+      // Upload all files and save photo data
       for (const file of Array.from(files)) {
         try {
           const result = await uploadToCloudinary(file)
-          
-          // Create thumbnail URL
           const thumbnailUrl = result.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/')
 
-          // Save to Supabase - without order_number
-          await supabase.from('photos').insert([{
-            url: result.secure_url,
-            thumbnail_url: thumbnailUrl,
-            title: file.name.split('.')[0],
-            alt_text: file.name.split('.')[0],
-            visible: true,
-            year: selectedYear
-          }])
+          // Insert photo and get the inserted ID
+          const { data: insertedPhotos, error: insertPhotoError } = await supabase
+            .from('photos')
+            .insert([{
+              url: result.secure_url,
+              thumbnail_url: thumbnailUrl,
+              title: file.name.split('.')[0],
+              alt_text: file.name.split('.')[0],
+              visible: true,
+              // year: selectedYear // Remove year
+            }])
+            .select('id') // Select the ID of the inserted photo
+
+          if (insertPhotoError) throw insertPhotoError
+          if (insertedPhotos && insertedPhotos.length > 0) {
+            uploadedPhotoIds.push(insertedPhotos[0].id)
+          }
+
         } catch (err) {
           console.error(`Error uploading ${file.name}:`, err)
-          throw err
+          throw err // Re-throw to be caught by outer catch
         }
+      }
+
+      // If photos were uploaded and albums selected, create relations
+      if (uploadedPhotoIds.length > 0 && selectedAlbumIds.length > 0) {
+        // Call service function to add photos to albums
+        await addPhotosToAlbums(uploadedPhotoIds, selectedAlbumIds)
+        // console.log('TODO: Link photos', uploadedPhotoIds, 'to albums', selectedAlbumIds)
       }
 
       onComplete() // Dit triggert nu een refresh
@@ -79,10 +103,6 @@ export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModal
     if (!selectedFiles?.length) {
       setError('Selecteer eerst foto\'s')
       return
-    }
-    if (!selectedYear) {
-        setError('Selecteer een jaar')
-        return
     }
 
     await handleUpload(selectedFiles)
@@ -133,18 +153,28 @@ export function PhotoUploadModal({ open, onClose, onComplete }: PhotoUploadModal
           </div>
 
           <div>
-            <label htmlFor="year-select" className={cc.form.label()}>Jaar (Map)</label>
-            <select
-              id="year-select"
-              name="year"
-              value={selectedYear}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
-              className={cc.form.select({ className: 'mt-1' })}
-            >
-              {yearOptions.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+            <label className={cc.form.label()}>Voeg toe aan albums (optioneel)</label>
+            {albums.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Geen albums beschikbaar.</p>
+            ) : (
+              <div className="mt-1 max-h-48 overflow-y-auto space-y-2 rounded-md border border-gray-300 dark:border-gray-600 p-3 bg-white dark:bg-gray-700">
+                {albums.map(album => (
+                  <div key={album.id} className="flex items-center">
+                    <input
+                      id={`album-${album.id}`}
+                      name="albums"
+                      type="checkbox"
+                      checked={selectedAlbumIds.includes(album.id)}
+                      onChange={() => handleAlbumSelect(album.id)}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 bg-gray-100 dark:bg-gray-600"
+                    />
+                    <label htmlFor={`album-${album.id}`} className="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                      {album.title}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {selectedFiles && selectedFiles.length > 0 && (

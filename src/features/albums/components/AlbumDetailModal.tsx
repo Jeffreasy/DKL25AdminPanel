@@ -159,34 +159,37 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
 
   return (
     <div className={`fixed inset-0 bg-black/30 dark:bg-black/60 z-[${Z_INDEX.BASE_MODAL}]`}> 
-      <div className={`fixed inset-0 flex items-center justify-center p-4 z-[${Z_INDEX.BASE_MODAL}]`}>
-        <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+      <div className={`fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[${Z_INDEX.BASE_MODAL}]`}>
+        <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] sm:max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
+          {/* Header: Stack on mobile */}
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-4 flex-shrink-0">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
               Album: {album.title}
             </h2>
-            <div className="flex items-center gap-2">
+            {/* Reduced gap on mobile, adjusted button padding/size implicitly via cc.button */}
+            <div className="flex items-center justify-end sm:justify-start gap-1 sm:gap-2 flex-wrap">
               <button
                 onClick={handleVisibilityToggle}
                 disabled={loading}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors disabled:opacity-50 ${
-                  album.visible
+                className={cc.button.base({
+                  size: 'sm',
+                  color: album.visible ? 'secondary' : 'secondary', // Use base secondary for consistent look
+                  className: album.visible
                     ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900'
                     : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                })}
               >
                 {album.visible ? 'Zichtbaar' : 'Verborgen'}
               </button>
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className={cc.button.base({ size: 'sm', color: 'secondary' })}
               >
                 Bewerken
               </button>
               <button 
                 onClick={onClose} 
-                className="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                className={cc.button.icon({ size: 'sm', color: 'secondary' })} // Use cc for consistency
               >
                 <span className="sr-only">Sluiten</span>
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -196,8 +199,8 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-800/50">
+          {/* Content: Adjusted padding */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/50">
             {error && (
               <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200 rounded-md flex items-center justify-between border border-red-200 dark:border-red-800/50">
                 <span>{error.message}</span>
@@ -215,12 +218,13 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
 
             {/* Album Info */}
             <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-              <div className="flex items-start gap-6">
-                <div className="relative flex-shrink-0">
+              <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                {/* Cover photo: Smaller on mobile */}
+                <div className="relative flex-shrink-0 w-full sm:w-48">
                   <img
                     src={album.cover_photo?.thumbnail_url || album.cover_photo?.url || ''}
                     alt={album.title}
-                    className="w-48 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700"
+                    className="w-full sm:w-48 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700"
                     onError={(e) => {
                        e.currentTarget.onerror = null;
                        e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239CA3AF' width='48' height='48'%3E%3Cpath d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm16.5-1.5H3.75V6h16.5v13.5z'/%3E%3C/svg%3E`;
@@ -255,28 +259,32 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             </div>
 
             {/* Actions */}
-            <div className="mb-6 flex gap-2">
+            <div className="mb-6 flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => setIsAddingPhotos(true)}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cc.button.base({ color: 'primary', className: 'w-full sm:w-auto' })}
               >
-                Foto's toevoegen
+                <span className="sm:hidden">Toevoegen</span>
+                <span className="hidden sm:inline">Foto's toevoegen</span>
               </button>
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cc.button.base({ color: 'secondary', className: 'w-full sm:w-auto' })}
               >
-                Album details bewerken
+                <span className="sm:hidden">Bewerken</span> 
+                <span className="hidden sm:inline">Album details bewerken</span>
               </button>
             </div>
 
-            {/* Photos Grid */}
+            {/* Photos Grid Section */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Album Foto's (Sleep = sorteer, Klik 🗑️ = verwijder)
+                  {/* Adjusted text for mobile */}
+                  <span className="sm:hidden">Foto's (Sleep/Klik 🗑️)</span>
+                  <span className="hidden sm:inline">Album Foto's (Sleep = sorteer, Klik 🗑️ = verwijder)</span>
                 </h3>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {photos.length} foto's

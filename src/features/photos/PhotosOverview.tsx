@@ -80,8 +80,12 @@ export function PhotosOverview() {
   const currentYear = String(new Date().getFullYear())
   const [selectedYear, setSelectedYear] = useState<string>(currentYear)
 
-  const availableYears = [currentYear, String(parseInt(currentYear) - 1), String(parseInt(currentYear) + 1), '2023']
-  const yearOptions = useMemo(() => [...new Set(availableYears)].sort((a, b) => parseInt(b) - parseInt(a)), [availableYears])
+  const yearOptions = useMemo(() => {
+    const yearsFromPhotos = photos.map(p => p.year).filter(Boolean).map(String);
+    const uniqueYearsFromPhotos = [...new Set(yearsFromPhotos)];
+    const uniqueYears = [...new Set([currentYear, ...uniqueYearsFromPhotos])];
+    return uniqueYears.sort((a, b) => parseInt(b) - parseInt(a));
+  }, [photos, currentYear]);
 
   useEffect(() => {
     loadData()
@@ -173,7 +177,7 @@ export function PhotosOverview() {
               {albums.slice(0, 4).map(album => (
                 <Link
                   key={album.id}
-                  to={`/albums/${album.id}`}
+                  to={`/albums?openAlbum=${album.id}`}
                   className="group relative aspect-[4/3] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500"
                 >
                   {album.cover_photo ? (
@@ -191,7 +195,7 @@ export function PhotosOverview() {
                     <div>
                       <h4 className="text-white font-medium">{album.title}</h4>
                       <p className="text-sm text-gray-300">
-                        {album.album_photos?.length || 0} foto's
+                        {album.photos_count?.[0]?.count || 0} foto's
                       </p>
                     </div>
                   </div>
@@ -234,6 +238,7 @@ export function PhotosOverview() {
                     error={null} 
                     setError={setError}
                     onUpdate={loadData}
+                    albums={albums}
                   />
                 </CollapsibleSection>
               );
@@ -252,6 +257,7 @@ export function PhotosOverview() {
               error={null}
               setError={setError}
               onUpdate={loadData}
+              albums={albums}
             />
              {filteredUnorganizedPhotos.length === 0 && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -275,21 +281,21 @@ export function PhotosOverview() {
             </p>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="relative flex-1 min-w-[200px] sm:min-w-0 order-last sm:order-none mt-2 sm:mt-0 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4 w-full lg:w-auto">
+            <div className="relative order-3 lg:order-1 w-full sm:w-auto lg:max-w-xs">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
               </div>
               <input
                 type="search"
-                placeholder="Zoek in foto's..."
+                placeholder="Zoek in albums..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cc.form.input({ className: 'pl-10 w-full' })}
               />
             </div>
 
-            <div className="flex rounded-md border border-gray-300 dark:border-gray-600 shadow-sm">
+            <div className="hidden sm:flex rounded-md border border-gray-300 dark:border-gray-600 shadow-sm order-2">
               <button
                 onClick={() => setView('grid')}
                 className={`p-2 ${ view === 'grid' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600' } rounded-l-md transition-colors`}
@@ -306,18 +312,18 @@ export function PhotosOverview() {
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <div className="flex-1 sm:flex-initial">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 order-1 lg:order-3 w-full sm:w-auto">
+              <div className="flex-shrink-0">
                 <label htmlFor="bulk-year-select" className="sr-only">
-                  Kies jaar voor bulk upload
+                  Kies jaar voor upload/import
                 </label>
                 <select
                   id="bulk-year-select"
                   name="bulk-year"
                   value={selectedYear}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
-                  className={cc.form.select()}
-                  title="Jaar voor bulk upload"
+                  className={cc.form.select({ className: 'h-full' })}
+                  title="Jaar voor upload/import"
                 >
                   {yearOptions.map(year => (
                     <option key={year} value={year}>
@@ -326,26 +332,25 @@ export function PhotosOverview() {
                   ))}
                 </select>
               </div>
-              <div className="flex gap-2">
-                <BulkUploadButton
-                  targetYear={selectedYear}
-                  onUploadComplete={loadData}
-                  className="flex-1 sm:flex-initial"
-                />
+              <div className="flex gap-2 flex-grow sm:flex-grow-0">
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className={cc.button.base({ color: 'primary', className: 'flex-1 sm:flex-initial flex items-center gap-1.5 justify-center' })}
                 >
                   <PhotoIcon className="w-5 h-5" />
-                  Foto toevoegen
+                  <span className="hidden sm:inline">Foto</span>
+                  <span> Toevoegen</span>
                 </button>
                 <button
                   onClick={() => setShowCloudinaryImportModal(true)}
-                  className={cc.button.base({ color: 'secondary', className: 'flex-1 sm:flex-initial flex items-center gap-1.5 justify-center' })}
+                  className={cc.button.base({ 
+                    color: 'secondary', 
+                    className: 'flex-1 sm:flex-initial flex items-center gap-1.5 justify-center p-2 sm:px-3 sm:py-1.5'
+                  })}
                   title="Importeer vanuit Cloudinary"
                 >
                   <CloudArrowDownIcon className="w-5 h-5" />
-                  <span className="hidden lg:inline">Importeer</span>
+                  <span className="hidden sm:inline">Importeer</span>
                 </button>
               </div>
             </div>
@@ -393,6 +398,7 @@ export function PhotosOverview() {
           setShowUploadModal(false)
           loadData()
         }}
+        albums={albums}
       />
 
       <CloudinaryImportModal

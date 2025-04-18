@@ -39,6 +39,8 @@ const loadCloudinaryScript = (callback: () => void) => {
     script.onload = () => {
       if (callback) callback();
     };
+    script.onerror = () => { // DEBUG: Add error handler
+    };
   } else {
     if (callback) callback();
   }
@@ -67,7 +69,9 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
   useEffect(() => {
     if (open) {
-      loadCloudinaryScript(() => setScriptLoaded(true));
+      loadCloudinaryScript(() => {
+        setScriptLoaded(true);
+      });
     }
   }, [open]);
 
@@ -79,93 +83,154 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
     setError(null);
 
-    const widget = (window as any).cloudinary.createMediaLibrary(
-      {
-        cloud_name: CLOUD_NAME,
-        api_key: API_KEY,
-        multiple: true, // Allow selecting multiple images
-        // Add other configuration options if needed
-      },
-      {
-        insertHandler: async (data: { assets: CloudinaryAsset[] }) => {
-          if (!data.assets || data.assets.length === 0) {
-            onClose();
-            return;
-          }
-
-          setIsProcessing(true);
-          setError(null);
-          let skippedCount = 0;
-          let photosToInsert: Partial<Photo>[] = [];
-
-          try {
-            const { data: existingPhotos, error: fetchError } = await supabase
-              .from('photos')
-              .select('url');
-
-            if (fetchError) {
-              throw new Error('Kon bestaande foto URLs niet ophalen: ' + fetchError.message);
+    try { // DEBUG: Wrap widget creation in try-catch
+      const widget = (window as any).cloudinary.createMediaLibrary(
+        {
+          cloud_name: CLOUD_NAME,
+          api_key: API_KEY,
+          multiple: true, // Allow selecting multiple images
+          // Add other configuration options if needed
+        },
+        {
+          insertHandler: async (data: { assets: CloudinaryAsset[] }) => {
+            if (!data.assets || data.assets.length === 0) {
+              onClose();
+              return;
             }
 
-            const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
+            setIsProcessing(true);
+            setError(null);
+            let skippedCount = 0;
+            let photosToInsert: Partial<Photo>[] = [];
 
-            for (const asset of data.assets) {
-              if (existingUrls.has(asset.secure_url)) {
-                skippedCount++;
-                continue;
+            try {
+              const { data: existingPhotos, error: fetchError } = await supabase
+                .from('photos')
+                .select('url');
+
+              if (fetchError) {
+                throw new Error('Kon bestaande foto URLs niet ophalen: ' + fetchError.message);
               }
 
-              photosToInsert.push({
-                url: asset.secure_url,
-                thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'),
-                title: asset.original_filename || asset.public_id,
-                alt_text: asset.original_filename || asset.public_id,
-                visible: true,
-                year: targetYear || String(new Date().getFullYear()),
-              });
-            }
+              const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
 
-            if (photosToInsert.length > 0) {
-                const { error: insertError } = await supabase
-                  .from('photos')
-                  .insert(photosToInsert);
-
-                if (insertError) {
-                  throw insertError;
+              for (const asset of data.assets) {
+                if (existingUrls.has(asset.secure_url)) {
+                  skippedCount++;
+                  continue;
                 }
+
+                photosToInsert.push({
+                  url: asset.secure_url,
+                  thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'),
+                  title: asset.original_filename || asset.public_id,
+                  alt_text: asset.original_filename || asset.public_id,
+                  visible: true,
+                  year: targetYear || String(new Date().getFullYear()),
+                });
+              }
+
+              if (photosToInsert.length > 0) {
+                  const { error: insertError } = await supabase
+                    .from('photos')
+                    .insert(photosToInsert);
+
+                  if (insertError) {
+                    throw insertError;
+                  }
+              }
+
+              // Success path: Only runs if try block succeeded
+              setIsProcessing(false);
+              if (photosToInsert.length > 0) {
+                  toast.success(
+                    `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` +
+                    (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
+                  );
+              } else if (skippedCount > 0) {
+                  toast(`${skippedCount} foto${skippedCount !== 1 ? '' : 's'} overgeslagen (reeds aanwezig).`);
+              } else {
+                  toast("Geen nieuwe foto's geselecteerd voor import.");
+              }
+
+              onComplete();
+              onClose();
+
+            } catch (err) { // Catch block for fetch or insert errors
+              setError(err instanceof Error ? err.message : "Importeren mislukt");
+              setIsProcessing(false); // Stop processing on error
             }
-
-            // Success path: Only runs if try block succeeded
-            setIsProcessing(false);
-            if (photosToInsert.length > 0) {
-                toast.success(
-                  `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` +
-                  (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
-                );
-            } else if (skippedCount > 0) {
-                toast(`${skippedCount} foto${skippedCount !== 1 ? '' : 's'} overgeslagen (reeds aanwezig).`);
-            } else {
-                toast("Geen nieuwe foto's geselecteerd voor import.");
-            }
-
-            onComplete();
-            onClose();
-
-          } catch (err) { // Catch block for fetch or insert errors
-            console.error("Error importing photos:", err);
-            setError(err instanceof Error ? err.message : "Importeren mislukt");
-            setIsProcessing(false); // Stop processing on error
           }
         }
-      }
-    );
+      );
 
-    widget.show();
+      widget.show();
+
+    } catch (widgetError) { // DEBUG: Catch errors during widget creation/show
+        setError('Cloudinary widget kon niet worden geopend.');
+    }
   }, [scriptLoaded, onClose, onComplete, targetYear]);
 
   return (
     <Dialog open={open} onClose={() => !isProcessing && onClose()} className={`relative z-[${Z_INDEX.BASE_MODAL + 1}]`}>
-      {/* ... rest of the JSX ... */}
+      {/* Fixed backdrop */}
+      <div className={`fixed inset-0 bg-black/30 dark:bg-black/70 z-[${Z_INDEX.BASE_MODAL + 1}]`} aria-hidden="true" />
+
+      {/* Full screen container to center the panel */}
+      <div className={`fixed inset-0 flex items-center justify-center p-4 z-[${Z_INDEX.BASE_MODAL + 1}]`}>
+        <Dialog.Panel className={cc.card({ className: "w-full max-w-md p-0 flex flex-col max-h-[90vh]"})}>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+            <Dialog.Title as="h2" className="text-lg font-semibold text-gray-900 dark:text-white">
+              Importeer vanuit Cloudinary
+            </Dialog.Title>
+            <button
+              onClick={onClose}
+              disabled={isProcessing}
+              className={cc.button.icon({ color: 'secondary', className: 'disabled:opacity-50'})}
+              title="Sluiten"
+            >
+              <span className="sr-only">Sluiten</span>
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="p-6 flex-grow flex flex-col items-center justify-center text-center">
+            {error && (
+              <div className={cc.alert({ status: 'error', className: 'mb-4 w-full text-left' })}>
+                {error}
+              </div>
+            )}
+
+            {isProcessing ? (
+               <div className="flex flex-col items-center gap-4">
+                 <svg className="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                 </svg>
+                 <p className="text-gray-600 dark:text-gray-400">Foto's verwerken...</p>
+               </div>
+            ) : scriptLoaded ? (
+              <button
+                onClick={openWidget}
+                className={cc.button.base({ color: 'primary' })}
+              >
+                Open Cloudinary Media Library
+              </button>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <svg className="animate-spin h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <p className="text-gray-600 dark:text-gray-400">Cloudinary widget laden...</p>
+              </div>
+            )}
+             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                Nieuwe foto's worden geïmporteerd met het jaar {targetYear}.
+             </p>
+          </div>
+        </Dialog.Panel>
+      </div>
     </Dialog>
   );
 }

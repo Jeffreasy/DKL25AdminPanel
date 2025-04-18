@@ -107,8 +107,10 @@ export async function fetchAllAlbums(): Promise<AlbumWithDetails[]> {
     const coverPhoto = album.cover_photo_id ? coverPhotosMap.get(album.cover_photo_id) || null : null;
     
     return {
-      ...(album as Omit<AlbumWithDetails, 'cover_photo' | 'photos_count' | 'photos'>),
-      cover_photo: coverPhoto, // Assign the fetched photo or null
+      // Omit only cover_photo and photos, keep photos_count
+      ...(album as Omit<AlbumWithDetails, 'cover_photo' | 'photos'>),
+      cover_photo: coverPhoto, 
+      // Use the photos_count from the original album data
       photos_count: album.photos_count || [{ count: 0 }],
       photos: [] 
     } as AlbumWithDetails;
@@ -140,6 +142,55 @@ export async function addPhotoToAlbum(photoId: string, albumId: string): Promise
     .insert(newRelation)
 
   if (error) throw error
+}
+
+// New function to add multiple photos to multiple albums
+export async function addPhotosToAlbums(photoIds: string[], albumIds: string[]): Promise<void> {
+  if (photoIds.length === 0 || albumIds.length === 0) {
+    return // Nothing to do
+  }
+
+  const relations: PhotoAlbumRelation[] = [];
+
+  // For each album, find the next order number
+  for (const albumId of albumIds) {
+    const { data: lastPhoto, error: orderError } = await supabase
+      .from('album_photos')
+      .select('order_number')
+      .eq('album_id', albumId)
+      .order('order_number', { ascending: false })
+      .limit(1)
+      .maybeSingle() // Use maybeSingle to handle albums with no photos
+
+    if (orderError) {
+      console.error(`Error fetching last order number for album ${albumId}:`, orderError)
+      // Decide if you want to skip this album or throw an error
+      continue // Skip this album on error
+    }
+
+    let nextOrderNumber = (lastPhoto?.order_number || 0) + 1
+
+    // Create relations for all new photos for this album
+    for (const photoId of photoIds) {
+      relations.push({
+        photo_id: photoId,
+        album_id: albumId,
+        order_number: nextOrderNumber++
+      })
+    }
+  }
+
+  // Bulk insert all relations
+  if (relations.length > 0) {
+    const { error } = await supabase
+      .from('album_photos')
+      .insert(relations)
+
+    if (error) {
+      console.error('Error inserting photo-album relations:', error)
+      throw error // Re-throw the error to be handled by the caller
+    }
+  }
 }
 
 export async function removePhotoFromAlbum(photoId: string, albumId: string): Promise<void> {

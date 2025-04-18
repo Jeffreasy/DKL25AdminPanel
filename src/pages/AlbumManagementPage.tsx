@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlbumGrid } from '../features/albums/components/AlbumGrid'
 import { AlbumForm } from '../features/albums/components/AlbumForm'
 import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal'
@@ -13,19 +14,27 @@ export function AlbumManagementPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithDetails | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
   }
 
-  const handleAlbumSelect = async (albumId: string) => {
+  const handleAlbumSelect = useCallback(async (albumId: string | null) => {
+    if (!albumId) {
+      setSelectedAlbum(null)
+      searchParams.delete('openAlbum')
+      setSearchParams(searchParams, { replace: true })
+      return
+    }
     try {
       const { data, error } = await supabase
         .from('albums')
         .select(`
           *,
-          cover_photo:photos!albums_cover_photo_id_fkey(*),
+          cover_photo:photos!cover_photo_id(*),
           photos:album_photos(
+            order_number, 
             photo:photos(*)
           )
         `)
@@ -36,8 +45,19 @@ export function AlbumManagementPage() {
       setSelectedAlbum(data)
     } catch (err) {
       console.error('Error loading album:', err)
+      setSelectedAlbum(null)
+      searchParams.delete('openAlbum')
+      setSearchParams(searchParams, { replace: true })
     }
-  }
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    const albumIdToOpen = searchParams.get('openAlbum')
+    if (albumIdToOpen && !selectedAlbum) {
+      console.log("Opening album from query param:", albumIdToOpen)
+      handleAlbumSelect(albumIdToOpen)
+    }
+  }, [searchParams, handleAlbumSelect, selectedAlbum])
 
   return (
     <div className="space-y-6">
@@ -77,10 +97,12 @@ export function AlbumManagementPage() {
       {selectedAlbum && (
         <AlbumDetailModal
           album={selectedAlbum}
-          onClose={() => setSelectedAlbum(null)}
+          onClose={() => handleAlbumSelect(null)}
           onSave={async () => {
             await handleRefresh()
-            handleAlbumSelect(selectedAlbum.id)
+            if (selectedAlbum) {
+              handleAlbumSelect(selectedAlbum.id)
+            }
           }}
         />
       )}
