@@ -75,7 +75,7 @@ export function PhotosOverview() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [activeTab, setActiveTab] = useState<'all' | 'unorganized'>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recent-albums']))
 
   const currentYear = String(new Date().getFullYear())
   const [selectedYear, setSelectedYear] = useState<string>(currentYear)
@@ -90,12 +90,15 @@ export function PhotosOverview() {
   const loadData = async () => {
     try {
       setLoading(true)
+      setError(null);
       const [photosData, albumsData] = await Promise.all([
         fetchPhotos(),
         fetchAllAlbums()
       ])
-      setPhotos(photosData)
-      setAlbums(albumsData)
+      console.log("Fetched Photos Sample:", photosData?.[0]);
+      console.log("Fetched Albums Sample:", albumsData?.[0]);
+      setPhotos(photosData || [])
+      setAlbums(albumsData || [])
     } catch (err) {
       console.error('Error loading data:', err)
       setError(new Error('Er ging iets mis bij het ophalen van de gegevens'))
@@ -104,27 +107,11 @@ export function PhotosOverview() {
     }
   }
 
-  // Filter photos that are not in any album
-  const unorganizedPhotos = photos.filter(photo => {
-    // Use album_photos (which contains photo_id) instead of photos_count
-    const albumPhotoIds = albums.flatMap(album => 
-      album.album_photos ? album.album_photos.map(ap => ap.photo_id) : []
-    )
-    // Check of deze foto in een album zit
-    return !albumPhotoIds.includes(photo.id)
-  })
-
-  // Groepeer foto's per jaar
-  const groupPhotosByYear = (photoList: Photo[]): PhotosByYear => {
-    return photoList.reduce((acc: PhotosByYear, photo) => {
-      const year = String(photo.year || new Date(photo.created_at).getFullYear())
-      if (!acc[year]) {
-        acc[year] = []
-      }
-      acc[year].push(photo)
-      return acc
-    }, {})
-  }
+  const unorganizedPhotos = useMemo(() => {
+    return photos.filter(photo => 
+      !photo.album_photos || photo.album_photos.length === 0
+    );
+  }, [photos]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -165,20 +152,22 @@ export function PhotosOverview() {
       return <div className="text-red-600 dark:text-red-400 text-center py-8">{error.message}</div>
     }
 
-    const photosByYear = groupPhotosByYear(
-      filterPhotos(activeTab === 'all' ? photos : unorganizedPhotos)
-    )
-    const years = Object.keys(photosByYear).sort((a, b) => Number(b) - Number(a))
+    const filteredAlbums = albums.filter(album => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return album.title?.toLowerCase().includes(query) || album.description?.toLowerCase().includes(query);
+    });
+
+    const filteredUnorganizedPhotos = filterPhotos(unorganizedPhotos);
 
     return (
       <div className="space-y-4">
-        {/* Recent Albums Sectie */}
         {activeTab === 'all' && (
           <CollapsibleSection 
             title="Recent gebruikte albums" 
             count={albums.length}
-            defaultOpen={expandedSections.has('albums')}
-            onToggle={() => toggleSection('albums')}
+            defaultOpen={expandedSections.has('recent-albums')}
+            onToggle={() => toggleSection('recent-albums')}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {albums.slice(0, 4).map(album => (
@@ -223,28 +212,52 @@ export function PhotosOverview() {
           </CollapsibleSection>
         )}
 
-        {/* Foto's per jaar */}
-        {years.map(year => (
-          <CollapsibleSection
-            key={year}
-            title={`Foto's ${year}`}
-            count={photosByYear[year].length}
-            defaultOpen={expandedSections.has(`year-${year}`)}
-            onToggle={() => toggleSection(`year-${year}`)}
-          >
+        {activeTab === 'all' ? (
+          <> 
+            {filteredAlbums.map(album => {
+              const albumPhotos = photos.filter(photo => 
+                photo.album_photos?.some(ap => ap.album_id === album.id)
+              );
+              const photoCount = album.photos_count?.[0]?.count ?? albumPhotos.length;
+
+              return (
+                <CollapsibleSection
+                  key={album.id}
+                  title={album.title}
+                  count={photoCount}
+                  defaultOpen={expandedSections.has(`album-${album.id}`)}
+                  onToggle={() => toggleSection(`album-${album.id}`)}
+                >
+                  <PhotoGrid
+                    photos={albumPhotos} 
+                    loading={false}
+                    error={null} 
+                    setError={setError}
+                    onUpdate={loadData}
+                  />
+                </CollapsibleSection>
+              );
+            })}
+            {filteredAlbums.length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                Geen albums gevonden{searchQuery ? ' voor deze zoekopdracht' : ''}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={cc.card({ className: 'p-4' })}>
             <PhotoGrid
-              photos={photosByYear[year]}
+              photos={filteredUnorganizedPhotos}
               loading={false}
               error={null}
               setError={setError}
               onUpdate={loadData}
             />
-          </CollapsibleSection>
-        ))}
-
-        {years.length === 0 && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            Geen foto's gevonden{searchQuery ? ' voor deze zoekopdracht' : ''}
+             {filteredUnorganizedPhotos.length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                Geen niet-georganiseerde foto's gevonden{searchQuery ? ' voor deze zoekopdracht' : ''}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -253,7 +266,6 @@ export function PhotosOverview() {
 
   return (
     <div className="space-y-8">
-      {/* Header met acties */}
       <div className={cc.card({ className: 'p-4' })}>
         <div className="flex flex-wrap justify-between items-center gap-4">
           <div className="flex-shrink min-w-0">
@@ -370,7 +382,6 @@ export function PhotosOverview() {
         </div>
       </div>
 
-      {/* Library Content */}
       <div className={cc.card({ className: 'p-6' })}>
         {renderLibraryContent()}
       </div>

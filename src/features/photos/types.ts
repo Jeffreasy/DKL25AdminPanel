@@ -10,11 +10,8 @@ export interface Photo {
   created_at: string
   updated_at: string
   album_photos?: {
-    album: {
-      id: string
-      title: string
-    }
-  }[]
+    album_id: string; 
+  }[];
 }
 
 // Voor gebruik in forms

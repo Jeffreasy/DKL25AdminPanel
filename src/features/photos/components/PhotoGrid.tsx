@@ -4,6 +4,7 @@ import { Dialog } from '@headlessui/react'
 import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon, FolderIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
+import type { AlbumWithDetails } from '../../albums/types'
 import clsx from 'clsx'
 import { supabase } from '../../../lib/supabase'
 import { cc } from '../../../styles/shared'
@@ -15,15 +16,17 @@ interface PhotoGridProps {
   onUpdate: () => Promise<void>
   setError: (error: Error | null) => void
   onPhotoRemove?: (photoId: string) => void
+  albums?: AlbumWithDetails[]
 }
 
 interface PhotoDetailsModalProps {
   photo: Photo
   onClose: () => void
   onUpdate: () => void
+  albums?: AlbumWithDetails[]
 }
 
-function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps) {
+function PhotoDetailsModal({ photo, onClose, onUpdate, albums }: PhotoDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -201,14 +204,17 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                       <div>
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Albums</h3>
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {photo.album_photos.map(({ album }) => (
-                            <span
-                              key={album.id}
-                              className={cc.badge({ color: 'gray' })}
-                            >
-                              {album.title}
-                            </span>
-                          ))}
+                          {photo.album_photos.map(({ album_id }) => {
+                            const currentAlbum = albums?.find(a => a.id === album_id);
+                            return (
+                              <span
+                                key={album_id}
+                                className={cc.badge({ color: 'gray' })}
+                              >
+                                {currentAlbum?.title || 'Onbekend Album'}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -253,7 +259,8 @@ export function PhotoGrid({
   error,
   onUpdate,
   setError,
-  onPhotoRemove
+  onPhotoRemove,
+  albums
 }: PhotoGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
@@ -366,16 +373,19 @@ export function PhotoGrid({
                 )}
                 {photo.album_photos && photo.album_photos.length > 0 && (
                   <div className="flex flex-wrap gap-1 max-w-full">
-                    {photo.album_photos.map(({ album }) => (
-                      <span
-                        key={album.id}
-                        className={cc.badge({ color: 'gray', className: 'bg-white/90 dark:bg-gray-900/80 truncate max-w-[150px]' })}
-                        title={album.title}
-                      >
-                        <FolderIcon className="w-3 h-3 mr-1 text-gray-500 dark:text-gray-400 inline-block" />
-                        {album.title}
-                      </span>
-                    ))}
+                    {photo.album_photos.map(({ album_id }) => {
+                       const currentAlbum = albums?.find(a => a.id === album_id);
+                       return (
+                          <span
+                            key={album_id} 
+                            className={cc.badge({ color: 'gray', className: 'bg-white/90 dark:bg-gray-900/80 truncate max-w-[150px]' })}
+                            title={currentAlbum?.title || 'Onbekend Album'}
+                          >
+                            <FolderIcon className="w-3 h-3 mr-1 text-gray-500 dark:text-gray-400 inline-block" />
+                            {currentAlbum?.title || 'Onbekend'}
+                          </span>
+                       );
+                    })}
                   </div>
                 )}
               </div>
@@ -392,6 +402,7 @@ export function PhotoGrid({
             onUpdate()
             setSelectedPhoto(null)
           }}
+          albums={albums}
         />
       ) : null}
     </>
