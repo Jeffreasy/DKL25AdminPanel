@@ -4,6 +4,8 @@ import type { Partner, CreatePartnerData } from '../types'
 import { createPartner, updatePartner } from '../services/partnerService'
 import { uploadPartnerLogo } from '../../../lib/cloudinary/cloudinaryClient'
 import { isAdmin } from '../../../lib/supabase'
+import { cc } from '../../../styles/shared'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface PartnerFormProps {
   partner?: Partner
@@ -129,175 +131,191 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-          Naam *
-        </label>
-        <input
-          type="text"
-          id="name"
-          value={formData.name}
-          onChange={handleInputChange}
-          name="name"
-          className="mt-1 input-primary"
-          required
-        />
-      </div>
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40 flex items-center justify-center p-4">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-auto border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {partner ? 'Partner Bewerken' : 'Partner Toevoegen'}
+          </h2>
+          <button
+            onClick={onCancel}
+            className={cc.button.icon({ color: 'secondary' })}
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto p-6 space-y-4">
+          <div>
+            <label htmlFor="name" className={cc.form.label()}>
+              Naam *
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              name="name"
+              className={cc.form.input({ className: 'mt-1' })}
+              required
+            />
+          </div>
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-          Beschrijving
-        </label>
-        <textarea
-          id="description"
-          value={formData.description}
-          onChange={handleInputChange}
-          name="description"
-          className="mt-1 input-primary"
-          rows={3}
-        />
-      </div>
+          <div>
+            <label htmlFor="description" className={cc.form.label()}>
+              Beschrijving
+            </label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              name="description"
+              className={cc.form.input({ className: 'mt-1' })}
+              rows={3}
+            />
+          </div>
 
-      <div>
-        <label htmlFor="website" className="block text-sm font-medium text-gray-700">
-          Website
-        </label>
-        <input
-          type="url"
-          id="website"
-          value={formData.website}
-          onChange={handleInputChange}
-          name="website"
-          className="mt-1 input-primary"
-          placeholder="https://..."
-        />
-      </div>
+          <div>
+            <label htmlFor="website" className={cc.form.label()}>
+              Website
+            </label>
+            <input
+              type="url"
+              id="website"
+              value={formData.website}
+              onChange={handleInputChange}
+              name="website"
+              className={cc.form.input({ className: 'mt-1' })}
+              placeholder="https://..."
+            />
+          </div>
 
-      <div>
-        <label htmlFor="tier" className="block text-sm font-medium text-gray-700">
-          Niveau *
-        </label>
-        <select
-          id="tier"
-          value={formData.tier}
-          onChange={handleInputChange}
-          name="tier"
-          className="mt-1 input-primary"
-          required
-        >
-          <option value="bronze">Bronze</option>
-          <option value="silver">Silver</option>
-          <option value="gold">Gold</option>
-        </select>
-      </div>
+          <div>
+            <label htmlFor="tier" className={cc.form.label()}>
+              Niveau *
+            </label>
+            <select
+              id="tier"
+              value={formData.tier}
+              onChange={handleInputChange}
+              name="tier"
+              className={cc.form.select({ className: 'mt-1' })}
+              required
+            >
+              <option value="bronze">Bronze</option>
+              <option value="silver">Silver</option>
+              <option value="gold">Gold</option>
+            </select>
+          </div>
 
-      <div>
-        <label htmlFor="since" className="block text-sm font-medium text-gray-700">
-          Partner sinds *
-        </label>
-        <input
-          type="date"
-          id="since"
-          value={formData.since}
-          onChange={handleInputChange}
-          name="since"
-          className="mt-1 input-primary"
-          required
-        />
-      </div>
+          <div>
+            <label htmlFor="since" className={cc.form.label()}>
+              Partner sinds *
+            </label>
+            <input
+              type="date"
+              id="since"
+              value={formData.since}
+              onChange={handleInputChange}
+              name="since"
+              className={cc.form.input({ className: 'mt-1' })}
+              required
+            />
+          </div>
 
-      <div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.visible}
-            onChange={(e) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
-            name="visible"
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
-          <span className="text-sm font-medium text-gray-700">Zichtbaar op website</span>
-        </label>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Logo
-        </label>
-        <div className="mt-1 space-y-2">
-          {/* Preview */}
-          {previewUrl && (
-            <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
-              <img
-                src={previewUrl}
-                alt="Logo preview"
-                className="w-full h-full object-contain p-2"
+          <div>
+            <label htmlFor="visible" className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="visible"
+                checked={formData.visible}
+                onChange={(e) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
+                name="visible"
+                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 dark:checked:bg-primary-600 dark:focus:ring-primary-600 dark:focus:ring-offset-gray-800"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewUrl(null)
-                  setLogoFile(null)
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = ''
-                  }
-                }}
-                className="absolute top-2 right-2 p-1 bg-red-100 rounded-full text-red-600 hover:bg-red-200"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Zichtbaar op website</span>
+            </label>
+          </div>
+
+          <div>
+            <label className={cc.form.label()}>
+              Logo
+            </label>
+            <div className="mt-1 space-y-2">
+              {previewUrl && (
+                <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
+                  <img
+                    src={previewUrl}
+                    alt="Logo preview"
+                    className="w-full h-full object-contain p-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewUrl(null)
+                      setLogoFile(null)
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = ''
+                      }
+                    }}
+                    className={cc.button.iconDanger({ size: 'sm', className: 'absolute top-2 right-2' })}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cc.button.base({ color: 'secondary', size: 'sm' })}
+                >
+                  {previewUrl ? 'Logo Wijzigen' : 'Logo Kiezen'}
+                </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handleLogoChange}
+                  className="hidden"
+                />
+                <SmallText>Max 2MB. Png, Jpg, Webp.</SmallText>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className={cc.alert({ status: 'error' })}>
+              <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="font-medium">Fout</p>
+                <p className="text-sm">{error}</p>
+              </div>
             </div>
           )}
 
-          {/* Upload input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            id="logo"
-            accept="image/*"
-            onChange={handleLogoChange}
-            className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-full file:border-0
-              file:text-sm file:font-semibold
-              file:bg-primary-50 file:text-primary-700
-              hover:file:bg-primary-100"
-          />
-          <SmallText>
-            Maximaal 2MB, alleen afbeeldingen toegestaan
-          </SmallText>
-        </div>
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className={cc.button.base({ color: 'secondary' })}
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={cc.button.base({ color: 'primary' })}
+            >
+              {isSubmitting ? 'Opslaan...' : (partner ? 'Wijzigingen Opslaan' : 'Partner Opslaan')}
+            </button>
+          </div>
+        </form>
       </div>
-
-      {error && <ErrorText>{error}</ErrorText>}
-
-      <div className="flex justify-end gap-3 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800"
-          disabled={isSubmitting}
-        >
-          Annuleren
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="btn-primary"
-        >
-          {isSubmitting ? (
-            <div className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Bezig...
-            </div>
-          ) : partner ? 'Opslaan' : 'Toevoegen'}
-        </button>
-      </div>
-    </form>
+    </div>
   )
 } 

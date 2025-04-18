@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { SponsorFormData } from '../types'
 import { sponsorService } from '../services/sponsorService'
+import { cc } from '../../../styles/shared'
+import { uploadPartnerLogo } from '../../../lib/cloudinary/cloudinaryClient'
+import { SmallText } from '../../../components/typography'
 
 interface Props {
   onComplete: () => void
@@ -20,17 +23,41 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
     visible: true
   })
   
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.logoUrl || null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     
     try {
+      let finalLogoUrl = formData.logoUrl
+
+      if (logoFile) {
+        setLogoError(null)
+        try {
+          const uploadResult = await uploadPartnerLogo(logoFile)
+          finalLogoUrl = uploadResult.secure_url
+        } catch (uploadErr) {
+          console.error('Logo upload error:', uploadErr)
+          setLogoError('Logo upload mislukt. Controleer het bestand en probeer opnieuw.')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      const dataToSend: SponsorFormData = {
+        ...formData,
+        logoUrl: finalLogoUrl
+      }
+
       if (initialData?.id) {
-        await sponsorService.updateSponsor(initialData.id, formData)
+        await sponsorService.updateSponsor(initialData.id, dataToSend)
       } else {
-        await sponsorService.createSponsor(formData)
+        await sponsorService.createSponsor(dataToSend)
       }
       onComplete()
     } catch (err) {
@@ -40,39 +67,63 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
     }
   }
 
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError('Logo mag niet groter zijn dan 2MB')
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setLogoError('Alleen afbeeldingsbestanden zijn toegestaan (PNG, JPG, WebP etc.)')
+      return
+    }
+
+    setLogoFile(file)
+    setLogoError(null)
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
-    <div className="fixed inset-0 bg-gray-500/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {initialData ? 'Sponsor bewerken' : 'Nieuwe sponsor'}
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {initialData?.id ? 'Sponsor bewerken' : 'Nieuwe sponsor'}
           </h2>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
+            className={cc.button.icon({ color: 'secondary' })}
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
           <div className="p-6 space-y-5">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Naam <span className="text-red-500">*</span>
+              <label htmlFor="name" className={cc.form.label()}>
+                Naam <span className="text-red-600 dark:text-red-400">*</span>
               </label>
               <input
                 type="text"
                 id="name"
                 value={formData.name}
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className={cc.form.input({ className: 'mt-1' })}
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className={cc.form.label()}>
                 Beschrijving
               </label>
               <textarea
@@ -80,26 +131,61 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
                 value={formData.description}
                 onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className={cc.form.input({ className: 'mt-1' })}
               />
             </div>
 
             <div>
-              <label htmlFor="logoUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                Logo URL <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="url"
-                id="logoUrl"
-                value={formData.logoUrl}
-                onChange={e => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              />
+              <label className={cc.form.label()}>Logo</label>
+              <div className="mt-1 space-y-2">
+                {previewUrl && (
+                  <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
+                    <img
+                      src={previewUrl}
+                      alt="Logo preview"
+                      className="w-full h-full object-contain p-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUrl(null)
+                        setLogoFile(null)
+                        setFormData(prev => ({ ...prev, logoUrl: '' }))
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = ''
+                        }
+                      }}
+                      className={cc.button.iconDanger({ size: 'sm', className: 'absolute top-2 right-2' })}
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cc.button.base({ color: 'secondary', size: 'sm' })}
+                  >
+                    {previewUrl ? 'Logo Wijzigen' : 'Logo Kiezen'}
+                  </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <SmallText>Max 2MB. Png, Jpg, Webp.</SmallText>
+                </div>
+                {logoError && (
+                  <p className={cc.form.error()}>{logoError}</p>
+                )}
+              </div>
             </div>
 
             <div>
-              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="websiteUrl" className={cc.form.label()}>
                 Website URL
               </label>
               <input
@@ -107,20 +193,20 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
                 id="websiteUrl"
                 value={formData.websiteUrl}
                 onChange={e => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className={cc.form.input({ className: 'mt-1' })}
               />
             </div>
 
             <div>
-              <label htmlFor="order" className="block text-sm font-medium text-gray-700 mb-1">
-                Volgorde <span className="text-red-500">*</span>
+              <label htmlFor="order" className={cc.form.label()}>
+                Volgorde <span className="text-red-600 dark:text-red-400">*</span>
               </label>
               <input
                 type="number"
                 id="order"
                 value={formData.order}
-                onChange={e => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) }))}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                onChange={e => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                className={cc.form.input({ className: 'mt-1' })}
                 required
               />
             </div>
@@ -131,28 +217,41 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
                 id="isActive"
                 checked={formData.isActive}
                 onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
               />
-              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                 Actief
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="visible"
+                checked={formData.visible}
+                onChange={e => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
+              />
+              <label htmlFor="visible" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Zichtbaar
               </label>
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className={cc.button.base({ color: 'secondary' })}
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={cc.button.base({ color: 'primary' })}
             >
-              {isSubmitting ? 'Bezig...' : initialData ? 'Opslaan' : 'Toevoegen'}
+              {isSubmitting ? 'Bezig...' : initialData?.id ? 'Opslaan' : 'Toevoegen'}
             </button>
           </div>
         </form>

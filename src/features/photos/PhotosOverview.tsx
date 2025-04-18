@@ -18,6 +18,7 @@ import {
   MagnifyingGlassIcon,
   CloudArrowDownIcon
 } from '@heroicons/react/24/outline'
+import { cc } from '../../styles/shared'
 
 interface PhotosByYear {
   [key: string]: Photo[]
@@ -35,13 +36,13 @@ function CollapsibleSection({ title, count, children, defaultOpen = true, onTogg
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+    <div className={cc.card({ className: 'overflow-hidden p-0' })}>
       <button
         onClick={() => {
           setIsOpen(!isOpen)
           onToggle?.()
         }}
-        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors border-b border-gray-200 dark:border-gray-700"
       >
         <div className="flex items-center gap-2">
           {isOpen ? (
@@ -49,7 +50,7 @@ function CollapsibleSection({ title, count, children, defaultOpen = true, onTogg
           ) : (
             <ChevronRightIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           )}
-          <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+          <h3 className="font-medium text-gray-900 dark:text-white">{title}</h3>
           <span className="text-sm text-gray-500 dark:text-gray-400">({count})</span>
         </div>
       </button>
@@ -253,105 +254,98 @@ export function PhotosOverview() {
   return (
     <div className="space-y-8">
       {/* Header met acties */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <H2 className="text-gray-900 dark:text-gray-100">Foto bibliotheek</H2>
+      <div className={cc.card({ className: 'p-4' })}>
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex-shrink min-w-0">
+            <H2>Foto bibliotheek</H2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Beheer hier alle foto's en albums
             </p>
           </div>
           
-          {/* Zoekbalk */}
-          <div className="relative flex-1 max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="relative flex-1 min-w-[200px] sm:min-w-0 order-last sm:order-none mt-2 sm:mt-0 w-full sm:w-auto">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+              </div>
+              <input
+                type="search"
+                placeholder="Zoek in foto's..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cc.form.input({ className: 'pl-10 w-full' })}
+              />
             </div>
-            <input
-              type="search"
-              placeholder="Zoek in foto's..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
-          </div>
 
-          {/* View toggle */}
-          <div className="flex rounded-lg shadow-sm border border-gray-300 dark:border-gray-600">
-            <button
-              onClick={() => setView('grid')}
-              className={`p-2 ${
-                view === 'grid'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-              } rounded-l-md`}
-              title="Grid weergave"
-            >
-              <ViewColumnsIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`p-2 ${
-                view === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-              } rounded-r-md`}
-              title="Lijst weergave"
-            >
-              <ListBulletIcon className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Upload buttons */}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label htmlFor="bulk-year-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Kies jaar voor bulk upload
-              </label>
-              <select
-                id="bulk-year-select"
-                name="bulk-year"
-                value={selectedYear}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            <div className="flex rounded-md border border-gray-300 dark:border-gray-600 shadow-sm">
+              <button
+                onClick={() => setView('grid')}
+                className={`p-2 ${ view === 'grid' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600' } rounded-l-md transition-colors`}
+                title="Grid weergave"
               >
-                {yearOptions.map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+                <ViewColumnsIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setView('list')}
+                className={`p-2 ${ view === 'list' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600' } rounded-r-md border-l border-gray-300 dark:border-gray-600 transition-colors`}
+                title="Lijst weergave"
+              >
+                <ListBulletIcon className="w-5 h-5" />
+              </button>
             </div>
-            <BulkUploadButton
-              targetYear={selectedYear}
-              onUploadComplete={loadData}
-              className="w-auto h-10 flex-shrink-0"
-            />
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="h-10 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md flex-shrink-0 flex items-center gap-1.5"
-            >
-              <PhotoIcon className="w-5 h-5" />
-              Foto toevoegen
-            </button>
-            <button
-              onClick={() => setShowCloudinaryImportModal(true)}
-              className="h-10 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md flex-shrink-0 flex items-center gap-1.5"
-              title="Importeer vanuit Cloudinary"
-            >
-              <CloudArrowDownIcon className="w-5 h-5" />
-              Importeer
-            </button>
+
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex-1 sm:flex-initial">
+                <label htmlFor="bulk-year-select" className="sr-only">
+                  Kies jaar voor bulk upload
+                </label>
+                <select
+                  id="bulk-year-select"
+                  name="bulk-year"
+                  value={selectedYear}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
+                  className={cc.form.select()}
+                  title="Jaar voor bulk upload"
+                >
+                  {yearOptions.map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <BulkUploadButton
+                  targetYear={selectedYear}
+                  onUploadComplete={loadData}
+                  className="flex-1 sm:flex-initial"
+                />
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className={cc.button.base({ color: 'primary', className: 'flex-1 sm:flex-initial flex items-center gap-1.5 justify-center' })}
+                >
+                  <PhotoIcon className="w-5 h-5" />
+                  Foto toevoegen
+                </button>
+                <button
+                  onClick={() => setShowCloudinaryImportModal(true)}
+                  className={cc.button.base({ color: 'secondary', className: 'flex-1 sm:flex-initial flex items-center gap-1.5 justify-center' })}
+                  title="Importeer vanuit Cloudinary"
+                >
+                  <CloudArrowDownIcon className="w-5 h-5" />
+                  <span className="hidden lg:inline">Importeer</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="mt-6 border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab('all')}
               className={`
-                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
+                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium whitespace-nowrap
                 ${activeTab === 'all' 
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'}
@@ -363,7 +357,7 @@ export function PhotosOverview() {
             <button
               onClick={() => setActiveTab('unorganized')}
               className={`
-                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium
+                flex items-center gap-2 py-4 px-1 border-b-2 text-sm font-medium whitespace-nowrap
                 ${activeTab === 'unorganized'
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'}
@@ -377,7 +371,7 @@ export function PhotosOverview() {
       </div>
 
       {/* Library Content */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+      <div className={cc.card({ className: 'p-6' })}>
         {renderLibraryContent()}
       </div>
 

@@ -79,6 +79,7 @@ export function VideoManagementPage() {
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
   const [editVideoData, setEditVideoData] = useState<Video | null>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   const filteredVideos = useMemo(() => {
     return videos
@@ -270,22 +271,54 @@ export function VideoManagementPage() {
     setShowForm(true)
   }
 
+  const handleDragEnd = async (result: any) => {
+    setIsDragging(false);
+    if (!result.destination) return;
+
+    const items = Array.from(videos);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update local state immediately for responsiveness
+    setVideos(items.map((item, index) => ({ ...item, order_number: index })));
+
+    // Update order numbers in the backend
+    try {
+      const updates = items.map((video, index) => 
+        supabase.from('videos').update({ order_number: index }).eq('id', video.id)
+      );
+      await Promise.all(updates);
+      toast.success('Volgorde opgeslagen!');
+      // Optionally re-fetch to confirm, though local state should be accurate
+      // loadVideos(); 
+    } catch (error) {
+      console.error("Error updating video order:", error);
+      toast.error('Opslaan van volgorde mislukt.');
+      // Revert local state on error?
+      loadVideos(); // Re-fetch to revert to actual DB state
+    }
+  };
+
   if (loading && videos.length === 0) {
     return <LoadingSkeleton />
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-          <div>
+      <div className={cc.card({ className: "p-0 overflow-hidden" })}> 
+        <div className="px-4 py-5 sm:px-6 flex flex-wrap justify-between items-center gap-4">
+          <div className="flex-shrink min-w-0">
             <H1 className="mb-1">Video's</H1>
             <SmallText>
               Beheer de video's voor de Koninklijke Loop
             </SmallText>
           </div>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingVideo(null);
+              setFormData({ title: '', description: '', url: '', visible: true });
+              setShowForm(true);
+            }}
             className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -296,23 +329,19 @@ export function VideoManagementPage() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800/50">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <XCircleIcon className="h-5 w-5 text-red-400 dark:text-red-500" aria-hidden="true" />
-            </div>
-            <div className="ml-3 flex-1">
-              <ErrorText>{error}</ErrorText>
-            </div>
-             <button onClick={() => setError(null)} className="ml-3 -mx-1.5 -my-1.5 rounded-lg p-1.5 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 flex-shrink-0">
-               <span className="sr-only">Sluiten</span>
-               <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
+        <div className={cc.alert({ status: 'error' })}>
+           <XCircleIcon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+           <div className="ml-3 flex-1">
+              <p className="text-sm font-medium">{error}</p>
+           </div>
+           <button onClick={() => setError(null)} className={cc.button.iconDanger({ size: 'sm', className: "-mx-1.5 -my-1.5" })}>
+             <span className="sr-only">Sluiten</span>
+             <XMarkIcon className="h-5 w-5" />
+          </button>
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className={cc.card({ className: "p-0 overflow-hidden" })}> 
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -327,17 +356,18 @@ export function VideoManagementPage() {
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
               </div>
             </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <button
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                 className={cc.button.base({ color: 'secondary' })}
+                title={sortOrder === 'asc' ? "Sorteer aflopend" : "Sorteer oplopend"}
               >
-                Sorteer {sortOrder === 'asc' ? '↑' : '↓'}
+                Volgorde {sortOrder === 'asc' ? '↑' : '↓'}
               </button>
               {selectedVideos.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  className={cc.button.base({ color: 'secondary', className: "text-red-600 dark:text-red-400 border-red-300 dark:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center" })}
+                  className={cc.button.base({ color: 'danger', className: "flex items-center" })}
                   title={`Verwijder ${selectedVideos.size} video's`}
                 >
                   <TrashIcon className="h-5 w-5 mr-1" /> Verwijder ({selectedVideos.size})
@@ -348,95 +378,200 @@ export function VideoManagementPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
-              <tr>
-                <th scope="col" className="px-4 py-3 text-left">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-indigo-600 focus:ring-indigo-500"
-                    checked={selectedVideos.size > 0 && selectedVideos.size === filteredVideos.length && filteredVideos.length > 0}
-                    onChange={handleSelectAll}
-                    aria-label="Selecteer alle video's"
-                  />
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Video</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Beschrijving</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Zichtbaar</th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Acties</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredVideos.map((video) => (
-                <tr key={video.id} className={`${selectedVideos.has(video.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                     <input 
-                        type="checkbox" 
-                        className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-indigo-600 focus:ring-indigo-500"
-                        checked={selectedVideos.has(video.id)}
-                        onChange={() => handleSelectVideo(video.id)}
-                        aria-label={`Selecteer video ${video.title}`}
-                      />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-16 w-28 bg-gray-200 dark:bg-gray-700 rounded mr-4 overflow-hidden relative group">
-                         <iframe
-                          src={getVideoEmbedUrl(video.url)}
-                          className="w-full h-full object-cover"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          title={video.title}
-                          loading="lazy"
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
-                        ></iframe>
-                         <div className="absolute inset-0 flex items-center justify-center bg-gray-300 dark:bg-gray-600 group-hover:opacity-0 transition-opacity">
-                           <svg className="h-8 w-8 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                         </div>
-                      </div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">{video.title}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">{video.description || '-'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleToggleVisibility(video)} className={cc.button.icon({ className: "rounded-full p-1" })}>
-                      {video.visible ? 
-                        <EyeIcon className="h-5 w-5 text-green-500" /> : 
-                        <EyeSlashIcon className="h-5 w-5 text-red-500" />
-                      }
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
-                    <button onClick={() => handleEdit(video)} className={cc.button.icon({ color: 'secondary'})} title="Bewerken">
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                     <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger({ className:"rounded-md" })} title="Verwijderen">
-                       <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredVideos.length === 0 && (
-                 <tr>
-                   <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                     Geen video's gevonden{searchQuery && ' voor uw zoekopdracht'}.
-                   </td>
-                 </tr>
-               )}
-            </tbody>
-          </table>
+           <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="videos">
+              {(provided, snapshot) => (
+                <table ref={provided.innerRef} {...provided.droppableProps} className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  {/* Hide thead on mobile */}
+                  <thead className="bg-gray-50 dark:bg-gray-800/50 hidden md:table-header-group">
+                    <tr>
+                      <th scope="col" className="w-12 px-4 py-3 text-left">
+                        <input 
+                          ref={selectAllRef}
+                          type="checkbox" 
+                          className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                          onChange={handleSelectAll}
+                          aria-label="Selecteer alle video's"
+                        />
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Video</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Beschrijving</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Zichtbaar</th>
+                      <th scope="col" className="w-28 relative px-6 py-3">
+                        <span className="sr-only">Acties</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  {/* Use a div wrapper for tbody to allow different display modes */}
+                  <tbody 
+                    className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group" // block on mobile, table-row-group on md+
+                  >
+                    {filteredVideos.map((video, index) => (
+                      <Draggable key={video.id} draggableId={video.id} index={index} isDragDisabled={window.innerWidth < 768}>
+                         {(provided, snapshot) => (
+                          // TR acts as a simple container on mobile
+                          <tr 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`block md:table-row ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                          >
+                            {/* Mobile Card View (hidden on md+) */}
+                            <td className="block md:hidden p-3 border-b border-gray-200 dark:border-gray-700">
+                              {/* Main flex container for image and text content */}
+                              <div className={`flex gap-3 ${selectedVideos.has(video.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-md' : 'p-2'}`}>
+                                {/* Checkbox */}
+                                <div className="pt-1 flex-shrink-0">
+                                  <input 
+                                      type="checkbox" 
+                                      className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                                      checked={selectedVideos.has(video.id)}
+                                      onChange={() => handleSelectVideo(video.id)}
+                                      aria-label={`Selecteer video ${video.title}`}
+                                    />
+                                </div>
+                                {/* Thumbnail */}
+                                <div className="flex-shrink-0 h-20 w-32 bg-gray-200 dark:bg-gray-900 rounded overflow-hidden relative group">
+                                   <iframe
+                                    src={getVideoEmbedUrl(video.url)}
+                                    className="w-full h-full object-cover"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                    title={video.title}
+                                    loading="lazy"
+                                    onError={(e) => { 
+                                      const target = e.currentTarget as HTMLIFrameElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if(parent) parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-red-500 p-1">Preview Error</div>';
+                                    }}
+                                  ></iframe>
+                                </div>
+                                {/* Content Column (Title + Description ONLY) */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={video.title}>{video.title}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2" title={video.description || ''}>{video.description || 'Geen beschrijving'}</p>
+                                </div>
+                              </div>
+                              {/* Separate row for Actions and Status below the main content */}
+                              {/* Group all buttons to the LEFT using justify-start */}
+                              <div className="flex justify-start items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                 {/* Action Buttons Group */}
+                                <div className="flex items-center gap-1">
+                                  {/* Status Button */}
+                                  <button 
+                                    onClick={() => handleToggleVisibility(video)} 
+                                    className={cc.button.icon({ color: 'secondary', size: 'sm', className: "rounded-full" })}
+                                    title={video.visible ? "Zichtbaar" : "Verborgen"}
+                                  >
+                                    {video.visible ? 
+                                      <EyeIcon className="h-4 w-4 text-green-500" /> : 
+                                      <EyeSlashIcon className="h-4 w-4 text-red-500" />
+                                    }
+                                  </button>
+                                  {/* Edit Button */}
+                                  <button onClick={() => handleEdit(video)} className={cc.button.icon({ color: 'secondary', size: 'sm'})} title="Bewerken">
+                                    <PencilIcon className="h-4 w-4" />
+                                  </button>
+                                  {/* Delete Button */}
+                                  <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger({ size: 'sm' })} title="Verwijderen">
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Desktop Table View Cells (hidden on mobile) */}
+                            <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap">
+                              {/* Checkbox content for desktop */}
+                                <input 
+                                    type="checkbox" 
+                                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                                    checked={selectedVideos.has(video.id)}
+                                    onChange={() => handleSelectVideo(video.id)}
+                                    aria-label={`Selecteer video ${video.title}`}
+                                  />
+                            </td>
+                            <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                              {/* Video content for desktop */}
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-16 w-28 bg-gray-200 dark:bg-gray-900 rounded mr-4 overflow-hidden relative group">
+                                   <iframe
+                                    src={getVideoEmbedUrl(video.url)}
+                                    className="w-full h-full object-cover"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                    title={video.title}
+                                    loading="lazy"
+                                    onError={(e) => { 
+                                      const target = e.currentTarget as HTMLIFrameElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if(parent) parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-red-500 p-1">Preview Error</div>';
+                                    }}
+                                  ></iframe>
+                                </div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs" title={video.title}>{video.title}</div>
+                              </div>
+                            </td>
+                            <td className="hidden md:table-cell px-6 py-4">
+                              {/* Description content for desktop */}
+                              <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md" title={video.description || ''}>{video.description || '-'}</div>
+                            </td>
+                            <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                              {/* Visibility content for desktop */}
+                               <button 
+                                  onClick={() => handleToggleVisibility(video)} 
+                                  className={cc.button.icon({ color: 'secondary', className: "rounded-full p-1" })}
+                                  title={video.visible ? "Zichtbaar" : "Verborgen"}
+                                >
+                                  {video.visible ? 
+                                    <EyeIcon className="h-5 w-5 text-green-500" /> : 
+                                    <EyeSlashIcon className="h-5 w-5 text-red-500" />
+                                  }
+                                </button>
+                            </td>
+                            <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
+                              {/* Actions content for desktop */}
+                                <button onClick={() => handleEdit(video)} className={cc.button.icon({ color: 'secondary'})} title="Bewerken">
+                                  <PencilIcon className="h-5 w-5" />
+                                </button>
+                                <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger()} title="Verwijderen">
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                            </td>
+                          </tr>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    {/* Empty state row - hide on mobile if parent tbody is block */}
+                    {filteredVideos.length === 0 && (
+                      <tr className="hidden md:table-row"> 
+                        <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                          Geen video's gevonden{searchQuery && ' voor uw zoekopdracht'}.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+             </Droppable>
+           </DragDropContext>
+           {/* Empty state message for mobile */}
+           {filteredVideos.length === 0 && (
+              <div className="block md:hidden px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                Geen video's gevonden{searchQuery && ' voor uw zoekopdracht'}.
+              </div>
+           )}
         </div>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full shadow-xl border border-gray-200 dark:border-gray-700 my-8">
-             <form onSubmit={handleSubmit}>
-               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className={cc.card({ className: "p-0 w-full max-w-lg flex flex-col max-h-[90vh]" })}> 
+             <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
+               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                    {editingVideo ? 'Video Bewerken' : 'Video Toevoegen'}
                  </h3>
@@ -444,11 +579,12 @@ export function VideoManagementPage() {
                     type="button" 
                     onClick={handleCloseForm} 
                     className={cc.button.icon({ color: 'secondary' })}
+                    title="Sluiten"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                </div>
-               <div className="p-6 space-y-4">
+               <div className="p-6 space-y-4 flex-grow overflow-y-auto">
                  <div>
                    <label htmlFor="title" className={cc.form.label()}>Titel</label>
                    <input 
@@ -456,7 +592,7 @@ export function VideoManagementPage() {
                      id="title" 
                      value={formData.title}
                      onChange={(e) => setFormData({...formData, title: e.target.value})}
-                     className={cc.form.input()}
+                     className={cc.form.input({ className: 'mt-1' })}
                      required 
                    />
                  </div>
@@ -466,7 +602,7 @@ export function VideoManagementPage() {
                      id="description" 
                      value={formData.description}
                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                     className={cc.form.input()}
+                     className={cc.form.input({ className: 'mt-1' })}
                      rows={3}
                    />
                  </div>
@@ -477,12 +613,12 @@ export function VideoManagementPage() {
                      id="url" 
                      value={formData.url}
                      onChange={(e) => setFormData({...formData, url: e.target.value})}
-                     className={cc.form.input()}
+                     className={cc.form.input({ className: 'mt-1' })}
                      required 
                      placeholder="https://www.youtube.com/watch?v=..."
                    />
                    {!isValidVideoUrl(formData.url) && formData.url && (
-                      <ErrorText>Ongeldige of niet-ondersteunde video URL.</ErrorText>
+                      <p className={cc.form.error()}>Ongeldige of niet-ondersteunde video URL.</p>
                    )}
                  </div>
                  <div className="flex items-center">
@@ -491,15 +627,15 @@ export function VideoManagementPage() {
                      type="checkbox" 
                      checked={formData.visible}
                      onChange={(e) => setFormData({...formData, visible: e.target.checked})}
-                     className="h-4 w-4 text-indigo-600 border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded focus:ring-indigo-500"
+                     className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
                    />
                    <label htmlFor="visible" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Zichtbaar op website</label>
                  </div>
-                  {error && !error.includes('ophalen') && !error.includes('zichtbaarheid') && !error.includes('verwijderen') && (
-                     <ErrorText>{error}</ErrorText> 
-                  )}
+                 {error && !error.includes('ophalen') && !error.includes('zichtbaarheid') && !error.includes('verwijderen') && (
+                    <p className={cc.form.error()}>{error}</p>
+                 )}
                </div>
-               <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-gray-800 rounded-b-lg z-10">
+               <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
                  <button type="button" className={cc.button.base({ color: 'secondary' })} onClick={handleCloseForm}>
                     Annuleren
                   </button>

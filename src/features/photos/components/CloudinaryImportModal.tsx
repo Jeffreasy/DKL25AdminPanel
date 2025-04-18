@@ -3,6 +3,9 @@ import { Dialog } from '@headlessui/react';
 import { supabase } from '../../../lib/supabase';
 import { Z_INDEX } from '../../../constants/zIndex';
 import type { Photo } from '../types';
+import { cc } from '../../../styles/shared';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
@@ -69,14 +72,14 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
   }, [open]);
 
   const openWidget = useCallback(() => {
-    if (!scriptLoaded || !window.cloudinary) {
+    if (!scriptLoaded || !(window as any).cloudinary) {
       setError('Cloudinary widget script niet geladen.');
       return;
     }
 
     setError(null);
 
-    const widget = window.cloudinary.createMediaLibrary(
+    const widget = (window as any).cloudinary.createMediaLibrary(
       {
         cloud_name: CLOUD_NAME,
         api_key: API_KEY,
@@ -86,36 +89,43 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
       {
         insertHandler: async (data: { assets: CloudinaryAsset[] }) => {
           if (!data.assets || data.assets.length === 0) {
-            onClose(); // Close modal if no assets selected
+            onClose();
             return;
           }
 
           setIsProcessing(true);
           setError(null);
+          let skippedCount = 0;
           
           try {
+            const { data: existingPhotos, error: fetchError } = await supabase
+              .from('photos')
+              .select('url');
+
+            if (fetchError) {
+              throw new Error('Kon bestaande foto URLs niet ophalen: ' + fetchError.message);
+            }
+
+            const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
+            
             const startOrderNumber = await getLastOrderNumber();
             let currentOrder = startOrderNumber;
-
-            // TODO: Add duplicate check logic here
-            // Fetch existing URLs/public_ids from Supabase?
-            // const { data: existingPhotos, error: fetchError } = await supabase.from('photos').select('url, id'); // Example
-            // if (fetchError) throw fetchError;
-            // const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
-
             const photosToInsert: Partial<Photo>[] = [];
 
             for (const asset of data.assets) {
-              // if (existingUrls.has(asset.secure_url)) continue; // Skip duplicates
+              if (existingUrls.has(asset.secure_url)) {
+                skippedCount++;
+                continue;
+              }
 
               photosToInsert.push({
                 url: asset.secure_url,
-                thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'), // Basic thumbnail generation
+                thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'),
                 title: asset.original_filename || asset.public_id,
                 alt_text: asset.original_filename || asset.public_id,
                 visible: true,
                 order_number: currentOrder++,
-                year: targetYear || String(new Date().getFullYear()), // Use targetYear or default
+                year: targetYear || String(new Date().getFullYear()),
               });
             }
 
@@ -125,9 +135,18 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
                   .insert(photosToInsert);
           
                 if (insertError) throw insertError;
+                
+                toast.success(
+                  `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` + 
+                  (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
+                );
+            } else if (skippedCount > 0) {
+                toast(`${skippedCount} foto${skippedCount !== 1 ? '' : 's'} overgeslagen (reeds aanwezig).`);
+            } else {
+                toast("Geen nieuwe foto's geselecteerd voor import.");
             }
 
-            onComplete(); // Refresh photo list in PhotosOverview
+            onComplete();
             onClose();
           } catch (err) {
             console.error("Error importing photos:", err);
@@ -144,29 +163,41 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
   return (
     <Dialog open={open} onClose={() => !isProcessing && onClose()} className={`relative z-[${Z_INDEX.BASE_MODAL + 1}]`}>
-      <div className={`fixed inset-0 bg-black/30 dark:bg-black/60`} aria-hidden="true" />
+      <div className={`fixed inset-0 bg-black/30 dark:bg-black/70`} aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-          <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-            Importeer vanuit Cloudinary
-          </Dialog.Title>
+        <Dialog.Panel className={cc.card({ className: 'w-full max-w-md p-0' })}>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <Dialog.Title as="h2" className="text-lg font-medium text-gray-900 dark:text-white">
+              Importeer vanuit Cloudinary
+            </Dialog.Title>
+            <button 
+              onClick={onClose}
+              className={cc.button.icon({ color: 'secondary' })}
+              title="Sluiten"
+              disabled={isProcessing}
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200 rounded-md border border-red-200 dark:border-red-800/50 text-sm">
-              {error}
-            </div>
-          )}
+          <div className="p-6">
+            {error && (
+              <div className={cc.alert({ status: 'error', className: 'mb-4' })}>
+                {error}
+              </div>
+            )}
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            Klik op de knop hieronder om je Cloudinary bibliotheek te openen en foto's te selecteren voor import.
-          </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Klik op de knop hieronder om je Cloudinary bibliotheek te openen en foto's te selecteren voor import.
+            </p>
+          </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              className={cc.button.base({ color: 'secondary' })}
             >
               Annuleren
             </button>
@@ -174,7 +205,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
               type="button"
               onClick={openWidget}
               disabled={!scriptLoaded || isProcessing}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              className={cc.button.base({ color: 'primary' })}
             >
               {isProcessing ? 'Bezig...' : !scriptLoaded ? 'Laden...' : 'Open Cloudinary'}
             </button>
@@ -183,11 +214,4 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
       </div>
     </Dialog>
   );
-}
-
-// Declare Cloudinary on window object for TypeScript
-declare global {
-  interface Window {
-    cloudinary: any;
-  }
 } 

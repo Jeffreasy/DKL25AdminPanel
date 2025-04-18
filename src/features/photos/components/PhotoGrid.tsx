@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { Dialog } from '@headlessui/react'
-import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon, FolderIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import clsx from 'clsx'
@@ -77,13 +77,50 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
 
   return (
     <Dialog open={true} onClose={onClose} className={`relative z-[${Z_INDEX.PHOTO_SELECTOR}]`}>
-      <div className={`fixed inset-0 bg-black/30 dark:bg-black/60 z-[${Z_INDEX.PHOTO_SELECTOR}]`} aria-hidden="true" />
+      <div className={`fixed inset-0 bg-black/30 dark:bg-black/70 z-[${Z_INDEX.PHOTO_SELECTOR}]`} aria-hidden="true" />
       
       <div className={`fixed inset-0 flex items-center justify-center p-4 z-[${Z_INDEX.PHOTO_SELECTOR}]`}>
-        <Dialog.Panel className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl overflow-hidden">
-          <div className="flex h-[32rem]">
-            {/* Foto preview */}
-            <div className="w-2/3 bg-gray-900 dark:bg-black relative">
+        <Dialog.Panel className={cc.card({ className: 'w-full max-w-3xl overflow-hidden p-0 flex flex-col max-h-[90vh]' })}>
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+            <Dialog.Title as="h2" className="text-lg font-medium text-gray-900 dark:text-white">
+              Foto details
+            </Dialog.Title>
+            <div className="flex gap-1">
+              <button
+                onClick={handleVisibilityToggle}
+                disabled={loading}
+                className={cc.button.icon({ color: 'secondary' })}
+                title={photo.visible ? 'Verbergen' : 'Zichtbaar maken'}
+              >
+                {photo.visible ? (
+                  <EyeIcon className="w-5 h-5" />
+                ) : (
+                  <EyeSlashIcon className="w-5 h-5" />
+                )}
+              </button>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                disabled={loading}
+                className={cc.button.icon({ color: 'secondary' })}
+                title="Bewerken"
+              >
+                <PencilIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className={cc.button.icon({ color: 'secondary' })}
+                title="Sluiten"
+              >
+                <span className="sr-only">Sluiten</span>
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-grow overflow-hidden">
+            <div className="w-2/3 bg-gray-100 dark:bg-black flex-shrink-0 relative">
               <img
                 src={photo.url}
                 alt={photo.alt_text || photo.title}
@@ -91,128 +128,83 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
               />
             </div>
 
-            {/* Details/edit form */}
             <div className="w-1/3 flex flex-col border-l border-gray-200 dark:border-gray-700">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Foto details
-                </h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleVisibilityToggle}
-                    disabled={loading}
-                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title={photo.visible ? 'Verbergen' : 'Zichtbaar maken'}
-                  >
-                    {photo.visible ? (
-                      <EyeIcon className="w-5 h-5" />
-                    ) : (
-                      <EyeSlashIcon className="w-5 h-5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    disabled={loading}
-                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    <PencilIcon className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    <span className="sr-only">Sluiten</span>
-                    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
               <div className="flex-1 overflow-y-auto p-4">
                 {isEditing ? (
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Titel
-                      </label>
+                      <label htmlFor="title" className={cc.form.label()}>Titel</label>
                       <input
                         type="text"
                         id="title"
                         value={formData.title}
                         onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                        className={cc.form.input()}
+                        className={cc.form.input({ className: 'mt-1' })}
                       />
                     </div>
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Beschrijving
-                      </label>
+                      <label htmlFor="description" className={cc.form.label()}>Beschrijving</label>
                       <textarea
                         id="description"
                         value={formData.description}
                         onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows={3}
-                        className={cc.form.input()}
+                        className={cc.form.input({ className: 'mt-1' })}
                       />
                     </div>
                     <div>
-                      <label htmlFor="alt_text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Alt tekst
-                      </label>
+                      <label htmlFor="alt_text" className={cc.form.label()}>Alt tekst</label>
                       <input
                         type="text"
                         id="alt_text"
                         value={formData.alt_text}
                         onChange={e => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
-                        className={cc.form.input()}
+                        className={cc.form.input({ className: 'mt-1' })}
                       />
                     </div>
                     <div>
-                      <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Jaar
-                      </label>
+                      <label htmlFor="year" className={cc.form.label()}>Jaar</label>
                       <input
-                        type="text"
+                        type="number"
                         id="year"
                         value={formData.year}
                         onChange={e => setFormData(prev => ({ ...prev, year: e.target.value }))}
-                        className={cc.form.input()}
+                        className={cc.form.input({ className: 'mt-1' })}
                       />
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Titel</h3>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.title}</p>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Titel</h3>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">{photo.title}</p>
                     </div>
                     {photo.description && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Beschrijving</h3>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.description}</p>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Beschrijving</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{photo.description}</p>
                       </div>
                     )}
                     {photo.alt_text && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Alt tekst</h3>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.alt_text}</p>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Alt tekst</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">{photo.alt_text}</p>
                       </div>
                     )}
                     {photo.year && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Jaar</h3>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{photo.year}</p>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Jaar</h3>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">{photo.year}</p>
                       </div>
                     )}
                     {photo.album_photos && photo.album_photos.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Albums</h3>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Albums</h3>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {photo.album_photos.map(({ album }) => (
                             <span
                               key={album.id}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                              className={cc.badge({ color: 'gray' })}
                             >
                               {album.title}
                             </span>
@@ -221,8 +213,8 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                       </div>
                     )}
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400">Toegevoegd op</h3>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Toegevoegd op</h3>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
                         {new Date(photo.created_at).toLocaleDateString('nl-NL')}
                       </p>
                     </div>
@@ -231,7 +223,7 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
               </div>
 
               {isEditing && (
-                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex justify-end gap-2">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-600 flex justify-end gap-2 flex-shrink-0">
                   <button
                     onClick={() => setIsEditing(false)}
                     className={cc.button.base({ color: 'secondary' })}
@@ -243,7 +235,7 @@ function PhotoDetailsModal({ photo, onClose, onUpdate }: PhotoDetailsModalProps)
                     disabled={loading}
                     className={cc.button.base({ color: 'primary' })}
                   >
-                    Opslaan
+                    {loading ? 'Opslaan...' : 'Opslaan'}
                   </button>
                 </div>
               )}
@@ -336,7 +328,7 @@ export function PhotoGrid({
           <div
             key={photo.id}
             className={clsx(
-              "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800",
+              "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
               isDeleting === photo.id && "opacity-50"
             )}
           >
@@ -347,55 +339,52 @@ export function PhotoGrid({
               loading="lazy"
             />
             
-            {/* Overlay met acties */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 dark:group-hover:bg-black/70 transition-colors">
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+              <div className="flex justify-end gap-1">
+                <button
                   onClick={() => setSelectedPhoto(photo)}
-                  className="p-1.5 text-white hover:text-gray-200 rounded-md bg-black/20 hover:bg-black/40"
+                  className={cc.button.icon({ className: 'bg-black/40 text-white hover:bg-black/60' })}
                   title="Details bekijken"
-            >
-                  <PencilIcon className="w-5 h-5" />
-            </button>
-            <button
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleDelete(photo)}
                   disabled={isDeleting === photo.id}
-                  className="p-1.5 text-white hover:text-gray-200 rounded-md bg-black/20 hover:bg-black/40 disabled:opacity-50"
+                  className={cc.button.iconDanger({ className: 'bg-black/40 text-white hover:bg-black/60' })}
                   title="Foto verwijderen"
                 >
-                  <TrashIcon className="w-5 h-5" />
-            </button>
-          </div>
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              </div>
 
-              {/* Album badges */}
-              {photo.album_photos && photo.album_photos.length > 0 && (
-                <div className="absolute bottom-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-1rem)] opacity-0 group-hover:opacity-100 transition-opacity">
-                  {photo.album_photos.map(({ album }) => (
-                    <span
-                      key={album.id}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 dark:bg-gray-900/80 text-gray-900 dark:text-gray-200 truncate max-w-[150px] shadow"
-                      title={album.title}
-                    >
-                      <svg className="w-3 h-3 mr-1 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {album.title}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {!photo.visible && (
-                <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-yellow-900 text-xs font-medium rounded-full shadow">
-                  Verborgen
-            </div>
-              )}
+              <div className="flex flex-col items-start gap-1">
+                {!photo.visible && (
+                  <span className={cc.badge({ color: 'orange' })}>
+                    Verborgen
+                  </span>
+                )}
+                {photo.album_photos && photo.album_photos.length > 0 && (
+                  <div className="flex flex-wrap gap-1 max-w-full">
+                    {photo.album_photos.map(({ album }) => (
+                      <span
+                        key={album.id}
+                        className={cc.badge({ color: 'gray', className: 'bg-white/90 dark:bg-gray-900/80 truncate max-w-[150px]' })}
+                        title={album.title}
+                      >
+                        <FolderIcon className="w-3 h-3 mr-1 text-gray-500 dark:text-gray-400 inline-block" />
+                        {album.title}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
-        </div>
+      </div>
 
-      {selectedPhoto && (
+      {selectedPhoto ? (
         <PhotoDetailsModal
           photo={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
@@ -404,7 +393,7 @@ export function PhotoGrid({
             setSelectedPhoto(null)
           }}
         />
-      )}
+      ) : null}
     </>
   )
 } 

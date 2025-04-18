@@ -4,6 +4,7 @@ import { ErrorText, SmallText } from '../../components/typography'
 import { PartnerCard } from './components'
 import { fetchPartners } from './services/partnerService'
 import type { Partner } from './types'
+import { cc } from '../../styles/shared'
 
 type SortField = 'name' | 'order_number'
 type SortOrder = 'asc' | 'desc'
@@ -85,7 +86,7 @@ export function PartnersOverview() {
   return (
     <div className="space-y-4">
       {/* Filters en sortering */}
-      <div className="p-4 border-b border-gray-200 space-y-4">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1">
             <input
@@ -93,10 +94,10 @@ export function PartnersOverview() {
               placeholder="Zoeken..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full pl-10 input-primary"
+              className={cc.form.input({ className: 'w-full pl-10' })}
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -105,21 +106,21 @@ export function PartnersOverview() {
             <select
               value={sortField}
               onChange={(e) => handleSort(e.target.value as SortField)}
-              className="input-primary"
+              className={cc.form.select({ className: 'h-full' })}
             >
               <option value="order_number">Volgorde</option>
               <option value="name">Naam</option>
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 rounded-md border border-gray-300 hover:bg-gray-50"
+              className="p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
             >
               {sortOrder === 'asc' ? (
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9M3 12h5m0 0v8m0-8h14" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
                 </svg>
               )}
@@ -132,7 +133,7 @@ export function PartnersOverview() {
       </div>
 
       {/* Partners grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+      <div className={cc.grid({ className: 'p-4 grid-auto-rows-fr' })}>
         {sortedAndFilteredPartners.map((partner) => (
           <PartnerCard
             key={partner.id}
@@ -140,17 +141,6 @@ export function PartnersOverview() {
             onUpdate={loadPartners}
           />
         ))}
-      </div>
-
-      <div className="fixed bottom-6 right-6">
-        <button
-          onClick={() => {/* Voeg hier je create partner logica toe */}}
-          className="btn-primary rounded-full p-4 shadow-lg"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
       </div>
 
       {filteredPartners.length === 0 && (
