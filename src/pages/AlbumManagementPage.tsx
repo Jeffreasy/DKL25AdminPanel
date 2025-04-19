@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { AlbumGrid } from '../features/albums/components/AlbumGrid'
 import { AlbumForm } from '../features/albums/components/AlbumForm'
 import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal'
+// Import the new preview modal
+import { GalleryPreviewModal } from '../features/albums/components/GalleryPreviewModal'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
 import { supabase } from '../lib/supabase'
@@ -13,6 +15,7 @@ export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
   const [isCreating, setIsCreating] = useState(false)
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithDetails | null>(null)
+  const [showPreviewModal, setShowPreviewModal] = useState(false) // State for preview modal
   const [refreshKey, setRefreshKey] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -61,14 +64,23 @@ export function AlbumManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header: Use flex-col on mobile, sm:flex-row on larger screens */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <H1>Albums</H1>
           <SmallText className="mt-1">
             Beheer hier je foto albums. Elk album kan worden getoond op de hoofdpagina.
           </SmallText>
         </div>
-        <div className="flex gap-3">
+        {/* Button group alignment adjustment for flex-col */}
+        <div className="flex gap-3 justify-end sm:justify-normal">
+          {/* Add Preview Button */}
+          <button
+            onClick={() => setShowPreviewModal(true)}
+            className={cc.button.base({ color: 'secondary' })}
+          >
+            Preview Galerij
+          </button>
           <button
             onClick={() => setIsCreating(true)}
             className={cc.button.base({ color: 'primary' })}
@@ -104,6 +116,14 @@ export function AlbumManagementPage() {
               handleAlbumSelect(selectedAlbum.id)
             }
           }}
+        />
+      )}
+
+      {/* Render Preview Modal (conditionally) */}
+      {showPreviewModal && (
+        <GalleryPreviewModal
+          open={showPreviewModal}
+          onClose={() => setShowPreviewModal(false)}
         />
       )}
     </div>

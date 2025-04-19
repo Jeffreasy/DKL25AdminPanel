@@ -83,6 +83,10 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
     setError(null);
 
+    // DEBUG: Log the actual values being used
+    console.log('[CloudinaryImportModal] Using Cloud Name:', CLOUD_NAME);
+    console.log('[CloudinaryImportModal] Using API Key:', API_KEY ? API_KEY.substring(0, 5) + '...' : 'undefined'); // Log only a prefix for security
+
     try { // DEBUG: Wrap widget creation in try-catch
       const widget = (window as any).cloudinary.createMediaLibrary(
         {
@@ -127,15 +131,21 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
                   alt_text: asset.original_filename || asset.public_id,
                   visible: true,
                   year: targetYear || String(new Date().getFullYear()),
+                  description: "",
                 });
               }
 
               if (photosToInsert.length > 0) {
+                  // DEBUG: Log the exact data being sent to Supabase
+                  console.log("[CloudinaryImportModal] Data to insert:", JSON.stringify(photosToInsert, null, 2));
+
                   const { error: insertError } = await supabase
                     .from('photos')
                     .insert(photosToInsert);
 
                   if (insertError) {
+                    // Log the full error object for more details
+                    console.error('[CloudinaryImportModal] Supabase insert error object:', insertError);
                     throw insertError;
                   }
               }

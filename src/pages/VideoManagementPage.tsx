@@ -306,25 +306,27 @@ export function VideoManagementPage() {
   return (
     <div className="space-y-6">
       <div className={cc.card({ className: "p-0 overflow-hidden" })}> 
-        <div className="px-4 py-5 sm:px-6 flex flex-wrap justify-between items-center gap-4">
+        <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex-shrink min-w-0">
             <H1 className="mb-1">Video's</H1>
             <SmallText>
               Beheer de video's voor de Koninklijke Loop
             </SmallText>
           </div>
-          <button
-            onClick={() => {
-              setEditingVideo(null);
-              setFormData({ title: '', description: '', url: '', visible: true });
-              setShowForm(true);
-            }}
-            className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            <span className="hidden sm:inline">Video Toevoegen</span>
-            <span className="sm:hidden">Toevoegen</span>
-          </button>
+          <div className="flex justify-end sm:justify-normal">
+            <button
+              onClick={() => {
+                setEditingVideo(null);
+                setFormData({ title: '', description: '', url: '', visible: true });
+                setShowForm(true);
+              }}
+              className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              <span className="hidden sm:inline">Video Toevoegen</span>
+              <span className="sm:hidden">Toevoegen</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -418,10 +420,10 @@ export function VideoManagementPage() {
                           >
                             {/* Mobile Card View (hidden on md+) */}
                             <td className="block md:hidden p-3 border-b border-gray-200 dark:border-gray-700">
-                              {/* Main flex container for image and text content */}
-                              <div className={`flex gap-3 ${selectedVideos.has(video.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-md' : 'p-2'}`}>
-                                {/* Checkbox */}
-                                <div className="pt-1 flex-shrink-0">
+                              {/* --- Switched to Grid Layout --- */}
+                              <div className={`grid grid-cols-[auto_max-content_1fr] gap-3 items-start ${selectedVideos.has(video.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 rounded-md p-1' : 'p-1'}`}>
+                                {/* Col 1: Checkbox */}
+                                <div className="pt-1">
                                   <input 
                                       type="checkbox" 
                                       className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
@@ -430,8 +432,8 @@ export function VideoManagementPage() {
                                       aria-label={`Selecteer video ${video.title}`}
                                     />
                                 </div>
-                                {/* Thumbnail */}
-                                <div className="flex-shrink-0 h-20 w-32 bg-gray-200 dark:bg-gray-900 rounded overflow-hidden relative group">
+                                {/* Col 2: Thumbnail */}
+                                <div className="h-20 w-32 bg-gray-200 dark:bg-gray-900 rounded overflow-hidden relative group">
                                    <iframe
                                     src={getVideoEmbedUrl(video.url)}
                                     className="w-full h-full object-cover"
@@ -447,14 +449,13 @@ export function VideoManagementPage() {
                                     }}
                                   ></iframe>
                                 </div>
-                                {/* Content Column (Title + Description ONLY) */}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={video.title}>{video.title}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2" title={video.description || ''}>{video.description || 'Geen beschrijving'}</p>
+                                {/* Col 3: Text Content - Kept min-w-0 overflow-hidden */}
+                                <div className="min-w-0 overflow-hidden">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate break-all" title={video.title}>{video.title}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words" title={video.description || ''}>{video.description || 'Geen beschrijving'}</p>
                                 </div>
                               </div>
-                              {/* Separate row for Actions and Status below the main content */}
-                              {/* Group all buttons to the LEFT using justify-start */}
+                              {/* Actions row remains flex */}
                               <div className="flex justify-start items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                  {/* Action Buttons Group */}
                                 <div className="flex items-center gap-1">

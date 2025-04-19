@@ -3,4 +3,5 @@ export const Z_INDEX = {
   PHOTO_SELECTOR: 50,
   ALBUM_FORM: 60,
   COVER_SELECTOR: 70,
+  PREVIEW_MODAL: 80,
 } as const 

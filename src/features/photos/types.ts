@@ -5,8 +5,9 @@ export interface Photo {
   title: string
   alt_text?: string
   visible: boolean
-  description?: string
-  year?: string
+  description?: string | null
+  year?: string | null
+  cloudinary_folder?: string | null
   created_at: string
   updated_at: string
   album_photos?: {
