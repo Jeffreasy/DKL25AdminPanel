@@ -44,29 +44,28 @@ const getAuthHeaders = () => {
 
 // Helper functie om te mappen van backend model naar frontend model
 function mapIncomingEmailToEmail(incomingEmail: any): Email {
-  // TODO: Standardize backend API field names (e.g., id vs ID, subject vs Subject, etc.)
-  // Updated to use 'sender' and 'read' from backend response
+  // Backend stuurt gedecodeerde/gesanitized body in 'html' veld
+  const decodedContent = incomingEmail.html || ''; 
+
   return {
-    id: incomingEmail.id || incomingEmail.ID, // Keep handling id/ID inconsistency for now
-    sender: incomingEmail.sender, // Use standardized 'sender'
-    subject: incomingEmail.subject || incomingEmail.Subject,
-    body: incomingEmail.body || incomingEmail.Body,
-    html: (incomingEmail.content_type || incomingEmail.ContentType || '').includes('html')
-      ? incomingEmail.body || incomingEmail.Body
-      : '',
-    account: incomingEmail.account_type || incomingEmail.AccountType,
-    message_id: incomingEmail.message_id || incomingEmail.MessageID,
-    created_at: incomingEmail.received_at || incomingEmail.ReceivedAt,
-    read: incomingEmail.read, // Use standardized 'read'
-    metadata: {
-      'return-path': incomingEmail.sender, // Use standardized 'sender'
-      'delivered-to': incomingEmail.to || incomingEmail.To,
-      'content-type': incomingEmail.content_type || incomingEmail.ContentType,
-      'reply-to': incomingEmail.sender // Use standardized 'sender'
+    // Voeg defaults toe voor robuustheid
+    id: incomingEmail.id || incomingEmail.ID || '', 
+    sender: incomingEmail.sender || '', 
+    subject: incomingEmail.subject || incomingEmail.Subject || '(Geen onderwerp)', 
+    // Sla gedecodeerde content op in beide velden, laat Detail renderen
+    body: decodedContent, 
+    html: decodedContent, 
+    account: incomingEmail.account_type || incomingEmail.AccountType || 'info',
+    message_id: incomingEmail.message_id || incomingEmail.MessageID || '',
+    created_at: incomingEmail.received_at || incomingEmail.ReceivedAt || new Date().toISOString(),
+    read: typeof incomingEmail.read === 'boolean' ? incomingEmail.read : false, 
+    metadata: { // Voeg defaults toe
+      'return-path': incomingEmail.sender || '',
+      'delivered-to': incomingEmail.to || incomingEmail.To || '',
+      'content-type': incomingEmail.content_type || incomingEmail.ContentType || '',
+      'reply-to': incomingEmail.sender || ''
     },
-    created_at_system: incomingEmail.created_at || incomingEmail.CreatedAt,
-    // Map IsProcessed and ProcessedAt if needed later, currently only using 'read'
-    // processed_at: incomingEmail.ProcessedAt // Example
+    created_at_system: incomingEmail.created_at || incomingEmail.CreatedAt || new Date().toISOString(),
   };
 }
 
@@ -182,6 +181,7 @@ interface SendAdminMailPayload {
   to: string; // Comma-separated if multiple
   subject: string;
   body: string; // Assumed to be HTML
+  from?: string; // Add optional from field
 }
 
 export const adminEmailService = {
@@ -530,7 +530,8 @@ export const adminEmailService = {
         body: JSON.stringify({
           to: payload.to, // Backend verwacht komma-gescheiden string
           subject: payload.subject,
-          body: payload.body // Backend verwacht HTML body
+          body: payload.body, // Backend verwacht HTML body
+          from: payload.from // Pass the 'from' field to the backend API
         })
       });
       console.log(`[sendMailAsAdmin] Response status from ${url}: ${response.status}`);
@@ -554,6 +555,33 @@ export const adminEmailService = {
     } catch (error) {
       console.error('[sendMailAsAdmin] Failed:', error);
       throw error; // Re-throw voor de UI laag om af te handelen
+    }
+  },
+
+  // NIEUW: Haal unieke emailadressen op van aanmeldingen
+  async fetchAanmeldingenEmails(): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('aanmeldingen')
+        .select('email')
+        // .neq('email', '') // Optional: exclude empty emails if they can exist
+        // .not('email', 'is', null); // Optional: exclude null emails
+
+      if (error) {
+        console.error('Error fetching aanmeldingen emails:', error);
+        throw error;
+      }
+
+      // Haal unieke, niet-lege emails op
+      const emails = data
+        ?.map(item => item.email)
+        .filter((email): email is string => !!email && email.trim() !== ''); 
+        
+      return [...new Set(emails)]; // Return unique emails
+
+    } catch (error) {
+      console.error('Failed in fetchAanmeldingenEmails:', error);
+      return []; // Return empty array on failure
     }
   }
 } 
