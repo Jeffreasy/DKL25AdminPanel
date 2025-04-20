@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
     CheckCircleIcon, 
     PaperAirplaneIcon, 
     UserIcon, 
     MapPinIcon, 
     HandRaisedIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    EnvelopeIcon,
+    ClipboardDocumentIcon,
+    CheckIcon
 } from '@heroicons/react/24/outline'
 import { updateAanmelding } from './../services/aanmeldingenService'
 import type { Aanmelding } from './../types'
@@ -32,6 +35,7 @@ function DetailItem({ label, value, icon: Icon }: { label: string; value: string
 
 export function RegistrationItem({ registration, onStatusUpdate }: RegistrationItemProps) {
   const [loading, setLoading] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   const handleEmailVerzonden = async () => {
     setLoading(true)
@@ -61,47 +65,84 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
     });
   }
 
+  const handleCopyEmail = async () => {
+    if (!registration.email) return;
+    try {
+      await navigator.clipboard.writeText(registration.email);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500); 
+    } catch (err) {
+      console.error('Failed to copy email: ', err);
+    }
+  };
+
   const roleIcon = UserIcon;
   const distanceIcon = MapPinIcon;
   const supportIcon = HandRaisedIcon;
 
   return (
     <div 
-      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 w-full"
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 sm:p-6 w-full"
     >
       <div className="space-y-4">
-        <div className="flex justify-between items-start gap-4">
-          <div className="space-y-0">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:items-start sm:gap-4">
+          <div className="space-y-1 flex-shrink-0">
             <h3 className="font-medium text-lg text-gray-900 dark:text-white">{registration.naam}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {registration.email}
-              {registration.telefoon && ` • ${registration.telefoon}`}
-            </p>
+            <div className="flex items-center gap-1">
+              <a 
+                href={`mailto:${registration.email}`}
+                title={`Mail ${registration.email}`}
+                className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline break-all"
+              >
+                <EnvelopeIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <span>{registration.email}</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleCopyEmail}
+                title={isCopied ? "Gekopieerd!" : "Kopieer email"}
+                className="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-indigo-500 flex-shrink-0"
+              >
+                <span className="sr-only">Kopieer e-mailadres</span>
+                {isCopied ? (
+                  <CheckIcon className="h-4 w-4 text-green-500" aria-hidden="true" />
+                ) : (
+                  <ClipboardDocumentIcon className="h-4 w-4" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+            {registration.telefoon && (
+              <p className="text-sm text-gray-500 dark:text-gray-500"> 
+                {`• ${registration.telefoon}`}
+              </p>
+            )}
           </div>
           
-          {registration.email_verzonden ? (
-            <span className={cc.badge({ color: 'green', className: 'inline-flex items-center gap-1.5' })}>
-              <CheckCircleIcon className="h-3.5 w-3.5" />
-              Email verzonden
-            </span>
-          ) : (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={handleEmailVerzonden}
-              className={cl(
-                cc.button.base({ color: 'secondary', size: 'sm', className: 'text-xs flex items-center gap-1.5' }),
-                loading && "opacity-75 cursor-not-allowed"
-              )}
-            >
-              {loading ? (
-                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
-              ) : (
-                  <PaperAirplaneIcon className="w-4 h-4 -rotate-45" />
-              )}
-              Markeer als verzonden
-            </button>
-          )}
+          <div className="flex-shrink-0 w-full sm:w-auto">
+            {registration.email_verzonden ? (
+              <span className={cc.badge({ color: 'green', className: 'inline-flex items-center gap-1.5 w-full sm:w-auto justify-center' })}>
+                <CheckCircleIcon className="h-3.5 w-3.5" />
+                Email verzonden
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleEmailVerzonden}
+                className={cl(
+                  cc.button.base({ color: 'secondary', size: 'sm', className: 'text-xs flex items-center gap-1.5 w-full sm:w-auto justify-center' }),
+                  loading && "opacity-75 cursor-not-allowed"
+                )}
+              >
+                {loading ? (
+                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                    <PaperAirplaneIcon className="w-4 h-4 -rotate-45" />
+                )}
+                Markeer als verzonden
+              </button>
+            )}
+          </div>
         </div>
 
         <hr className="border-gray-200 dark:border-gray-700" />
@@ -126,7 +167,7 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
 
         {!registration.bijzonderheden && <hr className="border-gray-200 dark:border-gray-700" />}
         
-        <div className="flex justify-between items-center mt-2">
+        <div className="flex flex-col items-start gap-1 sm:flex-row sm:justify-between sm:items-center mt-2">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Aangemeld op: {formatDate(registration.created_at)}
           </p>

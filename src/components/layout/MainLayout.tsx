@@ -9,7 +9,7 @@ export function MainLayout() {
         <Sidebar />
         <div className="flex-1 relative overflow-hidden">
           <Header />
-          <main className="p-4">
+          <main className="p-2 sm:p-4">
             <Outlet />
           </main>
         </div>

@@ -204,40 +204,36 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
             </button>
           </div>
 
-          <div className="p-6 flex-grow flex flex-col items-center justify-center text-center">
-            {error && (
-              <div className={cc.alert({ status: 'error', className: 'mb-4 w-full text-left' })}>
-                {error}
-              </div>
-            )}
-
-            {isProcessing ? (
-               <div className="flex flex-col items-center gap-4">
-                 <svg className="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                 </svg>
-                 <p className="text-gray-600 dark:text-gray-400">Foto's verwerken...</p>
-               </div>
-            ) : scriptLoaded ? (
+          <div className="p-6 flex-grow overflow-y-auto">
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Importeer foto's rechtstreeks uit je Cloudinary Media Library.
+              </p>
               <button
-                onClick={openWidget}
-                className={cc.button.base({ color: 'primary' })}
+                type="button"
+                onClick={openWidget} 
+                disabled={!scriptLoaded || isProcessing}
+                className={cc.button.base({ color: 'primary', className: 'w-full disabled:opacity-50'})}
+                title="Open de Cloudinary Media Library om foto's te selecteren"
               >
-                Open Cloudinary Media Library
+                Open Media Library
               </button>
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <svg className="animate-spin h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <p className="text-gray-600 dark:text-gray-400">Cloudinary widget laden...</p>
-              </div>
-            )}
-             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                Nieuwe foto's worden geïmporteerd met het jaar {targetYear}.
-             </p>
+
+              {isProcessing && (
+                <div className="mt-4 text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-indigo-600 dark:text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Bezig met importeren...
+                </div>
+              )}
+              {error && (
+                <div className={cc.alert({ status: 'error', className: 'mt-4' })}>
+                  {error}
+                </div>
+              )}
+            </div>
           </div>
         </Dialog.Panel>
       </div>
