@@ -3,7 +3,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PhotosOverview } from './features/photos/PhotosOverview'
 import { AlbumManagementPage } from './pages/AlbumManagementPage'
-import { VideoManagementPage } from './pages/VideoManagementPage'
+import { VideosOverview } from './features/videos/components/VideosOverview'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
 import { SponsorManagementPage } from './pages/SponsorManagementPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -40,7 +40,7 @@ export function App() {
         </Route>
         <Route path="/photos" element={<PhotosOverview />} />
         <Route path="/albums" element={<AlbumManagementPage />} />
-        <Route path="/videos" element={<VideoManagementPage />} />
+        <Route path="/videos" element={<VideosOverview />} />
         <Route path="/partners" element={<PartnerManagementPage />} />
         <Route path="/sponsors" element={<SponsorManagementPage />} />
         <Route path="/profile" element={<ProfilePage />} />
