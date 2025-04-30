@@ -15,7 +15,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Converteer de request body naar een stream
     const chunks: Buffer[] = []
     for await (const chunk of req) {
       chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
@@ -23,7 +22,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const buffer = Buffer.concat(chunks)
     const stream = Readable.from(buffer)
 
-    // Upload naar Cloudinary via stream
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
@@ -48,4 +46,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Upload error:', error)
     res.status(500).json({ error: 'Upload failed' })
   }
-} 
+}
