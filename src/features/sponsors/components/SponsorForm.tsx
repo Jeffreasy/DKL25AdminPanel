@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { SponsorFormData } from '../types'
 import { sponsorService } from '../services/sponsorService'
@@ -11,6 +11,7 @@ interface Props {
 
 export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
   const [formData, setFormData] = useState<SponsorFormData>(initialData ?? {
+    customId: '',
     name: '',
     description: '',
     logoUrl: '',
@@ -19,17 +20,33 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
     isActive: true,
     visible: true
   })
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [slugEdited, setSlugEdited] = useState(false) // houdt bij of gebruiker handmatig de slug aanpast
+
+  // Automatisch een slug genereren op basis van de naam
+  useEffect(() => {
+    if (!initialData?.id && !slugEdited) {
+      const slug = formData.name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      setFormData(prev => ({ ...prev, customId: slug }))
+    }
+  }, [formData.name, slugEdited, initialData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
+
     try {
       if (initialData?.id) {
         await sponsorService.updateSponsor(initialData.id, formData)
       } else {
+        if (!formData.customId) {
+          throw new Error('ID (slug) is verplicht.')
+        }
         await sponsorService.createSponsor(formData)
       }
       onComplete()
@@ -57,6 +74,25 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
 
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-5">
+            {!initialData?.id && (
+              <div>
+                <label htmlFor="customId" className="block text-sm font-medium text-gray-700 mb-1">
+                  ID (slug) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="customId"
+                  value={formData.customId ?? ''}
+                  onChange={e => {
+                    setSlugEdited(true)
+                    setFormData(prev => ({ ...prev, customId: e.target.value }))
+                  }}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+            )}
+
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Naam <span className="text-red-500">*</span>
@@ -159,4 +195,4 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
       </div>
     </div>
   )
-} 
+}
