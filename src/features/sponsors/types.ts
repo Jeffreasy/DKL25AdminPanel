@@ -12,6 +12,7 @@ export interface Sponsor {
 }
 
 export interface SponsorFormData {
+  customId?: string // 👈 nodig bij nieuwe sponsor aanmaken
   name: string
   description: string
   logoUrl: string
@@ -19,4 +20,4 @@ export interface SponsorFormData {
   order: number
   isActive: boolean
   visible: boolean
-} 
+}
