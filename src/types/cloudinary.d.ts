@@ -2,7 +2,7 @@
 // This can be expanded if more Cloudinary widget features are used elsewhere
 
 // Define the Cloudinary Asset structure globally
-interface CloudinaryAsset {
+export interface CloudinaryAsset {
   public_id: string;
   secure_url: string;
   thumbnail_url?: string;
@@ -34,6 +34,3 @@ declare global {
     };
   }
 }
-
-// Export empty object to ensure this file is treated as a module
-export {};

@@ -6,6 +6,7 @@ import type { Photo } from '../types';
 import { cc } from '../../../styles/shared';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import type { CloudinaryAsset } from '../../../types/cloudinary';
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
