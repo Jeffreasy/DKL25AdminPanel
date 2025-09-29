@@ -14,7 +14,7 @@ interface CloudinaryAsset {
 
 declare global {
   interface Window {
-    cloudinary?: {
+    cloudinary: {
       createMediaLibrary: (
         config: {
           cloud_name?: string;
@@ -35,4 +35,5 @@ declare global {
   }
 }
 
-// Removed the export {} to make this an ambient declaration file 
+// Export empty object to ensure this file is treated as a module
+export {};
