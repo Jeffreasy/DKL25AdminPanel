@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { Dialog } from '@headlessui/react'
-import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon, FolderIcon, XMarkIcon as CloseIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'
-import clsx from 'clsx'
-import { supabase } from '../../../lib/supabase'
 import { cc } from '../../../styles/shared'
 import { deletePhoto, updatePhotoVisibility } from '../services/photoService'
 import { PhotoDetailsModal } from './PhotoDetailsModal'
@@ -17,7 +15,6 @@ interface PhotoGridProps {
   error: Error | null
   onUpdate: () => Promise<void>
   setError: (error: Error | null) => void
-  onPhotoRemove?: (photoId: string) => void
   albums?: AlbumWithDetails[]
   selectedPhotoIds: Set<string>
   onSelectionChange: (photoId: string, isSelected: boolean) => void
@@ -29,7 +26,6 @@ export function PhotoGrid({
   error,
   onUpdate,
   setError,
-  onPhotoRemove,
   albums,
   selectedPhotoIds,
   onSelectionChange
@@ -47,8 +43,8 @@ export function PhotoGrid({
       await deletePhoto(photo.id);
       setPhotoToDelete(null)
       await onUpdate()
-    } catch (err) {
-      console.error("Error deleting photo:", err)
+    } catch (_err) {
+      console.error("Error deleting photo:", _err)
       handleError('Er ging iets mis bij het verwijderen van de foto')
       setPhotoToDelete(null)
     }
@@ -59,7 +55,8 @@ export function PhotoGrid({
     try {
       await updatePhotoVisibility(photo.id, !photo.visible);
       await onUpdate();
-    } catch (err) {
+    } catch (_err) {
+      console.error("Error toggling visibility:", _err);
       handleError('Kon zichtbaarheid niet wijzigen');
     }
   }

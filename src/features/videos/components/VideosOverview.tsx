@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton' // Adjusted path
 import { ErrorText, H1, SmallText } from '../../../components/typography' // Adjusted path
@@ -6,8 +6,7 @@ import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/vid
 import { usePageTitle } from '../../../hooks/usePageTitle' // Adjusted path
 import type { Video, VideoInsert } from '../types' // Adjusted path
 import { cl } from '../../../styles/shared' // Adjusted path - Changed cc to cl
-import { XCircleIcon } from '@heroicons/react/24/solid'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
 import { supabase } from '../../../lib/supabase' // Adjusted path
 
@@ -78,8 +77,6 @@ export function VideosOverview() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
-  const [editVideoData, setEditVideoData] = useState<Video | null>(null)
-  const selectAllRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   const filteredVideos = useMemo(() => {
@@ -101,23 +98,6 @@ export function VideosOverview() {
   useEffect(() => {
     loadVideos()
   }, [])
-
-  useEffect(() => {
-    const numSelected = selectedVideos.size
-    const numFiltered = filteredVideos.length
-    if (selectAllRef.current) {
-      if (numSelected === 0) {
-        selectAllRef.current.checked = false
-        selectAllRef.current.indeterminate = false
-      } else if (numSelected === numFiltered) {
-        selectAllRef.current.checked = true
-        selectAllRef.current.indeterminate = false
-      } else {
-        selectAllRef.current.checked = false
-        selectAllRef.current.indeterminate = true
-      }
-    }
-  }, [selectedVideos, filteredVideos.length])
 
   const loadVideos = async () => {
     try {
@@ -277,23 +257,7 @@ export function VideosOverview() {
     })
   }
 
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelectedVideos(new Set(filteredVideos.map(v => v.id)))
-    } else {
-      setSelectedVideos(new Set())
-    }
-  }
-
-  const handleEditVideo = (video: Video) => {
-    // Logic for editing a video (e.g., opening a modal or navigating to an edit page)
-    console.log("Editing video:", video);
-    // For now, just log, but this could set state to open a modal
-    setEditVideoData(video) // Assuming you have a state for this
-    // setShowEditModal(true); // Example: if you have a modal
-  }
-
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result
 
     if (!destination || source.index === destination.index) {
@@ -351,13 +315,13 @@ export function VideosOverview() {
 
 
   return (
-    <div className={cl("page-container", "p-4 md:p-6")}>
+    <div className={cl("page-container", "p-4 md:p-6", "dark:bg-gray-900")}>
       <Toaster position="top-right" />
-      <H1>Video's Beheren</H1>
+      <H1 className="dark:text-white">Video's Beheren</H1>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
         <button
           onClick={() => setShowForm(true)}
-          className={cl("button", "button-primary")}
+          className={cl("button", "button-primary", "dark:bg-indigo-600 dark:hover:bg-indigo-700")}
           disabled={isDragging}
         >
           Nieuwe Video Toevoegen
@@ -369,15 +333,15 @@ export function VideosOverview() {
                 placeholder="Zoeken..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={cl("input", "pl-8")} // Add padding for icon
+                className={cl("input", "pl-8", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")} // Add padding for icon
                 disabled={isDragging}
               />
-              <MagnifyingGlassIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
           </div>
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-            className={cl("input")}
+            className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white")}
             disabled={isDragging}
           >
             <option value="asc">Oplopend (Volgorde)</option>
@@ -387,11 +351,11 @@ export function VideosOverview() {
       </div>
 
       {selectedVideos.size > 0 && (
-        <div className="mb-4 flex justify-between items-center bg-blue-100 p-2 rounded">
-          <span className="text-sm font-medium text-blue-800">{selectedVideos.size} video('s) geselecteerd</span>
+        <div className="mb-4 flex justify-between items-center bg-blue-100 dark:bg-blue-900/50 p-2 rounded border border-blue-200 dark:border-blue-800">
+          <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{selectedVideos.size} video('s) geselecteerd</span>
           <button
             onClick={handleBulkDelete}
-            className={cl("button", "button-danger", "button-sm")}
+            className={cl("button", "button-danger", "button-sm", "dark:bg-red-600 dark:hover:bg-red-700")}
             disabled={isDragging}
           >
             Verwijder Geselecteerde
@@ -400,9 +364,9 @@ export function VideosOverview() {
       )}
 
       {loading ? (
-        <LoadingSkeleton />
+        <LoadingSkeleton className="dark:bg-gray-700" />
       ) : error ? (
-        <ErrorText>{error}</ErrorText>
+        <ErrorText className="dark:text-red-400">{error}</ErrorText>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="videos">
@@ -417,9 +381,9 @@ export function VideosOverview() {
                         {...provided.dragHandleProps}
                         className={cl(
                           "video-card",
-                          "border rounded-lg p-4 bg-white shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4",
-                          snapshot.isDragging ? "shadow-lg bg-gray-50 opacity-90" : "",
-                          selectedVideos.has(video.id) ? "border-blue-500 ring-2 ring-blue-200" : "border-gray-200",
+                          "border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4",
+                          snapshot.isDragging ? "shadow-lg bg-gray-50 dark:bg-gray-700 opacity-90" : "",
+                          selectedVideos.has(video.id) ? "border-blue-500 dark:border-blue-700 ring-2 ring-blue-200 dark:ring-blue-800/50" : "border-gray-200 dark:border-gray-700",
                           isDragging ? "cursor-grabbing" : "cursor-grab"
                         )}
                         style={{
@@ -430,12 +394,12 @@ export function VideosOverview() {
                       >
                         <input
                           type="checkbox"
-                          className="form-checkbox h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1 md:mt-0 flex-shrink-0"
+                          className="form-checkbox h-5 w-5 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:checked:bg-blue-600"
                           checked={selectedVideos.has(video.id)}
                           onChange={() => handleSelectVideo(video.id)}
                           disabled={isDragging}
                         />
-                         <div className="flex-shrink-0 w-32 h-20 bg-gray-100 rounded overflow-hidden">
+                         <div className="flex-shrink-0 w-32 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
                             {isValidVideoUrl(video.url) ? (
                                <iframe
                                    src={getVideoEmbedUrl(video.url)}
@@ -445,21 +409,21 @@ export function VideosOverview() {
                                    allowFullScreen
                                ></iframe>
                            ) : (
-                               <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">Ongeldige URL</div>
+                               <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs">Ongeldige URL</div>
                            )}
                         </div>
                         <div className="flex-grow">
-                          <h3 className="text-lg font-semibold">{video.title}</h3>
-                          <SmallText className="text-gray-600">{video.description || "Geen beschrijving"}</SmallText>
-                          <SmallText className="text-blue-500 truncate hover:underline">
+                          <h3 className="text-lg font-semibold dark:text-white">{video.title}</h3>
+                          <SmallText className="text-gray-600 dark:text-gray-400">{video.description || "Geen beschrijving"}</SmallText>
+                          <SmallText className="text-blue-500 dark:text-blue-400 truncate hover:underline">
                             <a href={video.url} target="_blank" rel="noopener noreferrer">{video.url}</a>
                           </SmallText>
-                          <SmallText className="text-gray-400">Volgorde: {video.order_number ?? 'N/A'}</SmallText>
+                          <SmallText className="text-gray-400 dark:text-gray-500">Volgorde: {video.order_number ?? 'N/A'}</SmallText>
                         </div>
                         <div className="flex flex-col md:flex-row items-end md:items-center gap-2 flex-shrink-0">
                             <button
                                 onClick={() => handleToggleVisibility(video)}
-                                className={cl("button", "button-icon", "button-sm", video.visible ? "text-green-600 hover:text-green-800" : "text-gray-400 hover:text-gray-600")}
+                                className={cl("button", "button-icon", "button-sm", video.visible ? "text-green-600 hover:text-green-800 dark:text-green-500 dark:hover:text-green-400" : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400")}
                                 title={video.visible ? 'Zichtbaar (klik om te verbergen)' : 'Verborgen (klik om zichtbaar te maken)'}
                                 disabled={isDragging}
                             >
@@ -467,7 +431,7 @@ export function VideosOverview() {
                             </button>
                             <button
                                 onClick={() => handleEdit(video)}
-                                className={cl("button", "button-icon", "button-sm", "text-blue-600 hover:text-blue-800")}
+                                className={cl("button", "button-icon", "button-sm", "text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400")}
                                 title="Bewerken"
                                 disabled={isDragging}
                             >
@@ -475,7 +439,7 @@ export function VideosOverview() {
                             </button>
                             <button
                                 onClick={() => handleDelete(video.id, video.title)}
-                                className={cl("button", "button-icon", "button-sm", "text-red-600 hover:text-red-800")}
+                                className={cl("button", "button-icon", "button-sm", "text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400")}
                                 title="Verwijderen"
                                 disabled={isDragging}
                             >
@@ -488,12 +452,12 @@ export function VideosOverview() {
                 ))}
                 {provided.placeholder}
                  {filteredVideos.length === 0 && !loading && (
-                  <div className="text-center py-10 text-gray-500">
+                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                     Geen video's gevonden die voldoen aan de zoekopdracht.
                   </div>
                 )}
                  {!loading && videos.length === 0 && (
-                  <div className="text-center py-10 text-gray-500">
+                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                     Er zijn nog geen video's toegevoegd.
                   </div>
                 )}
@@ -505,54 +469,54 @@ export function VideosOverview() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative">
             <button
               onClick={handleCloseForm}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               disabled={isSubmitting}
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
-            <h2 className="text-xl font-semibold mb-4">{editingVideo ? 'Video Bewerken' : 'Nieuwe Video Toevoegen'}</h2>
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">{editingVideo ? 'Video Bewerken' : 'Nieuwe Video Toevoegen'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Titel*</label>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel*</label>
                 <input
                   id="title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className={cl("input")}
+                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
                   required
                   disabled={isSubmitting}
                 />
               </div>
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700">Beschrijving</label>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschrijving</label>
                 <textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className={cl("input")}
+                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
                   rows={3}
                   disabled={isSubmitting}
                 />
               </div>
               <div>
-                <label htmlFor="url" className="block text-sm font-medium text-gray-700">Video URL* (YouTube, Vimeo, Streamable)</label>
+                <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Video URL* (YouTube, Vimeo, Streamable)</label>
                 <input
                   id="url"
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  className={cl("input")}
+                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
                   required
                   placeholder="https://www.youtube.com/watch?v=..."
                   disabled={isSubmitting}
                 />
                 {!isValidVideoUrl(formData.url) && formData.url && (
-                    <SmallText className="text-red-500 mt-1">Ongeldige of niet-ondersteunde URL.</SmallText>
+                    <SmallText className="text-red-500 dark:text-red-400 mt-1">Ongeldige of niet-ondersteunde URL.</SmallText>
                 )}
               </div>
               <div className="flex items-center">
@@ -561,24 +525,24 @@ export function VideosOverview() {
                   type="checkbox"
                   checked={formData.visible}
                   onChange={(e) => setFormData({ ...formData, visible: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:checked:bg-blue-600"
                   disabled={isSubmitting}
                 />
-                <label htmlFor="visible" className="ml-2 block text-sm text-gray-900">Zichtbaar</label>
+                <label htmlFor="visible" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Zichtbaar</label>
               </div>
-              {error && <ErrorText>{error}</ErrorText>}
+              {error && <ErrorText className="dark:text-red-400">{error}</ErrorText>}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={handleCloseForm}
-                  className={cl("button", "button-secondary")}
+                  className={cl("button", "button-secondary", "dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-300 dark:border-gray-500")}
                   disabled={isSubmitting}
                 >
                   Annuleren
                 </button>
                 <button
                   type="submit"
-                  className={cl("button", "button-primary", isSubmitting ? "opacity-50 cursor-not-allowed" : "")}
+                  className={cl("button", "button-primary", "dark:bg-indigo-600 dark:hover:bg-indigo-700", isSubmitting ? "opacity-50 cursor-not-allowed" : "")}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Opslaan...' : (editingVideo ? 'Wijzigingen Opslaan' : 'Video Toevoegen')}

@@ -35,7 +35,7 @@ export default function EmailDetail({ email }: EmailDetailProps) {
               <strong className="font-medium text-gray-800 dark:text-gray-200 w-[90px] inline-block">Antwoorden aan:</strong> {email.metadata['reply-to']}
             </p>
           )}
-           <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400">
             <strong className="font-medium text-gray-800 dark:text-gray-200 w-[90px] inline-block">Datum:</strong> 
             {format(new Date(email.created_at), 'dd MMMM yyyy HH:mm', { locale: nl })}
           </p>

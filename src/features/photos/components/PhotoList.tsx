@@ -3,7 +3,7 @@ import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'
 import { cc } from '../../../styles/shared'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
-import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon, FolderIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { PhotoDetailsModal } from './PhotoDetailsModal'
 import { deletePhoto, updatePhotoVisibility } from '../services/photoService'
 import { Dialog } from '@headlessui/react'
@@ -61,7 +61,8 @@ export function PhotoList({
     try {
       await updatePhotoVisibility(photo.id, !photo.visible);
       await onUpdate();
-    } catch (err) {
+    } catch (_err) {
+      console.error("Error toggling visibility:", _err);
       handleError('Kon zichtbaarheid niet wijzigen');
     }
   }

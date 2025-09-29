@@ -22,7 +22,7 @@ const savePhotoToAPI = async (params: {
 }): Promise<void> => {
   if (params.id) {
     // Update bestaande foto
-    const updateData: Record<string, any> = {
+    const updateData: Partial<Photo> = {
         url: params.url,
         alt_text: params.alt_text,
         title: params.title,
@@ -41,7 +41,7 @@ const savePhotoToAPI = async (params: {
     if (error) throw error
   } else {
     // Nieuwe foto toevoegen
-    const insertData: Record<string, any> = {
+    const insertData: Partial<Omit<Photo, 'id' | 'created_at' | 'updated_at' | 'album_photos'>> = {
         url: params.url,
         alt_text: params.alt_text,
         title: params.title,
@@ -131,7 +131,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               type="text"
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
@@ -146,7 +146,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               type="text"
               id="alt_text"
               value={formData.alt_text}
-              onChange={(e) => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
@@ -160,7 +160,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
             <textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
             />
@@ -175,7 +175,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               type="number"
               id="year"
               value={formData.year}
-              onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               min={2000}
               max={new Date().getFullYear()}
@@ -214,7 +214,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               type="checkbox"
               id="visible"
               checked={formData.visible}
-              onChange={(e) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, visible: e.target.checked }))}
               className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-gray-100 dark:bg-gray-700"
             />
             <label htmlFor="visible" className="text-sm text-gray-700 dark:text-gray-300">

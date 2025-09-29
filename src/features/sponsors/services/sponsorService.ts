@@ -39,7 +39,7 @@ export const sponsorService = {
         is_active: data.isActive,
         visible: data.visible
       }])
-      .select()
+      .select('id, name, description, logo_url, website_url, order_number, is_active, visible, created_at, updated_at')
       .single()
 
     if (error) {
@@ -48,8 +48,16 @@ export const sponsorService = {
     }
 
     return {
-      ...sponsor,
-      visible: sponsor.visible ?? true
+      id: sponsor.id,
+      name: sponsor.name,
+      description: sponsor.description,
+      logoUrl: sponsor.logo_url,
+      websiteUrl: sponsor.website_url,
+      order: sponsor.order_number,
+      isActive: sponsor.is_active,
+      visible: sponsor.visible ?? true,
+      createdAt: sponsor.created_at,
+      updatedAt: sponsor.updated_at
     }
   },
 

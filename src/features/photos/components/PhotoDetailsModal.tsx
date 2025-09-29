@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Dialog } from '@headlessui/react'
-import { PencilIcon, EyeIcon, EyeSlashIcon, FolderIcon, XMarkIcon as CloseIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, EyeIcon, EyeSlashIcon, XMarkIcon as CloseIcon } from '@heroicons/react/24/outline'
 import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'

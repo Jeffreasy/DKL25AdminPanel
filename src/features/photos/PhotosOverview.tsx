@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback, ChangeEvent } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { H2 } from '../../components/typography'
 import { PhotoGrid } from './components/PhotoGrid'
 import { PhotoUploadModal } from './components/PhotoUploadModal'
-import { BulkUploadButton } from './components/BulkUploadButton'
 import { CloudinaryImportModal } from './components/CloudinaryImportModal'
 import { fetchPhotos, fetchAllAlbums } from './services/photoService'
-import type { Photo, PhotoCount } from './types'
+import type { Photo } from './types'
 import type { AlbumWithDetails } from '../albums/types'
 import { Link } from 'react-router-dom'
 import { 
@@ -20,10 +19,6 @@ import {
 } from '@heroicons/react/24/outline'
 import { cc } from '../../styles/shared'
 import { PhotoList } from './components/PhotoList'
-
-interface PhotosByYear {
-  [key: string]: Photo[]
-}
 
 interface CollapsibleSectionProps {
   title: string
@@ -80,14 +75,6 @@ export function PhotosOverview() {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set())
 
   const currentYear = String(new Date().getFullYear())
-  const [selectedYear, setSelectedYear] = useState<string>(currentYear)
-
-  const yearOptions = useMemo(() => {
-    const yearsFromPhotos = photos.map(p => p.year).filter(Boolean).map(String);
-    const uniqueYearsFromPhotos = [...new Set(yearsFromPhotos)];
-    const uniqueYears = [...new Set([currentYear, ...uniqueYearsFromPhotos])];
-    return uniqueYears.sort((a, b) => parseInt(b) - parseInt(a));
-  }, [photos, currentYear]);
 
   useEffect(() => {
     loadData()
@@ -131,7 +118,7 @@ export function PhotosOverview() {
     })
   }
 
-  const filterPhotos = (photoList: Photo[]) => {
+  const filterPhotos = useCallback((photoList: Photo[]) => {
     if (!searchQuery) return photoList
 
     const query = searchQuery.toLowerCase()
@@ -141,7 +128,7 @@ export function PhotosOverview() {
       photo.alt_text?.toLowerCase().includes(query) ||
       photo.year?.toString().includes(query)
     )
-  }
+  }, [searchQuery])
 
   const handleSelectionChange = useCallback((photoId: string, isSelected: boolean) => {
     setSelectedPhotoIds(prevSelectedIds => {
@@ -457,7 +444,7 @@ export function PhotosOverview() {
             setShowCloudinaryImportModal(false)
             loadData()
           }}
-          targetYear={selectedYear} 
+          targetYear={currentYear}
         />
       )}
     </div>

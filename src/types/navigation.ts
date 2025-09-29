@@ -5,6 +5,7 @@ import {
   VideoCameraIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
+  GlobeAltIcon,
 } from '@heroicons/react/24/outline'
 import type { ComponentType } from 'react'
 
@@ -41,5 +42,10 @@ export const menuItems: MenuItemOrGroup[] = [
       { label: 'Partners', path: '/partners', icon: UserGroupIcon },
       { label: 'Sponsors', path: '/sponsors', icon: CurrencyDollarIcon },
     ]
+  },
+  {
+    label: 'Frontend',
+    path: '/frontend',
+    icon: GlobeAltIcon,
   }
 ] 

@@ -6,6 +6,7 @@ import { AlbumManagementPage } from './pages/AlbumManagementPage'
 import { VideosOverview } from './features/videos/components/VideosOverview'
 import { PartnerManagementPage } from './pages/PartnerManagementPage'
 import { SponsorManagementPage } from './pages/SponsorManagementPage'
+import { UnderConstructionPage } from './pages/UnderConstructionPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { AuthGuard } from './components/auth/AuthGuard'
@@ -43,6 +44,7 @@ export function App() {
         <Route path="/videos" element={<VideosOverview />} />
         <Route path="/partners" element={<PartnerManagementPage />} />
         <Route path="/sponsors" element={<SponsorManagementPage />} />
+        <Route path="/frontend" element={<UnderConstructionPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

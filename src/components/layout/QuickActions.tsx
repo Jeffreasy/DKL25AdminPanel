@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -9,10 +9,12 @@ import {
   Cog6ToothIcon,
   FolderPlusIcon,
 } from '@heroicons/react/24/outline'
-import { SponsorForm } from '../../features/sponsors/components/SponsorForm'
-import { PhotoForm } from '../../features/photos/components/PhotoForm'
-import { AlbumForm } from '../../features/albums/components/AlbumForm'
-import { PartnerForm } from '../../features/partners/components/PartnerForm'
+
+// Lazy load heavy components
+const SponsorForm = lazy(() => import('../../features/sponsors/components/SponsorForm').then(module => ({ default: module.SponsorForm })))
+const PhotoForm = lazy(() => import('../../features/photos/components/PhotoForm').then(module => ({ default: module.PhotoForm })))
+const AlbumForm = lazy(() => import('../../features/albums/components/AlbumForm').then(module => ({ default: module.AlbumForm })))
+const PartnerForm = lazy(() => import('../../features/partners/components/PartnerForm').then(module => ({ default: module.PartnerForm })))
 
 const quickActions = [
   {
@@ -49,32 +51,33 @@ const quickActions = [
 
 export function QuickActions() {
   const navigate = useNavigate()
-  const [showSponsorForm, setShowSponsorForm] = useState(false)
-  const [showPhotoForm, setShowPhotoForm] = useState(false)
-  const [showAlbumForm, setShowAlbumForm] = useState(false)
-  const [showPartnerForm, setShowPartnerForm] = useState(false)
+  const [modals, setModals] = useState({
+    sponsor: false,
+    photo: false,
+    album: false,
+    partner: false,
+  })
 
-  const handleAction = (action: string | undefined, href: string | undefined) => {
+  const memoizedQuickActions = useMemo(() => quickActions, [])
+
+  const handleAction = useCallback((action: string | undefined, href: string | undefined) => {
     if (href) {
       navigate(href)
       return
     }
 
-    switch (action) {
-      case 'sponsors':
-        setShowSponsorForm(true)
-        break
-      case 'photos':
-        setShowPhotoForm(true)
-        break
-      case 'albums':
-        setShowAlbumForm(true)
-        break
-      case 'partners':
-        setShowPartnerForm(true)
-        break
-    }
-  }
+    setModals(prev => ({
+      ...prev,
+      sponsor: action === 'sponsors',
+      photo: action === 'photos',
+      album: action === 'albums',
+      partner: action === 'partners',
+    }))
+  }, [navigate])
+
+  const closeModal = useCallback((type: keyof typeof modals) => {
+    setModals(prev => ({ ...prev, [type]: false }))
+  }, [])
 
   return (
     <>
@@ -93,32 +96,33 @@ export function QuickActions() {
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="absolute right-0 z-10 mt-2 w-full origin-top-right rounded-md bg-white dark:bg-gray-800 py-2 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none sm:w-96">
+          <Menu.Items className="fixed inset-x-2 top-16 z-50 w-auto min-w-[280px] max-w-sm rounded-md bg-white dark:bg-gray-800 py-2 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:max-w-none sm:w-96 sm:origin-top-right sm:inset-x-auto">
             <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Snelle acties</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Voer snel taken uit</p>
             </div>
 
             <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
-              {quickActions.map((action) => (
+              {memoizedQuickActions.map((action) => (
                 <Menu.Item key={action.name}>
                   {({ active }) => (
                     <button
                       onClick={() => handleAction(action.action, action.href)}
                       className={`
-                        flex w-full items-center px-4 py-3 text-left
+                        flex w-full items-center px-4 py-4 text-left
                         ${active ? 'bg-gray-100 dark:bg-gray-700' : ''}
+                        touch-manipulation sm:px-4 sm:py-3
                       `}
                     >
                       <action.icon
-                        className="h-6 w-6 text-gray-500 dark:text-gray-400"
+                        className="h-6 w-6 text-gray-500 dark:text-gray-400 flex-shrink-0 sm:h-6 sm:w-6"
                         aria-hidden="true"
                       />
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <div className="ml-4 min-w-0 flex-1">
+                        <p className="text-base font-medium text-gray-900 dark:text-gray-100 sm:text-sm">
                           {action.name}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 sm:text-sm">
                           {action.description}
                         </p>
                       </div>
@@ -131,30 +135,32 @@ export function QuickActions() {
         </Transition>
       </Menu>
 
-      {showSponsorForm && (
-        <SponsorForm
-          onComplete={() => setShowSponsorForm(false)}
-          onCancel={() => setShowSponsorForm(false)}
-        />
-      )}
-      {showPhotoForm && (
-        <PhotoForm
-          onComplete={() => setShowPhotoForm(false)}
-          onCancel={() => setShowPhotoForm(false)}
-        />
-      )}
-      {showAlbumForm && (
-        <AlbumForm
-          onComplete={() => setShowAlbumForm(false)}
-          onCancel={() => setShowAlbumForm(false)}
-        />
-      )}
-      {showPartnerForm && (
-        <PartnerForm
-          onComplete={() => setShowPartnerForm(false)}
-          onCancel={() => setShowPartnerForm(false)}
-        />
-      )}
+      <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
+        {modals.sponsor && (
+          <SponsorForm
+            onComplete={() => closeModal('sponsor')}
+            onCancel={() => closeModal('sponsor')}
+          />
+        )}
+        {modals.photo && (
+          <PhotoForm
+            onComplete={() => closeModal('photo')}
+            onCancel={() => closeModal('photo')}
+          />
+        )}
+        {modals.album && (
+          <AlbumForm
+            onComplete={() => closeModal('album')}
+            onCancel={() => closeModal('album')}
+          />
+        )}
+        {modals.partner && (
+          <PartnerForm
+            onComplete={() => closeModal('partner')}
+            onCancel={() => closeModal('partner')}
+          />
+        )}
+      </Suspense>
     </>
   )
 } 

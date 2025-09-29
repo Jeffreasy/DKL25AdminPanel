@@ -10,14 +10,9 @@ import { toast } from 'react-hot-toast';
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
 
-interface CloudinaryAsset {
-  public_id: string;
-  secure_url: string;
-  thumbnail_url?: string;
-  original_filename?: string;
-  width?: number;
-  height?: number;
-  // Add other relevant fields returned by Cloudinary
+// Define a type for the Cloudinary insertHandler data
+interface CloudinaryInsertData {
+  assets: CloudinaryAsset[];
 }
 
 interface CloudinaryImportModalProps {
@@ -46,22 +41,6 @@ const loadCloudinaryScript = (callback: () => void) => {
   }
 };
 
-// Function to get the last order number (similar to PhotoForm)
-const getLastOrderNumber = async (): Promise<number> => {
-    const { data, error } = await supabase
-      .from('photos')
-      .select('order_number')
-      .order('order_number', { ascending: false })
-      .limit(1)
-      .single()
-  
-    if (error && error.code !== 'PGRST116') { // Ignore "query returned no rows" error
-      console.error("Error fetching last order number:", error);
-      return 0;
-    }
-    return (data?.order_number || 0) + 1
-}
-
 export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }: CloudinaryImportModalProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -76,7 +55,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
   }, [open]);
 
   const openWidget = useCallback(() => {
-    if (!scriptLoaded || !(window as any).cloudinary) {
+    if (!scriptLoaded || !window.cloudinary) {
       setError('Cloudinary widget script niet geladen.');
       return;
     }
@@ -88,7 +67,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
     console.log('[CloudinaryImportModal] Using API Key:', API_KEY ? API_KEY.substring(0, 5) + '...' : 'undefined'); // Log only a prefix for security
 
     try { // DEBUG: Wrap widget creation in try-catch
-      const widget = (window as any).cloudinary.createMediaLibrary(
+      const widget = window.cloudinary.createMediaLibrary(
         {
           cloud_name: CLOUD_NAME,
           api_key: API_KEY,
@@ -96,7 +75,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
           // Add other configuration options if needed
         },
         {
-          insertHandler: async (data: { assets: CloudinaryAsset[] }) => {
+          insertHandler: async (data: CloudinaryInsertData) => {
             if (!data.assets || data.assets.length === 0) {
               onClose();
               return;
@@ -105,7 +84,8 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
             setIsProcessing(true);
             setError(null);
             let skippedCount = 0;
-            let photosToInsert: Partial<Photo>[] = [];
+            // Use const as photosToInsert is reassigned by pushing, not by creating a new array reference
+            const photosToInsert: Partial<Photo>[] = [];
 
             try {
               const { data: existingPhotos, error: fetchError } = await supabase
@@ -154,7 +134,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
               setIsProcessing(false);
               if (photosToInsert.length > 0) {
                   toast.success(
-                    `${photosToInsert.length} foto${photosToInsert.length !== 1 ? '' : 's'} succesvol geïmporteerd.` +
+                    `${photosToInsert.length} foto${photosToInsert.length !== 1 ? 's' : ''} succesvol geïmporteerd.` +
                     (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
                   );
               } else if (skippedCount > 0) {
@@ -176,7 +156,8 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
 
       widget.show();
 
-    } catch (widgetError) { // DEBUG: Catch errors during widget creation/show
+    } catch (widgetCreationError: unknown) { // Use unknown directly for the caught error
+        console.error('Cloudinary widget kon niet worden geopend:', widgetCreationError);
         setError('Cloudinary widget kon niet worden geopend.');
     }
   }, [scriptLoaded, onClose, onComplete, targetYear]);

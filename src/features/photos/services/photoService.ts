@@ -87,7 +87,7 @@ export async function fetchAllAlbums(): Promise<AlbumWithDetails[]> {
     .filter((id): id is string => id !== null && id !== undefined);
 
   // 3. Fetch cover photos if there are any IDs
-  let coverPhotosMap: Map<string, Photo> = new Map();
+  const coverPhotosMap: Map<string, Photo> = new Map();
   if (coverPhotoIds.length > 0) {
     const { data: photosData, error: photosError } = await supabase
       .from('photos')
