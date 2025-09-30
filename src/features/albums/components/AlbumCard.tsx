@@ -5,15 +5,7 @@ import { AlbumForm } from './AlbumForm'
 import { PhotoSelector } from './PhotoSelector'
 import type { AlbumWithDetails } from '../types'
 import { supabase } from '../../../lib/supabase'
-import { 
-  EyeIcon, 
-  EyeSlashIcon, 
-  PencilIcon, 
-  TrashIcon,
-  PhotoIcon,
-  FolderIcon
-} from '@heroicons/react/24/outline'
-import { cl } from '../../../styles/shared'
+import { FolderIcon } from '@heroicons/react/24/outline'
 import { CoverPhotoSelector } from './CoverPhotoSelector'
 import clsx from 'clsx'
 
@@ -29,8 +21,6 @@ const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardProps) {
   const [showEdit, setShowEdit] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
   const [showCoverSelector, setShowCoverSelector] = useState(false)
 
   const {
@@ -46,43 +36,6 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     transition,
   }
 
-  const handleVisibilityToggle = async () => {
-    try {
-      setIsUpdating(true)
-      const { error } = await supabase
-        .from('albums')
-        .update({ visible: !album.visible })
-        .eq('id', album.id)
-
-      if (error) throw error
-      onUpdate()
-    } catch (err) {
-      console.error('Error toggling visibility:', err)
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!confirm(`Weet je zeker dat je het album "${album.title}" wilt verwijderen?`)) {
-      return
-    }
-
-    try {
-      setIsDeleting(true)
-      const { error } = await supabase
-        .from('albums')
-        .delete()
-        .eq('id', album.id)
-
-      if (error) throw error
-      onUpdate()
-    } catch (err) {
-      console.error('Error deleting album:', err)
-    } finally {
-      setIsDeleting(false)
-    }
-  }
 
   const handleCoverPhotoSelect = async (photoId: string) => {
     try {
@@ -139,6 +92,16 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
         )
 
       if (insertError) throw insertError
+
+      // Stel automatisch cover foto in als er nog geen is
+      if (!album.cover_photo_id && selectedPhotoIds.length > 0) {
+        const { error: coverError } = await supabase
+          .from('albums')
+          .update({ cover_photo_id: selectedPhotoIds[0] })
+          .eq('id', album.id)
+
+        if (coverError) console.error('Error setting cover photo:', coverError)
+      }
 
       setShowPhotos(false)
       onUpdate()

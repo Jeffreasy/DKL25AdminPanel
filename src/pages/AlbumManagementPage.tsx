@@ -5,6 +5,7 @@ import { AlbumForm } from '../features/albums/components/AlbumForm'
 import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal'
 // Import the new preview modal
 import { GalleryPreviewModal } from '../features/albums/components/GalleryPreviewModal'
+import { ErrorBoundary } from '../features/albums/components/ErrorBoundary'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
 import { supabase } from '../lib/supabase'
@@ -90,11 +91,13 @@ export function AlbumManagementPage() {
         </div>
       </div>
 
-      <AlbumGrid 
-        key={refreshKey}
-        onAlbumSelect={handleAlbumSelect}
-        selectedAlbumId={selectedAlbum?.id}
-      />
+      <ErrorBoundary>
+        <AlbumGrid
+          key={refreshKey}
+          onAlbumSelect={handleAlbumSelect}
+          selectedAlbumId={selectedAlbum?.id}
+        />
+      </ErrorBoundary>
 
       {isCreating && (
         <AlbumForm

@@ -7,7 +7,6 @@ interface NavigationButtonProps {
 }
 
 const NavigationButton: React.FC<NavigationButtonProps> = ({ direction, onClick, disabled }) => {
-  const label = direction === 'previous' ? '<' : '>';
   return (
     <button
       onClick={onClick}

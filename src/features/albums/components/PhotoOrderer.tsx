@@ -23,13 +23,13 @@ interface PhotoOrdererProps {
   album: AlbumWithDetails
   onOrderChange: () => Promise<void>
   onPhotoRemove: (photoId: string) => void
+  removingPhotoId?: string | null
 }
 
-export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrdererProps) {
+export function PhotoOrderer({ album, onOrderChange, onPhotoRemove, removingPhotoId }: PhotoOrdererProps) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -49,7 +49,7 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrder
         .order('order_number', { ascending: true })
 
       if (fetchError) throw fetchError
-      const photosData = data?.map(item => item.photo as any).filter(p => p && typeof p === 'object') || []
+      const photosData = data?.map(item => item.photo as unknown as Photo).filter(p => p && typeof p === 'object') || []
       setPhotos(photosData as Photo[])
     } catch (err) {
       console.error('Error fetching photos for ordering:', err)
@@ -71,8 +71,7 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrder
       const newIndex = photos.findIndex((p) => p.id === over.id)
       const newOrderedPhotos = arrayMove(photos, oldIndex, newIndex)
       setPhotos(newOrderedPhotos)
-      
-      setIsSubmitting(true)
+
       setError(null)
       try {
         const updates = newOrderedPhotos.map((photo, index) => ({
@@ -86,15 +85,13 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrder
           .upsert(updates, { onConflict: 'album_id, photo_id' })
 
         if (updateError) throw updateError
-        
+
         await onOrderChange()
 
       } catch (err) {
         console.error('Error updating photo order:', err)
         setError('Kon volgorde niet opslaan')
-        setPhotos(photos) 
-      } finally {
-        setIsSubmitting(false)
+        setPhotos(photos)
       }
     }
   }
@@ -123,10 +120,11 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove }: PhotoOrder
       >
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
           {photos.map(photo => (
-            <SortablePhoto 
-              key={photo.id} 
-              photo={photo} 
+            <SortablePhoto
+              key={photo.id}
+              photo={photo}
               onRemove={onPhotoRemove}
+              isRemoving={removingPhotoId === photo.id}
             />
           ))}
         </div>

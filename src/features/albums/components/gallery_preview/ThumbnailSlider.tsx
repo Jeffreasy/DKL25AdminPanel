@@ -10,7 +10,6 @@ interface ThumbnailSliderProps {
 }
 
 const THUMBNAIL_WIDTH = 96; // w-24 (96px)
-const THUMBNAIL_GAP = 8; // gap-2 (8px)
 
 const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({ 
   photos, 
@@ -66,11 +65,6 @@ const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({
     };
   }, [debouncedUpdateArrows]);
 
-  // Scroll to current thumbnail
-  useEffect(() => {
-    scrollToThumbnail(currentIndex);
-  }, [currentIndex]); // Dependency on currentIndex
-
   const scrollToThumbnail = useCallback((index: number) => {
     if (!scrollRef.current) return;
 
@@ -90,6 +84,11 @@ const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({
       behavior: 'smooth'
     });
   }, []);
+
+  // Scroll to current thumbnail
+  useEffect(() => {
+    scrollToThumbnail(currentIndex);
+  }, [currentIndex, scrollToThumbnail]);
 
   // Drag to scroll functionality
   const handleMouseDown = (e: React.MouseEvent) => {

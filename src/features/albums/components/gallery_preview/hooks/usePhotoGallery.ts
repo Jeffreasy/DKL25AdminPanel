@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Photo } from '../types'; // Assuming types are in ../types
 
 interface GalleryState {
