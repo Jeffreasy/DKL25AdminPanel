@@ -6,8 +6,9 @@ import { Z_INDEX } from '../../../constants/zIndex'
 import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'
 import { cc } from '../../../styles/shared'
-import { deletePhoto, updatePhotoVisibility } from '../services/photoService'
 import { PhotoDetailsModal } from './PhotoDetailsModal'
+import { usePhotoActions } from '../hooks/usePhotoActions'
+import { usePhotoSelection } from '../hooks/usePhotoSelection'
 
 interface PhotoGridProps {
   photos: Photo[]
@@ -16,8 +17,8 @@ interface PhotoGridProps {
   onUpdate: () => Promise<void>
   setError: (error: Error | null) => void
   albums?: AlbumWithDetails[]
-  selectedPhotoIds: Set<string>
-  onSelectionChange: (photoId: string, isSelected: boolean) => void
+  selectedPhotoIds?: Set<string>
+  onSelectionChange?: (photoId: string, isSelected: boolean) => void
 }
 
 export function PhotoGrid({
@@ -27,45 +28,29 @@ export function PhotoGrid({
   onUpdate,
   setError,
   albums,
-  selectedPhotoIds,
-  onSelectionChange
+  selectedPhotoIds: externalSelectedPhotoIds,
+  onSelectionChange: externalOnSelectionChange
 }: PhotoGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null)
 
-  const handleError = (message: string) => {
-    setError(new Error(message))
-  }
+  const photoActions = usePhotoActions({ setError })
+  const internalPhotoSelection = usePhotoSelection()
 
-  const handleDelete = async (photo: Photo | null) => {
-    if (!photo) return
-    try {
-      await deletePhoto(photo.id);
-      setPhotoToDelete(null)
-      await onUpdate()
-    } catch (_err) {
-      console.error("Error deleting photo:", _err)
-      handleError('Er ging iets mis bij het verwijderen van de foto')
-      setPhotoToDelete(null)
-    }
-  }
-
-  const handleVisibilityToggle = async (photo: Photo | null) => {
-    if (!photo) return
-    try {
-      await updatePhotoVisibility(photo.id, !photo.visible);
-      await onUpdate();
-    } catch (_err) {
-      console.error("Error toggling visibility:", _err);
-      handleError('Kon zichtbaarheid niet wijzigen');
-    }
-  }
+  // Use external selection if provided, otherwise use internal
+  const photoSelection = externalSelectedPhotoIds !== undefined ? {
+    selectedPhotoIds: externalSelectedPhotoIds,
+    handleSelectionChange: externalOnSelectionChange || (() => {}),
+    handleSelectAll: () => {},
+    clearSelection: () => {},
+    selectedCount: externalSelectedPhotoIds.size
+  } : internalPhotoSelection
 
   if (loading) {
     return (
-      <div className={cc.grid()}>
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4 lg:gap-5">
         {[...Array(12)].map((_, i) => (
-          <LoadingSkeleton key={i} className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <LoadingSkeleton key={i} className="aspect-square rounded-xl bg-gray-200 dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -94,62 +79,116 @@ export function PhotoGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4 lg:gap-5">
         {photos.map(photo => {
-          const isSelected = selectedPhotoIds.has(photo.id);
+          const isSelected = photoSelection.selectedPhotoIds.has(photo.id);
           return (
-            <div 
-              key={photo.id} 
-              className={`group relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 ${isSelected ? 'ring-2 ring-offset-2 dark:ring-offset-gray-900 ring-indigo-500' : ''}`}
+            <div
+              key={photo.id}
+              className={`group relative aspect-square rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800/50 border-2 transition-all duration-200 ${
+                isSelected
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg scale-[1.02]'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
+              }`}
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest('.photo-grid-actions')) return;
-                onSelectionChange(photo.id, !isSelected);
+                photoSelection.handleSelectionChange(photo.id, !isSelected);
               }}
             >
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={(e) => onSelectionChange(photo.id, e.target.checked)}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-2 left-2 z-10 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-gray-700 dark:checked:bg-indigo-600"
-              />
-              <img
-                src={photo.thumbnail_url || photo.url}
-                alt={photo.alt_text || photo.title}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div className="photo-grid-actions absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 p-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedPhoto(photo);
-                  }}
-                  className={`${cc.button.icon({})} bg-black/30 text-white hover:bg-black/50`}
-                  title="Bekijk / Bewerk details" 
-                >
-                  <PencilIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleVisibilityToggle(photo);
-                  }}
-                  className={`${cc.button.icon({})} bg-black/30 text-white hover:bg-black/50`}
-                  title={photo.visible ? 'Verberg foto' : 'Maak foto zichtbaar'} 
-                >
-                  {photo.visible ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPhotoToDelete(photo);
-                  }}
-                  className={`${cc.button.icon({})} bg-red-600/70 text-white hover:bg-red-700/80`}
-                  title="Verwijder foto" 
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
+              {/* Selection Checkbox */}
+              <div className={`absolute top-3 left-3 z-20 transition-opacity duration-200 ${
+                isSelected || photoSelection.selectedPhotoIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => photoSelection.handleSelectionChange(photo.id, e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 rounded border-2 border-white/80 text-indigo-600 focus:ring-indigo-500 bg-white/90 backdrop-blur-sm shadow-sm"
+                />
+              </div>
+
+              {/* Photo Image */}
+              <div className="relative w-full h-full">
+                <img
+                  src={photo.thumbnail_url || photo.url}
+                  alt={photo.alt_text || photo.title}
+                  className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+                  loading="lazy"
+                />
+
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Action Buttons */}
+                <div className="photo-grid-actions absolute inset-0 flex items-center justify-center gap-2 p-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPhoto(photo);
+                      }}
+                      className="p-2 rounded-full bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg"
+                      title="Bekijk / Bewerk details"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        photoActions.handleVisibilityToggle(photo);
+                      }}
+                      className="p-2 rounded-full bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg"
+                      title={photo.visible ? 'Verberg foto' : 'Maak foto zichtbaar'}
+                    >
+                      {photo.visible ? <EyeIcon className="w-4 h-4" /> : <EyeSlashIcon className="w-4 h-4" />}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPhotoToDelete(photo);
+                      }}
+                      className="p-2 rounded-full bg-red-500/90 backdrop-blur-sm text-white hover:bg-red-500 hover:scale-110 transition-all duration-200 shadow-lg"
+                      title="Verwijder foto"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Photo Info Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="text-white">
+                    <p className="text-sm font-medium truncate" title={photo.title}>
+                      {photo.title}
+                    </p>
+                    {photo.year && (
+                      <p className="text-xs text-gray-200">{photo.year}</p>
+                    )}
+                    {/* Album Badges */}
+                    {photo.album_photos && photo.album_photos.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {photo.album_photos.slice(0, 2).map(albumPhoto => {
+                          const album = albums?.find(a => a.id === albumPhoto.album_id);
+                          return album ? (
+                            <span
+                              key={album.id}
+                              className="inline-block px-2 py-0.5 text-xs bg-indigo-500/80 text-white rounded-full backdrop-blur-sm"
+                              title={album.title}
+                            >
+                              {album.title}
+                            </span>
+                          ) : null;
+                        })}
+                        {photo.album_photos.length > 2 && (
+                          <span className="inline-block px-2 py-0.5 text-xs bg-gray-500/80 text-white rounded-full backdrop-blur-sm">
+                            +{photo.album_photos.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -183,7 +222,7 @@ export function PhotoGrid({
                   </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button onClick={() => handleDelete(photoToDelete)} className={cc.button.base({ color: 'danger', className: 'w-full sm:ml-3 sm:w-auto' })}>
+                  <button onClick={() => photoActions.handleDelete(photoToDelete)} className={cc.button.base({ color: 'danger', className: 'w-full sm:ml-3 sm:w-auto' })}>
                     Verwijderen
                   </button>
                   <button onClick={() => setPhotoToDelete(null)} className={cc.button.base({ color: 'secondary', className: 'mt-3 w-full sm:mt-0 sm:w-auto' })}>

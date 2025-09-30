@@ -5,9 +5,10 @@ import { cc } from '../../../styles/shared'
 import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { TrashIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { PhotoDetailsModal } from './PhotoDetailsModal'
-import { deletePhoto, updatePhotoVisibility } from '../services/photoService'
 import { Dialog } from '@headlessui/react'
 import { Z_INDEX } from '../../../constants/zIndex'
+import { usePhotoActions } from '../hooks/usePhotoActions'
+import { usePhotoSelection } from '../hooks/usePhotoSelection'
 
 // Interface similar to PhotoGridProps
 interface PhotoListProps {
@@ -17,55 +18,39 @@ interface PhotoListProps {
   onUpdate: () => Promise<void>
   setError: (error: Error | null) => void
   albums?: AlbumWithDetails[]
-  selectedPhotoIds: Set<string>
-  onSelectionChange: (photoId: string, isSelected: boolean) => void
-  onSelectAll: (photoIds: string[]) => void // Add select all handler prop
+  selectedPhotoIds?: Set<string>
+  onSelectionChange?: (photoId: string, isSelected: boolean) => void
+  onSelectAll?: (photoIds: string[]) => void // Add select all handler prop
 }
 
-export function PhotoList({ 
-  photos, 
-  loading, 
-  error, 
-  onUpdate, 
-  setError, 
-  albums, 
-  selectedPhotoIds, 
-  onSelectionChange,
-  onSelectAll
+export function PhotoList({
+  photos,
+  loading,
+  error,
+  onUpdate,
+  setError,
+  albums,
+  selectedPhotoIds: externalSelectedPhotoIds,
+  onSelectionChange: externalOnSelectionChange,
+  onSelectAll: externalOnSelectAll
 }: PhotoListProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null) // For details modal
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null) // For delete confirmation
 
+  const photoActions = usePhotoActions({ setError })
+  const internalPhotoSelection = usePhotoSelection()
+
+  // Use external selection if provided, otherwise use internal
+  const photoSelection = externalSelectedPhotoIds !== undefined ? {
+    selectedPhotoIds: externalSelectedPhotoIds,
+    handleSelectionChange: externalOnSelectionChange || (() => {}),
+    handleSelectAll: externalOnSelectAll || (() => {}),
+    clearSelection: () => {},
+    selectedCount: externalSelectedPhotoIds.size
+  } : internalPhotoSelection
+
   const allVisiblePhotoIds = photos.map(p => p.id);
-  const areAllSelected = allVisiblePhotoIds.length > 0 && allVisiblePhotoIds.every(id => selectedPhotoIds.has(id));
-
-  const handleError = (message: string) => {
-    setError(new Error(message))
-  }
-
-  const handleDelete = async (photo: Photo | null) => {
-    if (!photo) return;
-    try {
-      await deletePhoto(photo.id);
-      setPhotoToDelete(null);
-      await onUpdate();
-    } catch (err) {
-      console.error("Error deleting photo:", err);
-      handleError('Er ging iets mis bij het verwijderen van de foto');
-      setPhotoToDelete(null);
-    }
-  }
-
-  const handleVisibilityToggle = async (photo: Photo | null) => {
-    if (!photo) return;
-    try {
-      await updatePhotoVisibility(photo.id, !photo.visible);
-      await onUpdate();
-    } catch (_err) {
-      console.error("Error toggling visibility:", _err);
-      handleError('Kon zichtbaarheid niet wijzigen');
-    }
-  }
+  const areAllSelected = allVisiblePhotoIds.length > 0 && allVisiblePhotoIds.every(id => photoSelection.selectedPhotoIds.has(id));
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '-';
@@ -104,7 +89,7 @@ export function PhotoList({
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-gray-100 dark:bg-gray-700 mr-2"
                     checked={areAllSelected}
-                    onChange={() => onSelectAll(allVisiblePhotoIds)}
+                    onChange={() => photoSelection.handleSelectAll(allVisiblePhotoIds)}
                     aria-label="Selecteer alle foto's"
                   />
                 </th>
@@ -130,7 +115,7 @@ export function PhotoList({
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {photos.map((photo) => {
-                const isSelected = selectedPhotoIds.has(photo.id);
+                const isSelected = photoSelection.selectedPhotoIds.has(photo.id);
                 const photoAlbums = photo.album_photos?.map(({ album_id }) => albums?.find(a => a.id === album_id)).filter(Boolean);
 
                 return (
@@ -140,7 +125,7 @@ export function PhotoList({
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-gray-700"
                         checked={isSelected}
-                        onChange={(e) => onSelectionChange(photo.id, e.target.checked)}
+                        onChange={(e) => photoSelection.handleSelectionChange(photo.id, e.target.checked)}
                       />
                     </td>
                     <td className="px-2 py-2 whitespace-nowrap">
@@ -179,9 +164,9 @@ export function PhotoList({
                     <td className="pl-2 pr-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex flex-col items-end space-y-1">
                         <button
-                          onClick={() => handleVisibilityToggle(photo)}
+                          onClick={() => photoActions.handleVisibilityToggle(photo)}
                           className={cc.button.icon({ color: 'secondary' })}
-                          title={photo.visible ? 'Verberg foto' : 'Maak foto zichtbaar'} 
+                          title={photo.visible ? 'Verberg foto' : 'Maak foto zichtbaar'}
                         >
                           {photo.visible ? <EyeIcon className="w-4 h-4" /> : <EyeSlashIcon className="w-4 h-4" />}
                         </button>
@@ -189,14 +174,14 @@ export function PhotoList({
                            <button
                             onClick={() => setSelectedPhoto(photo)}
                             className={cc.button.icon({ color: 'secondary' })}
-                            title="Bekijk / Bewerk details" 
+                            title="Bekijk / Bewerk details"
                           >
                             <PencilIcon className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setPhotoToDelete(photo)}
                             className={cc.button.icon({ color: 'danger' })}
-                            title="Verwijder foto" 
+                            title="Verwijder foto"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -239,7 +224,7 @@ export function PhotoList({
                   </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button onClick={() => handleDelete(photoToDelete)} className={cc.button.base({ color: 'danger', className: 'w-full sm:ml-3 sm:w-auto' })}>
+                  <button onClick={() => photoActions.handleDelete(photoToDelete)} className={cc.button.base({ color: 'danger', className: 'w-full sm:ml-3 sm:w-auto' })}>
                     Verwijderen
                   </button>
                   <button onClick={() => setPhotoToDelete(null)} className={cc.button.base({ color: 'secondary', className: 'mt-3 w-full sm:mt-0 sm:w-auto' })}>

@@ -8,15 +8,71 @@ interface PhotoAlbumRelation {
   order_number: number
 }
 
-export async function fetchPhotos(): Promise<Photo[]> {
-  const { data, error } = await supabase
+interface FetchPhotosOptions {
+  limit?: number
+  offset?: number
+  search?: string
+  albumId?: string
+}
+
+export async function fetchPhotos(options: FetchPhotosOptions = {}): Promise<Photo[]> {
+  const { limit, offset, search, albumId } = options
+
+  let query = supabase
     .from('photos')
-    // Select all photo fields plus the album_id from the junction table
-    .select('*, album_photos(album_id)') 
+    .select('*, album_photos(album_id)')
     .order('created_at', { ascending: false })
 
+  // Apply pagination
+  if (limit) {
+    query = query.limit(limit)
+  }
+  if (offset) {
+    query = query.range(offset, offset + (limit || 50) - 1)
+  }
+
+  // Apply search filter
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,alt_text.ilike.%${search}%,year.ilike.%${search}%`)
+  }
+
+  // Apply album filter
+  if (albumId) {
+    query = query.eq('album_photos.album_id', albumId)
+  }
+
+  const { data, error } = await query
+
   if (error) throw error
-  return data
+  return data || []
+}
+
+// Keep backward compatibility
+export async function fetchAllPhotos(): Promise<Photo[]> {
+  return fetchPhotos()
+}
+
+export async function fetchPhotosCount(options: Omit<FetchPhotosOptions, 'limit' | 'offset'> = {}): Promise<number> {
+  const { search, albumId } = options
+
+  let query = supabase
+    .from('photos')
+    .select('id', { count: 'exact', head: true })
+
+  // Apply search filter
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,alt_text.ilike.%${search}%,year.ilike.%${search}%`)
+  }
+
+  // Apply album filter
+  if (albumId) {
+    query = query.eq('album_photos.album_id', albumId)
+  }
+
+  const { count, error } = await query
+
+  if (error) throw error
+  return count || 0
 }
 
 export async function deletePhoto(photoId: string): Promise<void> {
@@ -200,4 +256,68 @@ export async function removePhotoFromAlbum(photoId: string, albumId: string): Pr
     .match({ photo_id: photoId, album_id: albumId })
 
   if (error) throw error
-} 
+}
+
+// Bulk operations
+export async function bulkDeletePhotos(photoIds: string[]): Promise<void> {
+  if (photoIds.length === 0) return
+
+  // 1. Remove from all albums first
+  await supabase
+    .from('album_photos')
+    .delete()
+    .in('photo_id', photoIds)
+
+  // 2. Update albums where these photos were cover photos
+  await supabase
+    .from('albums')
+    .update({ cover_photo_id: null })
+    .in('cover_photo_id', photoIds)
+
+  // 3. Delete the photos
+  const { error } = await supabase
+    .from('photos')
+    .delete()
+    .in('id', photoIds)
+
+  if (error) throw error
+}
+
+export async function bulkUpdatePhotoVisibility(photoIds: string[], visible: boolean): Promise<void> {
+  if (photoIds.length === 0) return
+
+  const { error } = await supabase
+    .from('photos')
+    .update({ visible, updated_at: new Date().toISOString() })
+    .in('id', photoIds)
+
+  if (error) throw error
+}
+
+export async function bulkAddPhotosToAlbum(photoIds: string[], albumId: string): Promise<void> {
+  if (photoIds.length === 0) return
+
+  // Get the current max order number for this album
+  const { data: lastPhoto } = await supabase
+    .from('album_photos')
+    .select('order_number')
+    .eq('album_id', albumId)
+    .order('order_number', { ascending: false })
+    .limit(1)
+    .single()
+
+  let nextOrderNumber = (lastPhoto?.order_number || 0) + 1
+
+  // Create relation objects
+  const relations = photoIds.map(photoId => ({
+    photo_id: photoId,
+    album_id: albumId,
+    order_number: nextOrderNumber++
+  }))
+
+  const { error } = await supabase
+    .from('album_photos')
+    .insert(relations)
+
+  if (error) throw error
+}
