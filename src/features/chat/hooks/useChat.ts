@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { chatService } from '../services/chatService'
+import { chatService, chatRealtime } from '../services/chatService'
+import type { TypingIndicator, ChatUserPresence } from '../types'
 
 export function useChat() {
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null)
+  const [typingUsers, setTypingUsers] = useState<{ [channelId: string]: TypingIndicator[] }>({})
+  const [userPresence, setUserPresence] = useState<{ [userId: string]: ChatUserPresence }>({})
   const queryClient = useQueryClient()
 
   // Fetch channels
@@ -75,12 +78,53 @@ export function useChat() {
     joinChannelMutation.mutate(channelId)
   }
 
+  // Typing functions
+  const startTyping = useCallback((channelId: string) => {
+    if (activeChannelId === channelId) {
+      chatService.startTyping(channelId).catch(console.error)
+    }
+  }, [activeChannelId])
+
+  const stopTyping = useCallback((channelId: string) => {
+    if (activeChannelId === channelId) {
+      chatService.stopTyping(channelId).catch(console.error)
+    }
+  }, [activeChannelId])
+
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!activeChannelId) return
+
+    // Subscribe to typing indicators
+    const typingSubscription = chatRealtime.subscribeToTyping(activeChannelId, (typingUsers) => {
+      setTypingUsers(prev => ({
+        ...prev,
+        [activeChannelId]: typingUsers
+      }))
+    })
+
+    // Subscribe to presence updates
+    const presenceSubscription = chatRealtime.subscribeToPresence((presence) => {
+      setUserPresence(prev => ({
+        ...prev,
+        [presence.user_id]: presence
+      }))
+    })
+
+    return () => {
+      typingSubscription.unsubscribe()
+      presenceSubscription.unsubscribe()
+    }
+  }, [activeChannelId])
+
   return {
     // State
     channels,
     messages,
     onlineUsers,
     activeChannelId,
+    typingUsers: typingUsers[activeChannelId || ''] || [],
+    userPresence,
     loading: {
       channels: channelsLoading,
       messages: messagesLoading,
@@ -91,6 +135,8 @@ export function useChat() {
     selectChannel,
     sendMessage,
     createChannel,
-    joinChannel
+    joinChannel,
+    startTyping,
+    stopTyping
   }
 }

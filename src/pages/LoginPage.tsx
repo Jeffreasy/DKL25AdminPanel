@@ -13,13 +13,14 @@ export function LoginPage() {
     e.preventDefault()
     setError(null)
 
-    // Construct full email
-    const username = email.trim() // Rename variable for clarity
-    if (!username) {
-      setError('Gebruikersnaam is verplicht');
-      return;
+    const emailInput = email.trim()
+    if (!emailInput) {
+      setError('Email is verplicht')
+      return
     }
-    const fullEmail = `${username}@dekoninklijkeloop.nl`;
+
+    // If user didn't include domain, add it
+    const fullEmail = emailInput.includes('@') ? emailInput : `${emailInput}@dekoninklijkeloop.nl`;
 
     try {
       await signIn(fullEmail, password)
@@ -62,15 +63,15 @@ export function LoginPage() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="sr-only">Gebruikersnaam</label>
+              <label htmlFor="email" className="sr-only">Email</label>
               <input
-                id="username"
-                type="text"
+                id="email"
+                type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-700/50 backdrop-blur-sm"
-                placeholder="Gebruikersnaam"
+                placeholder="Email (admin of admin@dekoninklijkeloop.nl)"
               />
             </div>
             <div>

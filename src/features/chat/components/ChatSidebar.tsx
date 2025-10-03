@@ -10,12 +10,39 @@ export function ChatSidebar({ onClose }: ChatSidebarProps) {
   const { channels, onlineUsers, activeChannelId, selectChannel, createChannel, loading } = useChat()
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
+  const [error, setError] = useState('')
 
-  const handleCreateChannel = () => {
-    if (newChannelName.trim()) {
-      createChannel(newChannelName.trim())
+  const handleCreateChannel = async () => {
+    const channelName = newChannelName.trim()
+
+    if (!channelName) {
+      setError('Kanaal naam is verplicht')
+      return
+    }
+
+    if (channelName.length < 2) {
+      setError('Kanaal naam moet minstens 2 karakters bevatten')
+      return
+    }
+
+    if (channelName.length > 50) {
+      setError('Kanaal naam mag maximaal 50 karakters bevatten')
+      return
+    }
+
+    // Check if channel name already exists
+    if (channels.some(c => c.name.toLowerCase() === channelName.toLowerCase())) {
+      setError('Een kanaal met deze naam bestaat al')
+      return
+    }
+
+    try {
+      setError('')
+      await createChannel(channelName)
       setNewChannelName('')
       setShowCreateChannel(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Er is iets misgegaan bij het aanmaken van het kanaal')
     }
   }
 
@@ -59,15 +86,23 @@ export function ChatSidebar({ onClose }: ChatSidebarProps) {
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateChannel()}
                 />
+                {error && (
+                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateChannel}
-                    className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                    disabled={loading.channels}
+                    className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Aanmaken
+                    {loading.channels ? 'Aanmaken...' : 'Aanmaken'}
                   </button>
                   <button
-                    onClick={() => setShowCreateChannel(false)}
+                    onClick={() => {
+                      setShowCreateChannel(false)
+                      setError('')
+                      setNewChannelName('')
+                    }}
                     className="px-3 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500"
                   >
                     Annuleren

@@ -1,59 +1,61 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase.ts'
+import { authManager } from '../../lib/auth'
 import { AuthContext, User } from './AuthContext'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
-
-const mapSupabaseUser = (supabaseUser: SupabaseUser | null): User | null => {
-  if (!supabaseUser) return null
-  
-  return {
-    id: supabaseUser.id,
-    email: supabaseUser.email,
-    role: supabaseUser.role ?? 'user',
-    metadata: supabaseUser.user_metadata
-  }
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const navigate = useNavigate()
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      })
-      if (error) throw error
-      setUser(mapSupabaseUser(data.user))
+      setError(null)
+      const result = await authManager.login(email, password)
+      if (result.success && result.token) {
+        // For now, create a basic user object. In a full implementation,
+        // you'd decode the JWT to get user info
+        setUser({
+          id: 'admin',
+          email: email,
+          role: 'admin'
+        })
+      } else {
+        throw new Error(result.error || 'Login failed')
+      }
     } catch (err) {
       setError(err as Error)
+      throw err
     }
   }
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
+      await authManager.logout()
       setUser(null)
-      navigate('/login')
+      // Navigation is handled by authManager.logout()
     } catch (err) {
       console.error('Logout failed:', err)
     }
   }
 
   useEffect(() => {
-    const checkSession = async () => {
+    const checkAuth = () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setUser(mapSupabaseUser(session?.user ?? null))
+        const isAuthenticated = authManager.isAuthenticated()
+        if (isAuthenticated) {
+          // For now, create a basic user object. In a full implementation,
+          // you'd decode the JWT to get user info
+          setUser({
+            id: 'admin',
+            email: 'admin@dekoninklijkeloop.nl',
+            role: 'admin'
+          })
+        }
       } finally {
         setLoading(false)
       }
     }
-    checkSession()
+    checkAuth()
   }, [])
 
   return (

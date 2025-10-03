@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase'
+import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
 import type {
   ChatChannel,
   ChatMessage,
@@ -8,7 +9,11 @@ import type {
   UpdateMessageRequest,
   ChannelWithDetails,
   MessageWithDetails,
-  ChatUser
+  ChatUser,
+  FileUploadResult,
+  TypingIndicator,
+  MessageSearchResult,
+  MessageHistoryResult
 } from '../types'
 
 // Channel operations
@@ -56,18 +61,36 @@ export const chatService = {
   },
 
   async createChannel(request: CreateChannelRequest): Promise<ChatChannel> {
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) throw new Error('User not authenticated')
+
     const { data, error } = await supabase
       .from('chat_channels')
       .insert({
         name: request.name,
         description: request.description,
         type: request.type,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        created_by: userId
       })
       .select()
       .single()
 
     if (error) throw error
+
+    // Add creator as channel participant
+    const { error: participantError } = await supabase
+      .from('chat_channel_participants')
+      .insert({
+        channel_id: data.id,
+        user_id: userId,
+        role: 'owner'
+      })
+
+    if (participantError) {
+      console.error('Failed to add creator as participant:', participantError)
+      // Don't throw here as the channel was created successfully
+    }
+
     return data
   },
 
@@ -288,17 +311,89 @@ export const chatService = {
     const userId = (await supabase.auth.getUser()).data.user?.id
     if (!userId) throw new Error('User not authenticated')
 
-    // Typing indicators are temporary and will be cleaned up automatically
-    // This is just a placeholder for future implementation
-    console.log(`User ${userId} started typing in channel ${channelId}`)
+    // Use database function for persistent typing state
+    const { error } = await supabase.rpc('start_typing', {
+      channel_id: channelId,
+      user_id: userId
+    })
+
+    if (error) throw error
+
+    // Also broadcast for real-time updates
+    await supabase.channel(`typing:${channelId}`).send({
+      type: 'broadcast',
+      event: 'typing_start',
+      payload: {
+        user_id: userId,
+        channel_id: channelId,
+        timestamp: new Date().toISOString()
+      }
+    })
   },
 
   async stopTyping(channelId: string): Promise<void> {
     const userId = (await supabase.auth.getUser()).data.user?.id
     if (!userId) throw new Error('User not authenticated')
 
-    // Typing indicators are temporary and will be cleaned up automatically
-    console.log(`User ${userId} stopped typing in channel ${channelId}`)
+    // Use database function for persistent typing state
+    const { error } = await supabase.rpc('stop_typing', {
+      channel_id: channelId,
+      user_id: userId
+    })
+
+    if (error) throw error
+
+    // Also broadcast for real-time updates
+    await supabase.channel(`typing:${channelId}`).send({
+      type: 'broadcast',
+      event: 'typing_stop',
+      payload: {
+        user_id: userId,
+        channel_id: channelId,
+        timestamp: new Date().toISOString()
+      }
+    })
+  },
+
+  async getTypingUsers(channelId: string): Promise<TypingIndicator[]> {
+    const { data, error } = await supabase
+      .from('chat_typing_indicators')
+      .select(`
+        id,
+        channel_id,
+        user_id,
+        started_at
+      `)
+      .eq('channel_id', channelId)
+      .gt('started_at', new Date(Date.now() - 10000).toISOString()) // Last 10 seconds
+
+    if (error) throw error
+
+    // Get user details separately
+    const typingUsers = await Promise.all(
+      (data || []).map(async (indicator) => {
+        const { data: userData } = await supabase
+          .from('auth.users')
+          .select('id, email, full_name, avatar_url')
+          .eq('id', indicator.user_id)
+          .single()
+
+        return {
+          id: indicator.id,
+          channel_id: indicator.channel_id,
+          user_id: indicator.user_id,
+          started_at: indicator.started_at,
+          user: userData ? {
+            id: userData.id,
+            email: userData.email,
+            full_name: userData.full_name,
+            avatar_url: userData.avatar_url
+          } : undefined
+        }
+      })
+    )
+
+    return typingUsers
   },
 
   // Utility functions
@@ -324,6 +419,106 @@ export const chatService = {
 
     if (error) throw error
     return data || 0
+  },
+
+  // File upload functionality
+  async uploadFile(file: File, onProgress?: (progress: { loaded: number; total: number }) => void): Promise<FileUploadResult> {
+    try {
+      const result = await uploadToCloudinary(file, onProgress)
+      return {
+        url: result.secure_url,
+        public_id: '', // Cloudinary doesn't return this in the basic response
+        format: file.type.split('/')[1] || 'unknown',
+        bytes: file.size
+      }
+    } catch (error) {
+      console.error('File upload failed:', error)
+      throw new Error('Bestand upload mislukt')
+    }
+  },
+
+  async sendFileMessage(channelId: string, file: File, caption?: string): Promise<ChatMessage> {
+    try {
+      // Upload file first
+      const uploadResult = await this.uploadFile(file)
+
+      // Determine message type based on file type
+      let messageType: 'text' | 'image' | 'file' | 'system' = 'file'
+      if (file.type.startsWith('image/')) {
+        messageType = 'image'
+      }
+
+      // Send message with file
+      return await this.sendMessage({
+        channel_id: channelId,
+        content: caption || file.name,
+        message_type: messageType,
+        file_url: uploadResult.url,
+        file_name: file.name,
+        file_size: file.size
+      })
+    } catch (error) {
+      console.error('File message send failed:', error)
+      throw error
+    }
+  },
+
+  // Utility function to determine if file is an image
+  isImageFile(file: File): boolean {
+    return file.type.startsWith('image/')
+  },
+
+  // Message search functionality
+  async searchMessages(
+    query: string,
+    channelIds?: string[],
+    limit = 50,
+    offset = 0
+  ): Promise<MessageSearchResult[]> {
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase.rpc('search_chat_messages', {
+      search_query: query,
+      channel_ids: channelIds,
+      auth_user_id: userId,
+      limit_count: limit,
+      offset_count: offset
+    })
+
+    if (error) throw error
+    return data || []
+  },
+
+  // Get message history with pagination
+  async getMessageHistory(
+    channelId: string,
+    beforeTimestamp?: string,
+    limit = 50
+  ): Promise<MessageHistoryResult[]> {
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase.rpc('get_message_history', {
+      p_channel_id: channelId,
+      p_user_id: userId,
+      before_timestamp: beforeTimestamp || null,
+      limit_count: limit
+    })
+
+    if (error) throw error
+
+    // Return the data as MessageHistoryResult (already in correct format from database function)
+    return data || []
+  },
+
+  // Utility function to format file size
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 }
 
@@ -371,6 +566,61 @@ export const chatRealtime = {
           table: 'chat_channels'
         },
         (payload) => callback(payload.new as ChatChannel)
+      )
+      .subscribe()
+  },
+
+  subscribeToTyping(channelId: string, callback: (typingUsers: TypingIndicator[]) => void) {
+    const typingState: { [userId: string]: TypingIndicator } = {}
+
+    return supabase
+      .channel(`typing:${channelId}`)
+      .on(
+        'broadcast',
+        { event: 'typing_start' },
+        async (payload) => {
+          const { user_id, channel_id } = payload.payload
+          if (channel_id === channelId && user_id) {
+            // Get user details
+            const { data: userData } = await supabase
+              .from('auth.users')
+              .select('id, email, full_name, avatar_url')
+              .eq('id', user_id)
+              .single()
+
+            typingState[user_id] = {
+              id: `${user_id}-${channel_id}`,
+              channel_id,
+              user_id,
+              started_at: payload.payload.timestamp,
+              user: userData ? {
+                id: userData.id,
+                email: userData.email,
+                full_name: userData.full_name,
+                avatar_url: userData.avatar_url
+              } : undefined
+            }
+
+            // Auto-remove typing indicator after 3 seconds
+            setTimeout(() => {
+              delete typingState[user_id]
+              callback(Object.values(typingState))
+            }, 3000)
+
+            callback(Object.values(typingState))
+          }
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'typing_stop' },
+        (payload) => {
+          const { user_id } = payload.payload
+          if (user_id && typingState[user_id]) {
+            delete typingState[user_id]
+            callback(Object.values(typingState))
+          }
+        }
       )
       .subscribe()
   }

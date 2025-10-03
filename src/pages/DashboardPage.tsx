@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldingenService'
 import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
 import type { Aanmelding } from '../features/aanmeldingen/types'
 import type { ContactMessage, ContactStats } from '../features/contact/types'
-import { 
-  UsersIcon, 
-  ChatBubbleLeftEllipsisIcon, 
-  EnvelopeOpenIcon, 
-  ClockIcon 
-} from '@heroicons/react/24/outline'
 
 interface DashboardStats {
   totaal: number
@@ -26,7 +20,6 @@ const tabs = [
 ]
 
 export function DashboardPage() {
-  const location = useLocation()
   const [stats, setStats] = useState<DashboardStats>({
     totaal: 0,
     rollen: {},
@@ -54,9 +47,9 @@ export function DashboardPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      const { data, error } = await fetchAanmeldingen()
+      const { data, error } = await fetchAanmeldingen(100, 0)
       if (error) throw error
-      
+
       const newStats: DashboardStats = {
         totaal: data.length,
         rollen: {
@@ -76,7 +69,7 @@ export function DashboardPage() {
           Anders: data.filter(i => i.ondersteuning === 'Anders').length
         }
       }
-      
+
       setStats(newStats)
       setAanmeldingen(data)
     } catch (err) {
@@ -112,8 +105,6 @@ export function DashboardPage() {
     loadStats()
     loadMessages()
   }, [loadStats, loadMessages])
-
-  const currentPath = location.pathname
 
   return (
     <div className="space-y-6">

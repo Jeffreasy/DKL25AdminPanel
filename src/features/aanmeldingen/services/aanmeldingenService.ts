@@ -1,96 +1,64 @@
-import { supabase } from '../../../lib/supabase'
-import type { Aanmelding } from '../types'
+import { authManager } from '../../../lib/auth'
+import type { Aanmelding, AanmeldingAntwoord } from '../types'
 
-export async function fetchAanmeldingen(): Promise<{ data: Aanmelding[], error: Error | null }> {
+export async function fetchAanmeldingen(limit = 100, offset = 0): Promise<{ data: Aanmelding[], error: Error | null }> {
   try {
-    // Log de start van de query
-    // console.log('Starting aanmeldingen fetch...')
-
-    // Voer de query uit met expliciete type casting
-    const { data, error } = await supabase
-      .from('aanmeldingen')
-      .select(`
-        id,
-        created_at,
-        updated_at,
-        naam,
-        email,
-        telefoon,
-        rol,
-        afstand,
-        ondersteuning,
-        bijzonderheden,
-        terms,
-        email_verzonden,
-        email_verzonden_op
-      `)
-      .order('created_at', { ascending: false })
-
-    // Log de ruwe response
-    // console.log('Raw response:', { data, error })
-
-    if (error) {
-      // console.error('Supabase error:', error) // Keep specific errors?
-      throw error
-    }
-
-    // Valideer de data
-    if (!data) {
-      // console.warn('No data returned') // Keep warnings?
-      return { data: [], error: null }
-    }
-
-    // Log de gevonden records
-    // console.log('Found records:', {
-    //   count: data.length,
-    //   firstRecord: data[0],
-    //   fields: data[0] ? Object.keys(data[0]) : []
-    // })
-
-    return { data, error: null }
+    const data = await authManager.makeAuthenticatedRequest(`/api/aanmelding?limit=${limit}&offset=${offset}`)
+    return { data: data as Aanmelding[], error: null }
   } catch (err) {
-    // console.error('Error in fetchAanmeldingen:', err) // Keep specific errors?
     return { data: [], error: err as Error }
   }
 }
 
-export async function updateAanmelding(id: string, updates: Partial<Aanmelding>): Promise<{ error: Error | null }> {
+export async function fetchAanmeldingDetails(id: string): Promise<{ data: Aanmelding | null, error: Error | null }> {
   try {
-    // Log de update actie
-    // console.log('Updating aanmelding:', { id, updates })
-
-    const { error } = await supabase
-      .from('aanmeldingen')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-
-    if (error) {
-      // console.error('Update error:', error) // Keep specific errors?
-      throw error
-    }
-
-    // console.log('Update successful')
-    return { error: null }
+    const data = await authManager.makeAuthenticatedRequest(`/api/aanmelding/${id}`)
+    return { data: data as Aanmelding, error: null }
   } catch (err) {
-    // console.error('Error in updateAanmelding:', err) // Keep specific errors?
-    return { error: err as Error }
+    return { data: null, error: err as Error }
   }
 }
 
-// Helper functie om de table structuur te verifiëren
-export async function verifyTableStructure(): Promise<void> {
-  const { data, error } = await supabase
-    .from('aanmeldingen')
-    .select()
-    .limit(1)
+export async function fetchAanmeldingenByRol(rol: string): Promise<{ data: Aanmelding[], error: Error | null }> {
+  try {
+    const data = await authManager.makeAuthenticatedRequest(`/api/aanmelding/rol/${encodeURIComponent(rol)}`)
+    return { data: data as Aanmelding[], error: null }
+  } catch (err) {
+    return { data: [], error: err as Error }
+  }
+}
 
-  // console.log('Table structure check:', {
-  //   hasData: !!data,
-  //   firstRecord: data?.[0],
-  //   error,
-  //   columns: data?.[0] ? Object.keys(data[0]) : []
-  // })
-} 
+export async function updateAanmelding(id: string, updates: Partial<Aanmelding>): Promise<{ data: Aanmelding | null, error: Error | null }> {
+  try {
+    const data = await authManager.makeAuthenticatedRequest(`/api/aanmelding/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    })
+    return { data: data as Aanmelding, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function addAanmeldingAntwoord(aanmeldingId: string, tekst: string): Promise<{ data: AanmeldingAntwoord | null, error: Error | null }> {
+  try {
+    const data = await authManager.makeAuthenticatedRequest(`/api/aanmelding/${aanmeldingId}/antwoord`, {
+      method: 'POST',
+      body: JSON.stringify({ tekst })
+    })
+    return { data: data as AanmeldingAntwoord, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function deleteAanmelding(id: string): Promise<{ error: Error | null }> {
+  try {
+    await authManager.makeAuthenticatedRequest(`/api/aanmelding/${id}`, {
+      method: 'DELETE'
+    })
+    return { error: null }
+  } catch (err) {
+    return { error: err as Error }
+  }
+}

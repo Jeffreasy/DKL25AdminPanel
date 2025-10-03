@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
-import { 
-    CheckCircleIcon, 
-    PaperAirplaneIcon, 
-    UserIcon, 
-    MapPinIcon, 
+import { useState } from 'react'
+import {
+    CheckCircleIcon,
+    UserIcon,
+    MapPinIcon,
     HandRaisedIcon,
     ArrowPathIcon,
     EnvelopeIcon,
@@ -37,22 +36,42 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
   const [loading, setLoading] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
 
-  const handleEmailVerzonden = async () => {
+  const handleStatusUpdate = async (newStatus: Aanmelding['status']) => {
     setLoading(true)
     try {
       const { error } = await updateAanmelding(registration.id, {
-        email_verzonden: true,
-        email_verzonden_op: new Date().toISOString()
+        status: newStatus,
+        behandeld_op: newStatus !== 'nieuw' ? new Date().toISOString() : null
       })
       if (error) {
-        console.error('Error updating email status:', error)
+        console.error('Error updating status:', error)
       } else {
         onStatusUpdate()
       }
     } catch (err) {
-      console.error('Error in handleEmailVerzonden:', err)
+      console.error('Error in handleStatusUpdate:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: Aanmelding['status']) => {
+    switch (status) {
+      case 'nieuw': return 'orange'
+      case 'in_behandeling': return 'blue'
+      case 'behandeld': return 'green'
+      case 'geannuleerd': return 'red'
+      default: return 'gray'
+    }
+  }
+
+  const getStatusText = (status: Aanmelding['status']) => {
+    switch (status) {
+      case 'nieuw': return 'Nieuw'
+      case 'in_behandeling': return 'In behandeling'
+      case 'behandeld': return 'Behandeld'
+      case 'geannuleerd': return 'Geannuleerd'
+      default: return status
     }
   }
 
@@ -119,29 +138,32 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
           </div>
           
           <div className="flex-shrink-0 w-full sm:w-auto">
-            {registration.email_verzonden ? (
-              <span className={cc.badge({ color: 'green', className: 'inline-flex items-center gap-1.5 w-full sm:w-auto justify-center' })}>
-                <CheckCircleIcon className="h-3.5 w-3.5" />
-                Email verzonden
+            <div className="flex flex-col gap-2">
+              <span className={cc.badge({
+                color: getStatusColor(registration.status),
+                className: 'inline-flex items-center gap-1.5 w-full sm:w-auto justify-center'
+              })}>
+                {getStatusText(registration.status)}
               </span>
-            ) : (
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleEmailVerzonden}
-                className={cl(
-                  cc.button.base({ color: 'secondary', size: 'sm', className: 'text-xs flex items-center gap-1.5 w-full sm:w-auto justify-center' }),
-                  loading && "opacity-75 cursor-not-allowed"
-                )}
-              >
-                {loading ? (
-                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                ) : (
-                    <PaperAirplaneIcon className="w-4 h-4 -rotate-45" />
-                )}
-                Markeer als verzonden
-              </button>
-            )}
+              {registration.status === 'nieuw' && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleStatusUpdate('in_behandeling')}
+                  className={cl(
+                    cc.button.base({ color: 'secondary', size: 'sm', className: 'text-xs flex items-center gap-1.5 w-full sm:w-auto justify-center' }),
+                    loading && "opacity-75 cursor-not-allowed"
+                  )}
+                >
+                  {loading ? (
+                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                  ) : (
+                      <CheckCircleIcon className="w-4 h-4" />
+                  )}
+                  Start behandeling
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -168,15 +190,15 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
         {!registration.bijzonderheden && <hr className="border-gray-200 dark:border-gray-700" />}
         
         <div className="flex flex-col items-start gap-1 sm:flex-row sm:justify-between sm:items-center mt-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Aangemeld op: {formatDate(registration.created_at)}
-          </p>
-          {registration.email_verzonden_op && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Email verzonden op: {formatDate(registration.email_verzonden_op)}
-            </p>
-          )}
-        </div>
+           <p className="text-xs text-gray-500 dark:text-gray-400">
+             Aangemeld op: {formatDate(registration.created_at)}
+           </p>
+           {registration.behandeld_op && (
+             <p className="text-xs text-gray-500 dark:text-gray-400">
+               Behandeld op: {formatDate(registration.behandeld_op)}
+             </p>
+           )}
+         </div>
       </div>
     </div>
   )

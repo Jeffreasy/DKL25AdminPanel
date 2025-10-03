@@ -88,6 +88,13 @@ export interface SendMessageRequest {
   reply_to_id?: string
 }
 
+export interface FileUploadResult {
+  url: string
+  public_id: string
+  format: string
+  bytes: number
+}
+
 export interface UpdateMessageRequest {
   content: string
 }
@@ -175,4 +182,39 @@ export interface UseChannelsReturn {
   createChannel: (request: CreateChannelRequest) => Promise<ChatChannel>
   joinChannel: (channelId: string) => Promise<void>
   leaveChannel: (channelId: string) => Promise<void>
+}
+
+// Search result types
+export interface MessageSearchResult {
+  id: string
+  channel_id: string
+  user_id: string
+  content?: string
+  message_type: string
+  file_url?: string
+  file_name?: string
+  file_size?: number
+  created_at: string
+  user_email: string
+  user_full_name?: string
+  channel_name: string
+  rank: number
+}
+
+export interface MessageHistoryResult {
+  id: string
+  channel_id: string
+  user_id: string
+  content?: string
+  message_type: string
+  file_url?: string
+  file_name?: string
+  file_size?: number
+  reply_to_id?: string
+  edited_at?: string
+  created_at: string
+  user_email: string
+  user_full_name?: string
+  user_avatar_url?: string
+  reactions: ChatMessageReaction[]
 }
