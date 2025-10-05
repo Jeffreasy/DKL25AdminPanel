@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { authManager } from '../../lib/auth'
+import { jwtDecode } from 'jwt-decode'
 import { AuthContext, User } from './AuthContext'
+import type { User as BackendUser } from '../../features/users/types'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -12,12 +14,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null)
       const result = await authManager.login(email, password)
       if (result.success && result.token) {
-        // For now, create a basic user object. In a full implementation,
-        // you'd decode the JWT to get user info
+        const decoded: { sub: string } = jwtDecode(result.token)
+        const id = decoded.sub
+        const userData = await authManager.makeAuthenticatedRequest(`/api/users/${id}`) as BackendUser
         setUser({
-          id: 'admin',
-          email: email,
-          role: 'admin'
+          id: userData.id,
+          email: userData.email,
+          role: userData.rol,
+          user_metadata: { full_name: userData.naam }
         })
       } else {
         throw new Error(result.error || 'Login failed')
@@ -39,17 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
         const isAuthenticated = authManager.isAuthenticated()
         if (isAuthenticated) {
-          // For now, create a basic user object. In a full implementation,
-          // you'd decode the JWT to get user info
-          setUser({
-            id: 'admin',
-            email: 'admin@dekoninklijkeloop.nl',
-            role: 'admin'
-          })
+          const token = authManager.getToken()
+          if (token) {
+            const decoded: { sub: string } = jwtDecode(token)
+            const id = decoded.sub
+            const userData = await authManager.makeAuthenticatedRequest(`/api/users/${id}`) as BackendUser
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              role: userData.rol,
+              user_metadata: { full_name: userData.naam }
+            })
+          }
         }
       } finally {
         setLoading(false)
@@ -72,4 +81,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-} 
+}

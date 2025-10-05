@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useChat } from '../hooks/useChat'
+import { useChat } from '../ChatContext'
 import { PlusIcon, HashtagIcon, LockClosedIcon, UsersIcon } from '@heroicons/react/24/outline'
 
 interface ChatSidebarProps {
@@ -31,10 +31,10 @@ export function ChatSidebar({ onClose }: ChatSidebarProps) {
     }
 
     // Check if channel name already exists
-    if (channels.some(c => c.name.toLowerCase() === channelName.toLowerCase())) {
-      setError('Een kanaal met deze naam bestaat al')
-      return
-    }
+if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
+  setError('Een kanaal met deze naam bestaat al')
+  return
+}
 
     try {
       setError('')
@@ -125,29 +125,32 @@ export function ChatSidebar({ onClose }: ChatSidebarProps) {
                   ))}
                 </div>
               ) : (
-                channels.map((channel) => (
-                  <button
-                    key={channel.id}
-                    onClick={() => selectChannel(channel.id)}
-                    className={`w-full flex items-center gap-2 p-2 text-left text-sm rounded-md transition-colors ${
-                      activeChannelId === channel.id
-                        ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {channel.type === 'public' ? (
-                      <HashtagIcon className="w-4 h-4 flex-shrink-0" />
-                    ) : (
-                      <LockClosedIcon className="w-4 h-4 flex-shrink-0" />
-                    )}
-                    <span className="truncate">{channel.name}</span>
-                    {channel.unread_count && channel.unread_count > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        {channel.unread_count}
-                      </span>
-                    )}
-                  </button>
-                ))
+channels.filter(channel => channel.id && channel.name).map((channel) => (
+<button
+  key={channel.id}
+  onClick={() => {
+    selectChannel(channel.id)
+    if (window.innerWidth < 768) onClose()
+  }}
+  className={`w-full flex items-center gap-2 p-2 text-left text-sm rounded-md transition-colors ${
+    activeChannelId === channel.id
+      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100'
+      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+  }`}
+>
+    {channel.type === 'public' ? (
+      <HashtagIcon className="w-4 h-4 flex-shrink-0" />
+    ) : (
+      <LockClosedIcon className="w-4 h-4 flex-shrink-0" />
+    )}
+    <span className="truncate">{channel.name}</span>
+    {channel.unread_count && channel.unread_count > 0 && (
+      <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+        {channel.unread_count}
+      </span>
+    )}
+  </button>
+))
               )}
             </div>
           </div>

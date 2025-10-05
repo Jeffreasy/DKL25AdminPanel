@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatService, chatRealtime } from '../services/chatService'
-import type { TypingIndicator, ChatUserPresence } from '../types'
+import type { TypingIndicator, ChatUserPresence, ChatChannel, ChannelWithDetails } from '../types'
+import { authManager } from '../../../lib/auth'
+import { connectWebSocket } from '../services/chatService'
 
 export function useChat() {
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null)
   const [typingUsers, setTypingUsers] = useState<{ [channelId: string]: TypingIndicator[] }>({})
   const [userPresence, setUserPresence] = useState<{ [userId: string]: ChatUserPresence }>({})
-  const queryClient = useQueryClient()
+const queryClient = useQueryClient()
+
+useEffect(() => {
+  const token = authManager.getToken()
+  if (token) {
+    const localWs = connectWebSocket(token)
+    return () => localWs.close()
+  }
+}, [])
 
   // Fetch channels
   const { data: channels = [], isLoading: channelsLoading } = useQuery({
@@ -39,12 +49,17 @@ export function useChat() {
   })
 
   // Create channel mutation
-  const createChannelMutation = useMutation({
-    mutationFn: chatService.createChannel,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat-channels'] })
-    }
-  })
+const createChannelMutation = useMutation({
+  mutationFn: chatService.createChannel,
+  onSuccess: async (newChannel) => {
+    queryClient.setQueryData(['chat-channels'], (old: ChannelWithDetails[] | undefined) => [
+      ...(old || []),
+      { ...newChannel, participants: [], participant_count: 0, unread_count: 0, last_message: undefined }
+    ]);
+    await joinChannelMutation.mutateAsync(newChannel.id);
+    setActiveChannelId(newChannel.id)
+  }
+})
 
   // Join channel mutation
   const joinChannelMutation = useMutation({
@@ -54,11 +69,15 @@ export function useChat() {
     }
   })
 
-  const selectChannel = (channelId: string) => {
-    setActiveChannelId(channelId)
-    // Mark as read
-    chatService.markChannelAsRead(channelId).catch(console.error)
+const selectChannel = async (channelId: string) => {
+  const isJoined = channels.some(c => c.id === channelId);
+  if (!isJoined) {
+    await joinChannelMutation.mutateAsync(channelId);
   }
+  setActiveChannelId(channelId)
+  // Mark as read
+  chatService.markChannelAsRead(channelId).catch(console.error)
+}
 
   const sendMessage = (channelId: string, content: string) => {
     sendMessageMutation.mutate({

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useChat } from '../hooks/useChat'
+import { useChat } from '../ChatContext'
 import { Bars3Icon, XMarkIcon, PaperAirplaneIcon, PaperClipIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { chatService } from '../services/chatService'
 import { MessageSearch } from './MessageSearch'
@@ -19,7 +19,8 @@ export function ChatWindow({ onToggleSidebar, onClose }: ChatWindowProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
 
-  const activeChannel = channels.find(c => c.id === activeChannelId)
+const activeChannel = channels.find(c => c.id === activeChannelId)
+console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, channelsIds: channels.map(c => c.id) });
 
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

@@ -43,9 +43,10 @@ export const menuItems: MenuItemOrGroup[] = [
       { label: 'Sponsors', path: '/sponsors', icon: CurrencyDollarIcon },
     ]
   },
+  { label: 'Gebruikers', path: '/users', icon: UserGroupIcon },
   {
     label: 'Frontend',
     path: '/frontend',
     icon: GlobeAltIcon,
   }
-] 
+]

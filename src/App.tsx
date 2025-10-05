@@ -9,6 +9,7 @@ import { SponsorManagementPage } from './pages/SponsorManagementPage'
 import { UnderConstructionPage } from './pages/UnderConstructionPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { UserManagementPage } from './pages/UserManagementPage'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { MainLayout } from './components/layout/MainLayout'
 import { OverviewTab } from './features/dashboard/components/OverviewTab'
@@ -32,12 +33,14 @@ export function App() {
           <Route path="aanmeldingen" element={<AanmeldingenTab />} />
           <Route path="contact" element={<ContactTab />} />
           <Route path="inbox" element={<InboxTab />} />
+          <Route path="users" element={<UserManagementPage />} />
         </Route>
         <Route path="/dashboard" element={<DashboardPage />}>
           <Route index element={<OverviewTab />} />
           <Route path="aanmeldingen" element={<AanmeldingenTab />} />
           <Route path="contact" element={<ContactTab />} />
           <Route path="inbox" element={<InboxTab />} />
+          <Route path="users" element={<UserManagementPage />} />
         </Route>
         <Route path="/photos" element={<PhotosOverview />} />
         <Route path="/albums" element={<AlbumManagementPage />} />
@@ -46,8 +49,9 @@ export function App() {
         <Route path="/sponsors" element={<SponsorManagementPage />} />
         <Route path="/frontend" element={<UnderConstructionPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/users" element={<UserManagementPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   )
-} 
+}

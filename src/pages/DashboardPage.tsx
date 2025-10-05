@@ -4,6 +4,7 @@ import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldinge
 import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
 import type { Aanmelding } from '../features/aanmeldingen/types'
 import type { ContactMessage, ContactStats } from '../features/contact/types'
+import { UserManagementPage } from './UserManagementPage'
 
 interface DashboardStats {
   totaal: number
@@ -13,10 +14,11 @@ interface DashboardStats {
 }
 
 const tabs = [
-  { id: 'overzicht', label: 'Volledig overzicht', path: '/dashboard' },
-  { id: 'aanmeldingen', label: 'Aanmeldingen', path: '/dashboard/aanmeldingen' },
-  { id: 'contact', label: 'Contact', path: '/dashboard/contact' },
-  { id: 'inbox', label: 'Email Inbox', path: '/dashboard/inbox' }
+  { id: 'overzicht', label: 'Volledig overzicht', path: '' },
+  { id: 'aanmeldingen', label: 'Aanmeldingen', path: 'aanmeldingen' },
+  { id: 'contact', label: 'Contact', path: 'contact' },
+  { id: 'inbox', label: 'Email Inbox', path: 'inbox' },
+  { id: 'users', label: 'Gebruikers', path: 'users' }
 ]
 
 export function DashboardPage() {
@@ -123,7 +125,7 @@ export function DashboardPage() {
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
-                end={tab.path === '/dashboard'}
+                end={tab.path === ''}
               >
                 {tab.label}
               </NavLink>
