@@ -186,10 +186,192 @@ export const cc = {
   },
 };
 
+/** Chat Component Styles **/
+
+export const chat = {
+  // Chat message styles
+  message: tv({
+    base: 'group relative p-3 rounded-2xl max-w-[75%] break-words select-text',
+    variants: {
+      type: {
+        own: 'bg-blue-500 text-white self-end rounded-br-md shadow-sm',
+        other: 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 self-start rounded-bl-md shadow-sm border border-gray-200 dark:border-gray-700',
+      },
+      hasReaction: {
+        true: 'mb-1',
+        false: 'mb-3',
+      }
+    },
+    defaultVariants: {
+      type: 'other',
+      hasReaction: false,
+    }
+  }),
+
+  // Chat avatar styles
+  avatar: tv({
+    base: 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0',
+    variants: {
+      userType: {
+        own: 'bg-blue-500 text-white',
+        other: 'bg-gray-500 text-white'
+      }
+    },
+    defaultVariants: {
+      userType: 'other'
+    }
+  }),
+
+  // Chat input styles
+  input: tv({
+    base: 'flex-1 resize-none rounded-2xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200',
+    variants: {
+      hasText: {
+        true: 'pr-12',
+        false: ''
+      }
+    }
+  }),
+
+  // Reaction button styles
+  reaction: tv({
+    base: 'inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-all duration-200 hover:scale-105 cursor-pointer select-none',
+    variants: {
+      active: {
+        true: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+        false: 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+      }
+    }
+  }),
+
+  // Chat sidebar styles
+  sidebar: {
+    channel: tv({
+      base: 'w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-xl transition-all duration-200 group',
+      variants: {
+        active: {
+          true: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50',
+          false: 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+        }
+      }
+    }),
+    channelIcon: tv({
+      base: 'w-4 h-4 flex-shrink-0',
+      variants: {
+        type: {
+          public: 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
+          private: 'text-gray-500 group-hover:text-gray-600 dark:text-gray-400 dark:group-hover:text-gray-300'
+        }
+      }
+    })
+  },
+
+  // Online status indicator
+  onlineIndicator: tv({
+    base: 'w-3 h-3 rounded-full border-2 border-white dark:border-gray-900',
+    variants: {
+      status: {
+        online: 'bg-green-500',
+        offline: 'bg-gray-400',
+        away: 'bg-yellow-500',
+        busy: 'bg-red-500'
+      }
+    },
+    defaultVariants: {
+      status: 'offline'
+    }
+  }),
+
+  // Typing indicator styles
+  typing: tv({
+    base: 'flex items-center gap-1 px-4 py-2 text-sm text-gray-500 dark:text-gray-400',
+  }),
+
+  // Invite modal styles
+  inviteUserCard: tv({
+    base: 'flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer group',
+  }),
+
+  inviteUserAvatar: tv({
+    base: 'w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm',
+  }),
+
+  inviteUserInfo: tv({
+    base: 'flex-1 min-w-0 ml-3',
+  }),
+
+  inviteUserName: tv({
+    base: 'font-medium text-gray-900 dark:text-white truncate',
+  }),
+
+  inviteUserEmail: tv({
+    base: 'text-sm text-gray-500 dark:text-gray-400 truncate',
+  }),
+
+  inviteButton: tv({
+    base: 'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+    variants: {
+      variant: {
+        invite: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+        invited: 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'
+      }
+    },
+    defaultVariants: {
+      variant: 'invite'
+    }
+  }),
+
+  // Context menu styles
+  contextMenu: tv({
+    base: 'absolute right-0 z-50 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1',
+  }),
+
+  contextMenuItem: tv({
+    base: 'w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150 cursor-pointer',
+    variants: {
+      variant: {
+        danger: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50',
+        default: 'text-gray-700 dark:text-gray-300'
+      }
+    },
+    defaultVariants: {
+      variant: 'default'
+    }
+  }),
+
+  // Loading skeleton styles
+  skeleton: tv({
+    base: 'animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 bg-[length:200%_100%]',
+    variants: {
+      rounded: {
+        true: 'rounded-2xl',
+        false: ''
+      }
+    }
+  }),
+
+  // Empty state styles
+  emptyState: tv({
+    base: 'text-center py-12 px-4',
+  }),
+
+  emptyStateIcon: tv({
+    base: 'w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600',
+  }),
+
+  emptyStateTitle: tv({
+    base: 'text-lg font-semibold text-gray-900 dark:text-white mb-2',
+  }),
+
+  emptyStateDescription: tv({
+    base: 'text-gray-500 dark:text-gray-400',
+  })
+};
+
 // Type helper for extracting props from tv functions
 export type TVProps<T> = T extends (props: infer P) => any ? P : never;
 
 // Helper function to apply styles, potentially useful for complex components
 // export function applyStyles<T>(variantFn: (props?: TVProps<T>) => string, props?: TVProps<T>) {
 //   return variantFn(props);
-// } 
+// }

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useChat } from '../ChatContext'
 import { PlusIcon, HashtagIcon, LockClosedIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { Button } from '@mantine/core'
 
 interface ChatSidebarProps {
   onClose: () => void
 }
 
 export function ChatSidebar({ onClose }: ChatSidebarProps) {
-  const { channels, onlineUsers, activeChannelId, selectChannel, createChannel, loading } = useChat()
+  const { channels, publicChannels, onlineUsers, activeChannelId, selectChannel, createChannel, joinChannel, createDirectChannel, loading } = useChat()
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [error, setError] = useState('')
@@ -38,7 +39,7 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
 
     try {
       setError('')
-      await createChannel(channelName)
+      await createChannel({ name: channelName, type: 'public', is_public: true })
       setNewChannelName('')
       setShowCreateChannel(false)
     } catch (err) {
@@ -60,8 +61,23 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
           >
             ✕
           </button>
-        </div>
-      </div>
+            </div>
+          </div>
+
+          {/* Available Public Channels */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Beschikbare Publieke Kanalen
+            </h3>
+            <div className="space-y-1">
+              {publicChannels.filter(pc => !channels.some(c => c.id === pc.id)).map((channel) => (
+                <div key={channel.id} className="flex items-center justify-between p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md">
+                  <span className="truncate">{channel.name}</span>
+                  <Button size="xs" onClick={() => joinChannel(channel.id)}>Join</Button>
+                </div>
+              ))}
+            </div>
+          </div>
 
       {/* Channels */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -165,7 +181,8 @@ channels.filter(channel => channel.id && channel.name).map((channel) => (
               {onlineUsers.slice(0, 10).map((user) => (
                 <div key={user.id} className="flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300">
                   <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
-                  <span className="truncate">{user.full_name || user.email}</span>
+                  <span className="truncate flex-1">{user.full_name || user.email}</span>
+                  <Button size="xs" variant="outline" onClick={() => createDirectChannel(user.id)}>Start chat</Button>
                 </div>
               ))}
               {onlineUsers.length > 10 && (

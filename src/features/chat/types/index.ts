@@ -76,6 +76,7 @@ export interface CreateChannelRequest {
   name: string
   description?: string
   type: 'public' | 'private'
+  is_public?: boolean
 }
 
 export interface SendMessageRequest {

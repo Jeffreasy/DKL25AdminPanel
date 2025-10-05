@@ -14,14 +14,14 @@ import type {
   FileUploadResult,
   TypingIndicator,
   MessageSearchResult,
-  MessageHistoryResult
+  MessageHistoryResult,
+  ChatChannelParticipant
 } from '../types'
 
 // Base API URL from environment or default
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'
 
-// Helper to get user ID from token
-const getUserId = () => {
+export const getUserId = () => {
   const token = authManager.getToken()
   if (!token) throw new Error('User not authenticated')
   const decoded: { sub: string } = jwtDecode(token)
@@ -30,11 +30,35 @@ const getUserId = () => {
 
 // WebSocket connection
 let ws: WebSocket | null = null
-export const connectWebSocket = (token: string) => {
-  ws = new WebSocket(`${API_BASE.replace('http', 'ws')}/api/chat/ws?token=${token}`);
-  ws.onopen = () => console.log('WS connected - you should now be online');
-  ws.onclose = () => console.log('WS disconnected - status set to offline');
-  return ws;
+export const connectWebSocket = (token: string, channelId: string) => {
+  // Include channel_id in URL path as backend expects /ws/:channel_id
+  const newWs = new WebSocket(`${API_BASE.replace('http', 'ws')}/api/chat/ws/${channelId}?token=${token}`);
+  ws = newWs;
+
+  newWs.onopen = () => {
+    console.log('WS connected - you should now be online', channelId);
+    // Connection itself implies join for the channel in URL path
+  };
+
+  newWs.onclose = (event) => {
+    console.log('WS disconnected - status set to offline', event.code, event.reason);
+  };
+
+  newWs.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('WS message received:', data);
+
+      // Handle different message types at the global level
+      if (data.type === 'connected') {
+        console.log('WebSocket: successfully joined channel', channelId);
+      }
+    } catch (e) {
+      console.error('Failed to parse WS message:', event.data);
+    }
+  };
+
+  return newWs;
 }
 
 
@@ -54,12 +78,35 @@ export const chatService = {
     }) as ChatChannel
   },
 
+
+  async leaveChannel(channelId: string): Promise<void> {
+    await authManager.makeAuthenticatedRequest(`/api/chat/channels/${channelId}/leave`, { method: 'POST' })
+  },
+
   async joinChannel(channelId: string): Promise<void> {
     await authManager.makeAuthenticatedRequest(`/api/chat/channels/${channelId}/join`, { method: 'POST' })
   },
 
-  async leaveChannel(channelId: string): Promise<void> {
-    await authManager.makeAuthenticatedRequest(`/api/chat/channels/${channelId}/leave`, { method: 'POST' })
+  async getPublicChannels(): Promise<ChatChannel[]> {
+    return await authManager.makeAuthenticatedRequest('/api/chat/public-channels') as ChatChannel[]
+  },
+
+  async createDirectChannel(userId: string): Promise<ChatChannel> {
+    return await authManager.makeAuthenticatedRequest('/api/chat/direct', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId })
+    }) as ChatChannel
+  },
+
+  async inviteUserToChannel(channelId: string, userId: string): Promise<void> {
+    await authManager.makeAuthenticatedRequest(`/api/chat/channels/${channelId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId })
+    })
+  },
+
+  async getChannelParticipants(channelId: string): Promise<ChatChannelParticipant[]> {
+    return await authManager.makeAuthenticatedRequest(`/api/chat/channels/${channelId}/participants`) as ChatChannelParticipant[]
   },
 
   // Messages
@@ -114,6 +161,10 @@ export const chatService = {
   async getOnlineUsers(): Promise<ChatUser[]> {
     const data = await authManager.makeAuthenticatedRequest('/api/chat/online-users') as {id: string, name: string}[]
     return data.map(d => ({id: d.id, full_name: d.name, email: '', avatar_url: '', status: 'online', last_seen: ''}))
+  },
+
+  async getAllUsers(): Promise<ChatUser[]> {
+    return await authManager.makeAuthenticatedRequest('/api/chat/users') as ChatUser[]
   },
 
   // Typing indicators (stubs)
