@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import { H1, SmallText } from '../components/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { UnderConstructionForm } from '../features/under-construction/components/UnderConstructionForm'
-import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { useNavigationHistory } from '../features/navigation'
 import { cc } from '../styles/shared'
 
 export function UnderConstructionPage() {

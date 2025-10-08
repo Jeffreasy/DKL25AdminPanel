@@ -1,6 +1,10 @@
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import type { Sponsor, SponsorFormData } from '../types'
 
+/**
+ * Sponsor service with custom mapping for camelCase fields
+ * Uses manual implementation due to field name differences (camelCase vs snake_case)
+ */
 export const sponsorService = {
   getSponsors: async (): Promise<Sponsor[]> => {
     const { data, error } = await supabase
@@ -22,6 +26,8 @@ export const sponsorService = {
       order: sponsor.order_number,
       isActive: sponsor.is_active,
       visible: sponsor.visible ?? true,
+      created_at: sponsor.created_at,
+      updated_at: sponsor.updated_at,
       createdAt: sponsor.created_at,
       updatedAt: sponsor.updated_at
     }))
@@ -56,6 +62,8 @@ export const sponsorService = {
       order: sponsor.order_number,
       isActive: sponsor.is_active,
       visible: sponsor.visible ?? true,
+      created_at: sponsor.created_at,
+      updated_at: sponsor.updated_at,
       createdAt: sponsor.created_at,
       updatedAt: sponsor.updated_at
     }
@@ -71,7 +79,8 @@ export const sponsorService = {
         website_url: data.websiteUrl,
         order_number: data.order,
         is_active: data.isActive,
-        visible: data.visible
+        visible: data.visible,
+        updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
@@ -83,8 +92,18 @@ export const sponsorService = {
     }
 
     return {
-      ...sponsor,
-      visible: sponsor.visible ?? true
+      id: sponsor.id,
+      name: sponsor.name,
+      description: sponsor.description,
+      logoUrl: sponsor.logo_url,
+      websiteUrl: sponsor.website_url,
+      order: sponsor.order_number,
+      isActive: sponsor.is_active,
+      visible: sponsor.visible ?? true,
+      created_at: sponsor.created_at,
+      updated_at: sponsor.updated_at,
+      createdAt: sponsor.created_at,
+      updatedAt: sponsor.updated_at
     }
   },
 
@@ -99,4 +118,4 @@ export const sponsorService = {
       throw error
     }
   }
-} 
+}

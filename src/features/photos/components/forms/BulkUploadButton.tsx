@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { uploadToCloudinary } from '../../../../lib/cloudinary/cloudinaryClient'
-import { supabase } from '../../../../lib/supabase'
-import type { CloudinaryUploadResponse } from '../../../../lib/cloudinary/types'
+import { uploadToCloudinary } from '../../../../api/client/cloudinary'
+import { supabase } from '../../../../api/client/supabase'
+import type { CloudinaryUploadResponse } from '../../../../api/types/cloudinary'
+import { cc } from '../../../../styles/shared'
 
 interface BulkUploadButtonProps {
   onUploadComplete: () => void
@@ -119,21 +120,21 @@ export function BulkUploadButton({ onUploadComplete, targetYear, className = '',
     <div
       {...getRootProps()}
       className={`
-        relative p-4 border-2 border-dashed rounded-lg transition-all
-        ${isDragActive 
-          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+        relative ${cc.spacing.container.sm} border-2 border-dashed rounded-lg ${cc.transition.normal}
+        ${isDragActive
+          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
           : 'border-gray-300 dark:border-gray-600'}
-        ${isDragReject 
-          ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+        ${isDragReject
+          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
           : ''}
-        ${uploading 
-          ? 'opacity-75 cursor-not-allowed' 
+        ${uploading
+          ? 'opacity-75 cursor-not-allowed'
           : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-600'}
         ${className}
       `}
     >
       <input {...getInputProps()} />
-      <div className="flex flex-col items-center space-y-3">
+      <div className={`flex flex-col items-center ${cc.spacing.section.xs}`}>
         {/* Upload Icon */}
         <div className={`
           w-12 h-12 rounded-lg flex items-center justify-center
@@ -147,13 +148,13 @@ export function BulkUploadButton({ onUploadComplete, targetYear, className = '',
         {/* Status Text met gedetailleerde voortgang */}
         <div className="text-sm text-center">
           {uploading ? (
-            <div className="space-y-2">
+            <div className={cc.spacing.section.sm}>
               <div className="text-indigo-600 dark:text-indigo-400">
                 Uploading... {Math.round(totalProgress)}%
               </div>
               <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-indigo-600 transition-all"
+                <div
+                  className={`h-full bg-indigo-600 dark:bg-indigo-500 ${cc.transition.normal}`}
                   style={{ width: `${totalProgress}%` }}
                 />
               </div>

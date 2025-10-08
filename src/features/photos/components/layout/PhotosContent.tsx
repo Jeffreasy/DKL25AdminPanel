@@ -25,7 +25,7 @@ function CollapsibleSection({ title, count, children, defaultOpen = true, onTogg
           setIsOpen(!isOpen)
           onToggle?.()
         }}
-        className="w-full px-2 py-2 sm:px-4 sm:py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors border-b border-gray-200 dark:border-gray-700"
+        className={`w-full px-2 py-2 sm:${cc.spacing.px.sm} sm:py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/80 ${cc.transition.colors} border-b border-gray-200 dark:border-gray-700`}
       >
         <div className="flex items-center gap-2">
           {isOpen ? (
@@ -98,7 +98,7 @@ export function PhotosContent({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cc.spacing.section.sm}>
       {activeTab === 'all' && (
         <CollapsibleSection
           title="Recent gebruikte albums"

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { uploadToCloudinary } from '../../../../lib/cloudinary/cloudinaryClient'
-import { supabase } from '../../../../lib/supabase'
+import { uploadToCloudinary } from '../../../../api/client/cloudinary'
+import { supabase } from '../../../../api/client/supabase'
 import { cc } from '../../../../styles/shared'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import type { AlbumWithDetails } from '../../../albums/types'
@@ -123,11 +123,11 @@ export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUpl
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-grow overflow-y-auto" id="photo-upload-form">
+        <form onSubmit={handleSubmit} className={`${cc.spacing.container.md} ${cc.spacing.section.md} flex-grow overflow-y-auto`} id="photo-upload-form">
           <div>
             <label className={cc.form.label({ className: 'mb-2' })}>Selecteer foto's</label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-gray-50 dark:bg-gray-700/50">
-              <div className="space-y-1 text-center">
+            <div className={`mt-1 flex justify-center ${cc.spacing.px.md} pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 ${cc.transition.colors} bg-gray-50 dark:bg-gray-700/50`}>
+              <div className={`${cc.spacing.section.xs} text-center`}>
                 <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -157,7 +157,7 @@ export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUpl
             {albums.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400 italic">Geen albums beschikbaar.</p>
             ) : (
-              <div className="mt-1 max-h-48 overflow-y-auto space-y-2 rounded-md border border-gray-300 dark:border-gray-600 p-3 bg-white dark:bg-gray-700">
+              <div className={`mt-1 max-h-48 overflow-y-auto ${cc.spacing.section.sm} rounded-md border border-gray-300 dark:border-gray-600 p-3 bg-white dark:bg-gray-700`}>
                 {albums.map(album => (
                   <div key={album.id} className="flex items-center">
                     <input
@@ -193,7 +193,7 @@ export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUpl
           )}
         </form>
 
-        <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
+        <div className={`${cc.spacing.container.md} bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end ${cc.spacing.gap.md} flex-shrink-0`}>
           <button
             type="button"
             onClick={onClose}

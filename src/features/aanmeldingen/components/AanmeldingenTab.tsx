@@ -57,7 +57,7 @@ export function AanmeldingenTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cc.spacing.section.md}>
       {/* Role Statistics */}
       <div className={`${cc.grid.twoThree()} gap-4`}>
         {Object.entries(stats.rollen).map(([rol, aantal]) => (
@@ -204,7 +204,7 @@ export function AanmeldingenTab() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className={cc.spacing.section.sm}>
               {filteredAanmeldingen.map((aanmelding) => (
                 <RegistrationItem
                   key={aanmelding.id}

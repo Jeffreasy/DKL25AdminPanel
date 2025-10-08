@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { useNavigationHistory } from '../features/navigation'
 
 export function usePageTitle(title: string) {
   const { addToHistory } = useNavigationHistory()

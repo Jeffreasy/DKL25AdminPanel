@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal, Text } from '@mantine/core'
 import { permissionService } from '../services/permissionService'
 import { PermissionForm } from './PermissionForm'
+import { useFilters, applyFilters } from '../../../hooks/useFilters'
 import type { PermissionWithId } from '../types'
 import { cc } from '../../../styles/shared'
 
@@ -10,8 +11,14 @@ export function PermissionList() {
   const queryClient = useQueryClient()
   const [selectedPermission, setSelectedPermission] = useState<PermissionWithId | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'system' | 'custom'>('all')
+
+  // Use filters hook
+  const filters = useFilters<'search' | 'type'>({
+    initialFilters: {
+      search: '',
+      type: 'all'
+    }
+  })
 
   const { data: permissions = [], isLoading, error } = useQuery({
     queryKey: ['permissions'],
@@ -20,27 +27,39 @@ export function PermissionList() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const filteredPermissions = permissions.filter(permission => {
-    const matchesSearch = 
-      permission.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      permission.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      permission.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilter = 
-      filterType === 'all' ||
-      (filterType === 'system' && permission.is_system_permission) ||
-      (filterType === 'custom' && !permission.is_system_permission);
-    
-    return matchesSearch && matchesFilter;
-  });
+  // Apply filters
+  const filteredPermissions = useMemo(() => {
+    return applyFilters(permissions, filters.filters, (permission, filterValues) => {
+      // Search filter
+      if (filterValues.search) {
+        const searchTerm = (filterValues.search as string).toLowerCase()
+        const matchesSearch =
+          permission.resource.toLowerCase().includes(searchTerm) ||
+          permission.action.toLowerCase().includes(searchTerm) ||
+          permission.description.toLowerCase().includes(searchTerm)
+        if (!matchesSearch) return false
+      }
 
-  const groupedPermissions = filteredPermissions.reduce((acc, permission) => {
-    if (!acc[permission.resource]) {
-      acc[permission.resource] = [];
-    }
-    acc[permission.resource].push(permission);
-    return acc;
-  }, {} as Record<string, PermissionWithId[]>);
+      // Type filter
+      if (filterValues.type && filterValues.type !== 'all') {
+        if (filterValues.type === 'system' && !permission.is_system_permission) return false
+        if (filterValues.type === 'custom' && permission.is_system_permission) return false
+      }
+
+      return true
+    })
+  }, [permissions, filters.filters])
+
+  // Group permissions by resource
+  const groupedPermissions = useMemo(() => {
+    return filteredPermissions.reduce((acc, permission) => {
+      if (!acc[permission.resource]) {
+        acc[permission.resource] = []
+      }
+      acc[permission.resource].push(permission)
+      return acc
+    }, {} as Record<string, PermissionWithId[]>)
+  }, [filteredPermissions])
 
   const createMutation = useMutation({
     mutationFn: permissionService.createPermission,
@@ -127,17 +146,17 @@ export function PermissionList() {
             <input
               type="text"
               placeholder="Zoek permissies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={filters.getFilterValue('search') as string || ''}
+              onChange={(e) => filters.setFilter('search', e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
           
           <div className={`flex ${cc.spacing.gap.sm}`}>
             <button
-              onClick={() => setFilterType('all')}
+              onClick={() => filters.setFilter('type', 'all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
-                filterType === 'all'
+                filters.getFilterValue('type') === 'all'
                   ? 'bg-blue-600 dark:bg-blue-500 text-white'
                   : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
@@ -145,9 +164,9 @@ export function PermissionList() {
               Alle
             </button>
             <button
-              onClick={() => setFilterType('system')}
+              onClick={() => filters.setFilter('type', 'system')}
               className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
-                filterType === 'system'
+                filters.getFilterValue('type') === 'system'
                   ? 'bg-blue-600 dark:bg-blue-500 text-white'
                   : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
@@ -155,9 +174,9 @@ export function PermissionList() {
               Systeem
             </button>
             <button
-              onClick={() => setFilterType('custom')}
+              onClick={() => filters.setFilter('type', 'custom')}
               className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
-                filterType === 'custom'
+                filters.getFilterValue('type') === 'custom'
                   ? 'bg-blue-600 dark:bg-blue-500 text-white'
                   : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
@@ -186,7 +205,7 @@ export function PermissionList() {
           </svg>
           <p className="text-gray-600 dark:text-gray-400 font-medium">Geen permissies gevonden</p>
           <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
-            {searchQuery || filterType !== 'all' ? 'Probeer een andere zoekopdracht of filter' : 'Klik op "Nieuwe Permissie" om te beginnen'}
+            {filters.hasActiveFilters ? 'Probeer een andere zoekopdracht of filter' : 'Klik op "Nieuwe Permissie" om te beginnen'}
           </p>
         </div>
       ) : (

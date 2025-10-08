@@ -58,7 +58,7 @@ export function PhotoList({
   }
 
   if (loading) {
-    return <LoadingGrid variant="compact" count={5} aspectRatio="custom" className="space-y-2" />
+    return <LoadingGrid variant="compact" count={5} aspectRatio="custom" className={cc.spacing.section.sm} />
   }
 
   if (error) {
@@ -154,7 +154,7 @@ export function PhotoList({
                       )}
                     </td>
                     <td className="pl-2 pr-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex flex-col items-end space-y-1">
+                      <div className={`flex flex-col items-end ${cc.spacing.section.xs}`}>
                         <button
                           onClick={() => photoActions.handleVisibilityToggle(photo)}
                           className={cc.button.icon({ color: 'secondary' })}

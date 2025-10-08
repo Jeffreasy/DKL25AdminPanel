@@ -1,4 +1,4 @@
-import { authManager } from '../../../lib/auth'
+import { authManager } from '../../../api/client/auth'
 import type { PermissionWithId, CreatePermissionRequest } from '../types'
 
 export const permissionService = {

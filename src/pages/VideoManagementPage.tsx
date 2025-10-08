@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { ErrorText, H1, SmallText } from '../components/typography'
+import { ErrorText, H1, SmallText } from '../components/typography/typography'
 import { LoadingGrid, ConfirmDialog } from '../components/ui'
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../features/videos/services/videoService'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -9,7 +9,7 @@ import { cc } from '../styles/shared'
 import { XCircleIcon } from '@heroicons/react/24/solid'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../api/client/supabase'
 import { usePermissions } from '../hooks/usePermissions'
 
 interface VideoFormData {

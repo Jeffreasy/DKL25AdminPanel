@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import type { ContactMessage, ContactStats, ContactStatus } from '../types'
 
 export async function fetchMessages(): Promise<{ data: ContactMessage[], error: Error | null }> {

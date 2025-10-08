@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { ChatLayout } from '../../features/chat/components/ChatLayout'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { cc } from '../../styles/shared'
 
 export function MainLayout() {
   const [chatOpen, setChatOpen] = useState(false)
@@ -23,10 +24,11 @@ export function MainLayout() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-40"
+        className={`fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center ${cc.transition.colors} z-40`}
         title="Open Team Chat"
+        aria-label="Open Team Chat"
       >
-        <ChatBubbleLeftRightIcon className="w-6 h-6" />
+        <ChatBubbleLeftRightIcon className="w-6 h-6" aria-hidden="true" />
       </button>
 
       {/* Chat Panel */}

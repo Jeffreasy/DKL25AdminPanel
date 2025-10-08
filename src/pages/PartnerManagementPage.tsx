@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { H1, SmallText } from '../components/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { PartnersOverview } from '../features/partners/PartnersOverview'
 import { PartnerForm } from '../features/partners/components/PartnerForm'
-import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { useNavigationHistory } from '../features/navigation'
 import { cc } from '../styles/shared'
 import { usePermissions } from '../hooks/usePermissions'
 

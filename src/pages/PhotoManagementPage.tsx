@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { PhotosOverview } from '../features/photos/PhotosOverview'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { useNavigationHistory } from '../features/navigation'
 import { usePermissions } from '../hooks/usePermissions'
-import { H1, SmallText } from '../components/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
 
 export function PhotoManagementPage() {

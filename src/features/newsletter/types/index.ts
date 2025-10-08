@@ -1,11 +1,10 @@
-export interface Newsletter {
-  id: string
+import type { BaseEntity } from '../../../types/base'
+
+export interface Newsletter extends BaseEntity {
   subject: string
   content: string
   sent_at?: string
   batch_id?: string
-  created_at: string
-  updated_at: string
 }
 
 export interface CreateNewsletterData {

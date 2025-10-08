@@ -1,17 +1,15 @@
-export interface Photo {
-  id: string
+import type { VisibleEntity } from '../../types/base'
+
+export interface Photo extends VisibleEntity {
   url: string
   thumbnail_url?: string
   title: string
   alt_text?: string
-  visible: boolean
   description?: string | null
   year?: string | null
   cloudinary_folder?: string | null
-  created_at: string
-  updated_at: string
   album_photos?: {
-    album_id: string; 
+    album_id: string;
   }[];
 }
 

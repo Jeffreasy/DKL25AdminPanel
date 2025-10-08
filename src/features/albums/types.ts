@@ -1,14 +1,10 @@
 import type { PhotoCount } from '../photos/types'
+import type { OrderedEntity } from '../../types/base'
 
-export interface Album {
-  id: string;
+export interface Album extends OrderedEntity {
   title: string;
   description?: string;
   cover_photo_id?: string;
-  visible: boolean;
-  order_number: number;
-  created_at: string;
-  updated_at: string;
   cover_photo?: import('../photos/types').Photo;
   photos?: AlbumPhoto[];
   photos_count: PhotoCount[];

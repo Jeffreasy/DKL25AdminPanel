@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy
 } from '@dnd-kit/sortable'
-import { supabase } from '../../../../lib/supabase'
+import { supabase } from '../../../../api/client/supabase'
 import type { AlbumWithDetails } from '../../types'
 import type { Photo } from '../../../photos/types'
 import { SortablePhoto } from './SortablePhoto'

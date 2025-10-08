@@ -1,4 +1,4 @@
-import { authManager } from '../../../lib/auth'
+import { authManager } from '../../../api/client/auth'
 import type { User, CreateUserRequest, UpdateUserRequest } from '../types'
 
 export const userService = {

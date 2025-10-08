@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Dialog } from '@headlessui/react'
 import { PencilIcon, EyeIcon, EyeSlashIcon, XMarkIcon as CloseIcon, ChevronLeftIcon, ChevronRightIcon, FolderIcon, PhotoIcon, CalendarIcon } from '@heroicons/react/24/outline'
-import { Z_INDEX } from '../../../../constants/zIndex'
+import { Z_INDEX } from '../../../../config/zIndex'
 import type { Photo } from '../../types'
 import type { AlbumWithDetails } from '../../../albums/types'
-import { supabase } from '../../../../lib/supabase'
+import { supabase } from '../../../../api/client/supabase'
 import { cc } from '../../../../styles/shared'
 
 export interface PhotoDetailsModalProps {
@@ -261,7 +261,7 @@ export function PhotoDetailsModal({ photo, onClose, onUpdate, albums, allPhotos,
               <div className="flex-1 overflow-y-auto p-6">
                 {isEditing ? (
                   // Enhanced Editing Form
-                  <div className="space-y-6">
+                  <div className={cc.spacing.section.md}>
                     <div className="flex items-center gap-2 mb-4">
                       <PencilIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white">Bewerk details</h3>
@@ -319,7 +319,7 @@ export function PhotoDetailsModal({ photo, onClose, onUpdate, albums, allPhotos,
                   </div>
                 ) : (
                   // Enhanced Display Details
-                  <div className="space-y-6">
+                  <div className={cc.spacing.section.md}>
                     <div>
                       <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                         {photo.title}

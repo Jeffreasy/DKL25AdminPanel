@@ -55,25 +55,50 @@ De applicatie bestaat uit verschillende hoofdmodules:
 
 ```
 src/
-├── components/         # UI-componenten
-│   ├── auth/           # Authenticatie componenten
-│   ├── layout/         # Layout componenten (navigatie, header, etc.)
-├── contexts/           # React Context providers
-│   ├── auth/           # Authenticatie context
-│   ├── favorites/      # Favorieten pagina's context
-│   ├── navigation/     # Navigatiegeschiedenis context
-│   ├── sidebar/        # Sidebar context
-├── features/           # Feature modules
-│   ├── aanmeldingen/   # Deelnemersregistratie feature
-│   ├── contact/        # Contact/berichten feature
-├── hooks/              # Custom React hooks
-├── pages/              # Pagina componenten
-│   ├── DashboardPage   # Dashboard met tabs
-│   ├── Media pagina's  # Foto's, albums, video's
-│   ├── Relatie pagina's # Partners, sponsors
-├── styles/             # CSS en styling
-├── types/              # TypeScript typedefinities
-└── services/           # API services
+├── api/                    # API layer
+│   ├── client/             # API clients (Supabase, Cloudinary, Auth)
+│   └── types/              # API-specific types
+├── assets/                 # Static assets (images, icons)
+├── components/             # Shared/reusable components
+│   ├── auth/               # Authentication components
+│   ├── common/             # Common components (LoadingSkeleton, etc.)
+│   ├── layout/             # Layout components (Header, Sidebar, etc.)
+│   ├── typography/         # Typography components
+│   └── ui/                 # Base UI components (Modal, DataTable, etc.)
+├── config/                 # Configuration files (zIndex, constants)
+├── features/               # Feature modules (domain-driven)
+│   ├── aanmeldingen/       # Registration management
+│   ├── albums/             # Album management
+│   ├── auth/               # Authentication feature
+│   ├── chat/               # Chat system
+│   ├── contact/            # Contact messages
+│   ├── dashboard/          # Dashboard overview
+│   ├── email/              # Email management
+│   ├── navigation/         # Navigation history
+│   ├── newsletter/         # Newsletter management
+│   ├── partners/           # Partner management
+│   ├── photos/             # Photo management
+│   ├── sponsors/           # Sponsor management
+│   ├── under-construction/ # Under construction pages
+│   ├── users/              # User & permissions management
+│   └── videos/             # Video management
+├── hooks/                  # Global/shared custom hooks
+├── lib/                    # Third-party integrations & utilities
+│   └── services/           # Service utilities (CRUD service)
+├── pages/                  # Page components (route handlers)
+├── providers/              # Global context providers
+├── styles/                 # Global styles
+├── types/                  # Global TypeScript types
+└── utils/                  # Utility functions
+
+Feature Structure (consistent across all features):
+features/[feature-name]/
+├── components/             # Feature-specific components
+├── hooks/                  # Feature-specific hooks
+├── services/               # Feature-specific services
+├── types/                  # Feature-specific types
+├── contexts/               # Feature-specific contexts (if needed)
+└── index.ts                # Barrel export
 ```
 
 ## 🔧 Installatie & Ontwikkeling

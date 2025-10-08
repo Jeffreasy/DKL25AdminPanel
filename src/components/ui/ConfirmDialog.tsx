@@ -1,6 +1,6 @@
 import { Dialog } from '@headlessui/react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { Z_INDEX } from '../../constants/zIndex'
+import { Z_INDEX } from '../../config/zIndex'
 import { cc } from '../../styles/shared'
 
 export interface ConfirmDialogProps {

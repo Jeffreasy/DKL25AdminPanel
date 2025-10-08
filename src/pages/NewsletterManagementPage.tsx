@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { H1, SmallText } from '../components/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { NewsletterList } from '../features/newsletter/components/NewsletterList'
 import { NewsletterHistory } from '../features/newsletter/components/NewsletterHistory'
 import { NewsletterEditor } from '../features/newsletter/components/NewsletterEditor'
 import type { Newsletter, CreateNewsletterData } from '../features/newsletter/types'
 import { createNewsletter, updateNewsletter } from '../features/newsletter/services/newsletterService'
-import { useNavigationHistory } from '../contexts/navigation/useNavigationHistory'
+import { useNavigationHistory } from '../features/navigation'
 import { cc } from '../styles/shared'
 import { toast } from 'react-hot-toast'
 

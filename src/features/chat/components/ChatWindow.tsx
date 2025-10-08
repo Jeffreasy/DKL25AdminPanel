@@ -6,7 +6,7 @@ import { chatService, getUserId } from '../services/chatService'
 import { MessageSearch } from './MessageSearch'
 import { Modal, Button, Menu } from '@mantine/core'
 import { chat as chatStyles, cc } from '../../../styles/shared'
-import { H3, H4, Text, SmallText, Caption, ErrorText, SuccessText } from '../../../components/typography'
+import { H3, H4, Text, SmallText, Caption, ErrorText, SuccessText } from '../../../components/typography/typography'
 import { ConfirmDialog } from '../../../components/ui'
 
 interface ChatWindowProps {
@@ -251,7 +251,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                                 <img
                                   src={message.file_url}
                                   alt={message.file_name || 'Afbeelding'}
-                                  className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                                  className={`rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 ${cc.transition.opacity}`}
                                   onClick={() => window.open(message.file_url, '_blank')}
                                   loading="lazy"
                                 />
@@ -278,7 +278,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                                   href={message.file_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                                  className={`px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 ${cc.transition.colors}`}
                                 >
                                   Download
                                 </a>
@@ -368,7 +368,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                   </p>
                   <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-2 mt-1">
                     <div
-                      className="bg-indigo-600 h-2 rounded-full transition-all"
+                      className={`bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full ${cc.transition.normal}`}
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>

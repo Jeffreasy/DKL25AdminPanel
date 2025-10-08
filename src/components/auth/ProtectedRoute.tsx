@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/auth/useAuth'
+import { useAuth } from '../../features/auth'
 import { usePermissions } from '../../hooks/usePermissions'
 import { LoadingGrid } from '../ui'
 

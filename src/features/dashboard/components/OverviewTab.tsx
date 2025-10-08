@@ -14,9 +14,9 @@ export function OverviewTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cc.spacing.section.md}>
       {/* Main Statistics Grid */}
-      <div className={`${cc.grid.stats()} gap-6`}>
+      <div className={`${cc.grid.stats()} ${cc.spacing.gap.xl}`}>
         {/* Aanmeldingen */}
         <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${cc.hover.card}`}>
           <div className="flex items-center justify-between">
@@ -118,8 +118,8 @@ export function OverviewTab() {
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Afstanden</h3>
             </div>
           </div>
-          <div className="p-6">
-            <div className="space-y-3">
+          <div className={cc.spacing.container.md}>
+            <div className={cc.spacing.section.xs}>
               {Object.entries(stats.afstanden).map(([afstand, aantal]) => {
                 const percentage = stats.totaal > 0 ? (Number(aantal) / stats.totaal * 100).toFixed(0) : 0
                 return (
@@ -151,8 +151,8 @@ export function OverviewTab() {
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Ondersteuning</h3>
             </div>
           </div>
-          <div className="p-6">
-            <div className="space-y-3">
+          <div className={cc.spacing.container.md}>
+            <div className={cc.spacing.section.xs}>
               {Object.entries(stats.ondersteuning).map(([type, aantal]) => {
                 const percentage = stats.totaal > 0 ? (Number(aantal) / stats.totaal * 100).toFixed(0) : 0
                 const color = type === 'Ja' ? 'green' : type === 'Nee' ? 'red' : 'orange'

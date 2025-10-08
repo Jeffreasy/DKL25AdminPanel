@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { H1, SmallText } from '../../components/typography'
+import { H1, SmallText } from '../../components/typography/typography'
 import { PhotoGrid } from './components/display/PhotoGrid'
 import { PhotoList } from './components/display/PhotoList'
 import { PhotoDetailsModal } from './components/display/PhotoDetailsModal'

@@ -7,8 +7,8 @@ import { GalleryPreviewModal } from '../features/albums/components/preview/Galle
 import { ErrorBoundary } from '../features/albums/components/ErrorBoundary'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
-import { supabase } from '../lib/supabase'
-import { H1, SmallText } from '../components/typography'
+import { supabase } from '../api/client/supabase'
+import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
 import { usePermissions } from '../hooks/usePermissions'
 

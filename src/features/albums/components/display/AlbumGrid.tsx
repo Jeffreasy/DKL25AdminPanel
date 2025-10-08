@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AlbumCard } from './AlbumCard'
 import type { AlbumWithDetails } from '../../types'
-import { supabase } from '../../../../lib/supabase'
+import { supabase } from '../../../../api/client/supabase'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove } from '@dnd-kit/sortable'
-import { isAdmin } from '../../../../lib/supabase'
+import { isAdmin } from '../../../../api/client/supabase'
 import debounce from 'lodash/debounce'
 import { LoadingGrid, EmptyState } from '../../../../components/ui'
 import { FolderIcon } from '@heroicons/react/24/outline'
@@ -213,7 +213,7 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cc.spacing.section.sm}>
       {/* Filters */}
       <div className="flex gap-4 items-center">
         <div className="flex-1">

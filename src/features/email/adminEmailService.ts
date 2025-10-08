@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../api/client/supabase'
 import type { AutoResponse, Email } from './types'
 import type { Aanmelding } from '../aanmeldingen/types'
 

@@ -98,7 +98,7 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
       </div>
 
       {/* Card Body */}
-      <div className="p-6 space-y-4">
+      <div className={`${cc.spacing.container.md} ${cc.spacing.section.sm}`}>
         {/* Quick Info Grid */}
         <div className={`${cc.grid.compact()} gap-4`}>
           <div>
@@ -123,7 +123,7 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
 
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+          <div className={`pt-4 border-t border-gray-200 dark:border-gray-700 ${cc.spacing.section.sm}`}>
             {/* Bijzonderheden */}
             {registration.bijzonderheden && (
               <div>

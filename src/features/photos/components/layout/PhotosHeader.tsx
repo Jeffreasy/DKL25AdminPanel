@@ -1,4 +1,4 @@
-import { H2 } from '../../../../components/typography'
+import { H2 } from '../../../../components/typography/typography'
 import { cc } from '../../../../styles/shared'
 import { PhotoIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline'
 

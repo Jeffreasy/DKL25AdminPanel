@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ErrorText, SmallText } from '../../../components/typography'
+import { ErrorText, SmallText } from '../../../components/typography/typography'
 import { sponsorService } from '../services/sponsorService'
 import type { Sponsor } from '../types'
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
@@ -191,7 +191,7 @@ export function SponsorGrid() {
               </div>
               
               <div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                <div className={`text-sm text-gray-500 dark:text-gray-400 ${cc.spacing.section.xs}`}>
                   <p>Volgorde: <span className="font-medium text-gray-700 dark:text-gray-200">{sponsor.order}</span></p>
                   <p>
                     Status:{' '}

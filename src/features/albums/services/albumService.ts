@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import type { Album, AlbumWithDetails } from '../types'
 import type { Photo } from '../../photos/types'
 

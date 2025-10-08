@@ -3,6 +3,7 @@ import type { Photo } from '../../../photos/types';
 import NavigationButton from './NavigationButton';
 import ImageModal from './ImageModal';
 import { useSwipe } from './hooks/useSwipe';
+import { cc } from '../../../../styles/shared';
 
 interface MainSliderProps {
   photos: Photo[];
@@ -54,7 +55,7 @@ const MainSlider: React.FC<MainSliderProps> = ({
         className={`
           relative aspect-[16/9] mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800
           group shadow-lg ${isGrabbing ? 'cursor-grabbing' : 'cursor-grab'}
-          hover:shadow-xl transition-shadow touch-pan-y
+          hover:shadow-xl ${cc.transition.shadow} touch-pan-y
         `}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
@@ -101,7 +102,7 @@ const MainSlider: React.FC<MainSliderProps> = ({
                 alt={photo.alt_text || ''}
                 className={`
                   w-full h-full object-cover
-                  transition-opacity
+                  ${cc.transition.opacity}
                   ${!imageLoaded[photo.url] ? 'opacity-0' : 'opacity-100'}
                 `}
                 loading="lazy"
@@ -115,14 +116,14 @@ const MainSlider: React.FC<MainSliderProps> = ({
           );
         })}
 
-        <div 
-          className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+        <div
+          className={`absolute inset-0 ${cc.overlay.gradient.full} ${cc.hover.fadeIn} pointer-events-none`}
           style={{ willChange: 'opacity' }}
         />
 
         {photos.length > 1 && (
-            <div 
-                className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity"
+            <div
+                className={`absolute inset-x-4 top-1/2 -translate-y-1/2 flex items-center justify-between ${cc.hover.fadeIn}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <NavigationButton
@@ -146,7 +147,7 @@ const MainSlider: React.FC<MainSliderProps> = ({
           </div>
         )}
 
-        <div className="absolute top-3 right-3 bg-black/60 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className={`absolute top-3 right-3 bg-black/60 dark:bg-black/70 text-white p-1.5 rounded-full ${cc.hover.fadeIn} pointer-events-none`}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>

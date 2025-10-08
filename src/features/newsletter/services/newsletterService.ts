@@ -1,4 +1,4 @@
-import { authManager } from '../../../lib/auth'
+import { authManager } from '../../../api/client/auth'
 import { handleApiResponse, isPermissionError } from '../../../utils/apiErrorHandler'
 import type { Newsletter, CreateNewsletterData, UpdateNewsletterData, NewsletterSendResponse } from '../types'
 

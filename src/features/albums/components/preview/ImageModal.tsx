@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Photo } from '../../../photos/types';
-import { PhotoViewer } from '../../../../components/gallery/PhotoViewer';
-import { Z_INDEX } from '../../../../constants/zIndex';
+import { PhotoViewer } from '../../../photos/components/PhotoViewer';
+import { Z_INDEX } from '../../../../config/zIndex';
 
 interface ImageModalProps {
   photo: Photo | null;

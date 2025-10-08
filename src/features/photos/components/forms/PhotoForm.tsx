@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
-import { ErrorText, SmallText } from '../../../../components/typography'
+import { ErrorText, SmallText } from '../../../../components/typography/typography'
 import type { Photo } from '../../types'
-import { supabase } from '../../../../lib/supabase'
-import { uploadToCloudinary } from '../../../../lib/cloudinary/cloudinaryClient'
+import { supabase } from '../../../../api/client/supabase'
+import { uploadToCloudinary } from '../../../../api/client/cloudinary'
+import { cc } from '../../../../styles/shared'
 
 interface PhotoFormProps {
   photo?: Photo
@@ -113,18 +114,18 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className={`fixed inset-0 ${cc.overlay.medium} flex items-center justify-center ${cc.spacing.container.sm} z-50`}>
       <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg shadow-xl">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700`}>
           <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
             {photo ? 'Foto bewerken' : 'Nieuwe foto'}
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className={`${cc.spacing.container.sm} ${cc.spacing.section.sm}`}>
           {/* Titel */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="title" className={cc.form.label()}>
               Titel *
             </label>
             <input
@@ -132,14 +133,14 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="title"
               value={formData.title}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={cc.form.input({ className: 'mt-1' })}
               required
             />
           </div>
 
           {/* Alt text */}
           <div>
-            <label htmlFor="alt_text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="alt_text" className={cc.form.label()}>
               Alt tekst *
             </label>
             <input
@@ -147,28 +148,28 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="alt_text"
               value={formData.alt_text}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, alt_text: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={cc.form.input({ className: 'mt-1' })}
               required
             />
           </div>
 
           {/* Beschrijving */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="description" className={cc.form.label()}>
               Beschrijving
             </label>
             <textarea
               id="description"
               value={formData.description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={cc.form.input({ className: 'mt-1' })}
               rows={3}
             />
           </div>
 
           {/* Jaar */}
           <div>
-            <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="year" className={cc.form.label()}>
               Jaar *
             </label>
             <input
@@ -176,7 +177,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
               id="year"
               value={formData.year}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={cc.form.input({ className: 'mt-1' })}
               min={2000}
               max={new Date().getFullYear()}
               required
@@ -185,7 +186,7 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
           {/* Foto upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className={cc.form.label()}>
               Foto {!photo && '*'}
             </label>
             <div className="mt-2 flex items-center space-x-4">
@@ -224,18 +225,18 @@ export function PhotoForm({ photo, onComplete, onCancel }: PhotoFormProps) {
 
           {error && <ErrorText>{error}</ErrorText>}
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className={`flex justify-end ${cc.spacing.gap.md} pt-4`}>
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600"
+              className={cc.button.base({ color: 'secondary' })}
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50"
+              className={cc.button.base({ color: 'primary' })}
             >
               {isSubmitting ? 'Bezig met opslaan...' : photo ? 'Opslaan' : 'Toevoegen'}
             </button>

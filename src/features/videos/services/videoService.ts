@@ -1,32 +1,30 @@
-import { supabase } from '../../../lib/supabase'
-import type { Video, VideoInsert } from '../types'
+import { createCRUDService } from '../../../lib/services/createCRUDService'
+import type { Video } from '../types'
 
-// Ophalen van alle videos
-export async function fetchVideos(): Promise<{ data: Video[], error: Error | null }> {
+/**
+ * Video service using generic CRUD factory
+ * Reduces code duplication significantly
+ */
+const baseService = createCRUDService<Video>({
+  tableName: 'videos',
+  orderBy: 'order_number',
+  orderDirection: 'asc'
+})
+
+// Export CRUD operations with custom names for backward compatibility
+export const fetchVideos = async () => {
   try {
-    const { data, error } = await supabase
-      .from('videos')
-      .select('*')
-      .order('order_number')
-
-    if (error) throw error
-    return { data: data || [], error: null }
+    const data = await baseService.fetchAll()
+    return { data, error: null }
   } catch (err) {
     console.error('Error fetching videos:', err)
     return { data: [], error: err as Error }
   }
 }
 
-// Video toevoegen
-export async function addVideo(video: VideoInsert): Promise<{ data: Video | null, error: Error | null }> {
+export const addVideo = async (video: Omit<Video, 'id' | 'created_at' | 'updated_at'> | any) => {
   try {
-    const { data, error } = await supabase
-      .from('videos')
-      .insert([video])
-      .select()
-      .single()
-
-    if (error) throw error
+    const data = await baseService.create(video)
     return { data, error: null }
   } catch (err) {
     console.error('Error adding video:', err)
@@ -34,18 +32,9 @@ export async function addVideo(video: VideoInsert): Promise<{ data: Video | null
   }
 }
 
-// Video updaten
-export async function updateVideo(videoId: string, updates: Partial<Video>): Promise<{ error: Error | null }> {
+export const updateVideo = async (videoId: string, updates: Partial<Video>) => {
   try {
-    const { error } = await supabase
-      .from('videos')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', videoId)
-
-    if (error) throw error
+    await baseService.update(videoId, updates)
     return { error: null }
   } catch (err) {
     console.error('Error updating video:', err)
@@ -53,15 +42,9 @@ export async function updateVideo(videoId: string, updates: Partial<Video>): Pro
   }
 }
 
-// Video verwijderen (hard delete omdat we geen deleted_at hebben)
-export async function deleteVideo(videoId: string): Promise<{ error: Error | null }> {
+export const deleteVideo = async (videoId: string) => {
   try {
-    const { error } = await supabase
-      .from('videos')
-      .delete()
-      .eq('id', videoId)
-
-    if (error) throw error
+    await baseService.delete(videoId)
     return { error: null }
   } catch (err) {
     console.error('Error deleting video:', err)
@@ -69,21 +52,12 @@ export async function deleteVideo(videoId: string): Promise<{ error: Error | nul
   }
 }
 
-// Video volgorde updaten
-export async function updateVideoOrder(videoId: string, newOrder: number): Promise<{ error: Error | null }> {
+export const updateVideoOrder = async (videoId: string, newOrder: number) => {
   try {
-    const { error } = await supabase
-      .from('videos')
-      .update({
-        order_number: newOrder,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', videoId)
-
-    if (error) throw error
+    await baseService.update(videoId, { order_number: newOrder } as any)
     return { error: null }
   } catch (err) {
     console.error('Error updating video order:', err)
     return { error: err as Error }
   }
-} 
+}

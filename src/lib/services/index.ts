@@ -1,0 +1,1 @@
+export { createCRUDService } from './createCRUDService';

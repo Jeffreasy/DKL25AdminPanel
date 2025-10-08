@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import type { Photo } from '../types'
 import type { AlbumWithDetails } from '../../albums/types'
 // Import fetchAllAlbums from albumService to avoid duplication

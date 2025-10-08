@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { ErrorText, H1, SmallText } from '../../../components/typography'
+import { ErrorText, H1, SmallText } from '../../../components/typography/typography'
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/videoService'
 import { usePageTitle } from '../../../hooks/usePageTitle'
 import type { Video, VideoInsert } from '../types'
 import { cl, cc } from '../../../styles/shared'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import { ConfirmDialog, EmptyState, LoadingGrid } from '../../../components/ui'
 
 interface VideoFormData {
@@ -385,7 +385,7 @@ export function VideosOverview() {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="videos">
             {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+              <div {...provided.droppableProps} ref={provided.innerRef} className={cc.spacing.section.sm}>
                 {filteredVideos.map((video, index) => (
                   <Draggable key={video.id} draggableId={video.id} index={index} isDragDisabled={isDragging}>
                     {(provided, snapshot) => (
@@ -485,8 +485,8 @@ export function VideosOverview() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative">
+        <div className={`fixed inset-0 ${cc.overlay.medium} flex items-center justify-center z-50 ${cc.spacing.container.sm}`}>
+          <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl ${cc.spacing.container.md} w-full max-w-lg relative`}>
             <button
               onClick={handleCloseForm}
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -495,38 +495,38 @@ export function VideosOverview() {
               <XMarkIcon className="h-6 w-6" />
             </button>
             <h2 className="text-xl font-semibold mb-4 dark:text-white">{editingVideo ? 'Video Bewerken' : 'Nieuwe Video Toevoegen'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className={cc.spacing.section.sm}>
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel*</label>
+                <label htmlFor="title" className={cc.form.label()}>Titel*</label>
                 <input
                   id="title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
+                  className={cc.form.input()}
                   required
                   disabled={isSubmitting}
                 />
               </div>
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschrijving</label>
+                <label htmlFor="description" className={cc.form.label()}>Beschrijving</label>
                 <textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
+                  className={cc.form.input()}
                   rows={3}
                   disabled={isSubmitting}
                 />
               </div>
               <div>
-                <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Video URL* (YouTube, Vimeo, Streamable)</label>
+                <label htmlFor="url" className={cc.form.label()}>Video URL* (YouTube, Vimeo, Streamable)</label>
                 <input
                   id="url"
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  className={cl("input", "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400")}
+                  className={cc.form.input()}
                   required
                   placeholder="https://www.youtube.com/watch?v=..."
                   disabled={isSubmitting}
@@ -547,18 +547,18 @@ export function VideosOverview() {
                 <label htmlFor="visible" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Zichtbaar</label>
               </div>
               {error && <ErrorText className="dark:text-red-400">{error}</ErrorText>}
-              <div className="flex justify-end gap-2">
+              <div className={`flex justify-end ${cc.spacing.gap.sm}`}>
                 <button
                   type="button"
                   onClick={handleCloseForm}
-                  className={cl("button", "button-secondary", "dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-300 dark:border-gray-500")}
+                  className={cc.button.base({ color: 'secondary' })}
                   disabled={isSubmitting}
                 >
                   Annuleren
                 </button>
                 <button
                   type="submit"
-                  className={cl("button", "button-primary", "dark:bg-indigo-600 dark:hover:bg-indigo-700", isSubmitting ? "opacity-50 cursor-not-allowed" : "")}
+                  className={cc.button.base({ color: 'primary' })}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Opslaan...' : (editingVideo ? 'Wijzigingen Opslaan' : 'Video Toevoegen')}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useSidebar } from '../../../contexts/SidebarContext' // Adjusted path
+import { useSidebar } from '../../../providers/SidebarProvider' // Adjusted path
 import { MobileSidebar } from './MobileSidebar'
 import { TabletSidebar } from './TabletSidebar'
 import { DesktopSidebar } from './DesktopSidebar'

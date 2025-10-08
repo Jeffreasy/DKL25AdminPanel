@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../../../lib/supabase'
+import { supabase } from '../../../../api/client/supabase'
 import type { Photo } from '../../../photos/types'
-import { Z_INDEX } from '../../../../constants/zIndex'
+import { Z_INDEX } from '../../../../config/zIndex'
 import { cc } from '../../../../styles/shared'
 import { LoadingGrid } from '../../../../components/ui'
 

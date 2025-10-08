@@ -5,9 +5,9 @@ import { RoleList } from '../features/users/components/RoleList'
 import { useQuery } from '@tanstack/react-query'
 import { roleService } from '../features/users/services/roleService'
 import { permissionService } from '../features/users/services/permissionService'
-import { H1, SmallText } from '../components/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
-import { useAuth } from '../contexts/auth/useAuth'
+import { useAuth } from '../features/auth'
 
 export function AdminPermissionsPage() {
   const { hasPermission } = usePermissions()

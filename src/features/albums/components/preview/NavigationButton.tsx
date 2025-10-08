@@ -1,4 +1,5 @@
 import React from 'react';
+import { cc } from '../../../../styles/shared';
 
 interface NavigationButtonProps {
   direction: 'previous' | 'next';
@@ -11,7 +12,7 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({ direction, onClick,
     <button
       onClick={onClick}
       disabled={disabled}
-      className="bg-white/80 hover:bg-white disabled:opacity-50 text-black rounded-full shadow-md p-2 transition"
+      className={`bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50 text-black dark:text-white rounded-full shadow-md p-2 ${cc.transition.normal}`}
       aria-label={direction === 'previous' ? 'Vorige foto' : 'Volgende foto'}
     >
       {/* Simple SVG arrows for now */}

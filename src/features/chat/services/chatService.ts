@@ -1,6 +1,6 @@
-import { authManager } from '../../../lib/auth'
+import { authManager } from '../../../api/client/auth'
 import { jwtDecode } from 'jwt-decode'
-import { uploadToCloudinary } from '../../../lib/cloudinary/cloudinaryClient'
+import { uploadToCloudinary } from '../../../api/client/cloudinary'
 import type {
   ChatChannel,
   ChatMessage,

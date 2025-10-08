@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Dialog } from '@headlessui/react'
-import { Z_INDEX } from '../../../../constants/zIndex'
+import { Z_INDEX } from '../../../../config/zIndex'
 import { cc } from '../../../../styles/shared'
 import type { AlbumWithDetails } from '../../../albums/types'
 import { useBulkDeletePhotos, useBulkUpdatePhotoVisibility, useBulkAddPhotosToAlbum, useAlbums } from '../../hooks/usePhotos'

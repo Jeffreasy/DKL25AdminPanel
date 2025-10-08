@@ -43,7 +43,7 @@ export function PartnerCard({ partner, onUpdate }: PartnerCardProps) {
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-md border border-gray-200 dark:border-gray-700 flex flex-col ${cc.hover.cardLarge} ${cc.transition.normal}`}>
       <div className={`h-40 ${cc.spacing.container.sm} bg-gray-50 dark:bg-gray-700/50 rounded-t-lg flex items-center justify-center border-b border-gray-200 dark:border-gray-600`}>
         <img
-          src={partner.logo}
+          src={partner.logo || ''}
           alt={`${partner.name} logo`}
           className="object-contain w-full h-full"
           loading="lazy"

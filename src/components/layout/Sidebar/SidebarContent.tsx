@@ -4,6 +4,7 @@ import { menuItems, MenuItem, MenuGroup, MenuItemOrGroup } from '../../../types/
 import { FavoritePages } from '../FavoritePages'
 import { RecentPages } from '../RecentPages'
 import { usePermissions } from '../../../hooks/usePermissions'
+import { cc } from '../../../styles/shared'
 
 interface SidebarContentProps {
   variant: 'mobile' | 'tablet' | 'desktop';
@@ -14,19 +15,15 @@ interface SidebarContentProps {
 export function SidebarContent({ variant, isCollapsed = false, onClose }: SidebarContentProps) {
   const { hasPermission } = usePermissions();
 
-  // Filter menu items based on permissions
   const filterMenuItems = (items: MenuItemOrGroup[]): MenuItemOrGroup[] => {
     return items
       .map(item => {
         if ('items' in item) {
-          // It's a MenuGroup, filter its sub-items
           const filteredItems = item.items.filter(subItem =>
             !subItem.permission || hasPermission(subItem.permission.split(':')[0], subItem.permission.split(':')[1])
           );
-          // Only include the group if it has any items left
           return filteredItems.length > 0 ? { ...item, items: filteredItems } : null;
         } else {
-          // It's a MenuItem, check permission
           return !item.permission || hasPermission(item.permission.split(':')[0], item.permission.split(':')[1]) ? item : null;
         }
       })
@@ -35,40 +32,37 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
 
   const filteredMenuItems = filterMenuItems(menuItems);
 
-  // Determine logo size based on variant and collapsed state
   const logoSizeClass =
     variant === 'mobile' ? 'w-24'
     : variant === 'tablet' ? 'w-24'
     : isCollapsed ? 'w-8'
     : 'w-32';
 
-  // Apply white background wrapper for both mobile and tablet
   const useWrapper = variant === 'mobile' || variant === 'tablet';
-
-  // Determine if optional sections should be shown
   const showOptionalSections = variant === 'desktop' && !isCollapsed;
 
   return (
     <div className="h-full flex flex-col overflow-y-auto">
       {/* Header (Logo) */}
-      <div className={`flex items-center justify-between flex-shrink-0 ${useWrapper ? 'px-4 pt-4 pb-2' : 'px-4 py-3'}`}> {/* Adjust padding for mobile wrapper */}
-        <div className={`${useWrapper ? 'bg-white p-2 rounded-md inline-block' : ''}`}> 
+      <div className={`flex items-center justify-between flex-shrink-0 ${useWrapper ? `${cc.spacing.px.sm} pt-4 pb-2` : `${cc.spacing.px.sm} ${cc.spacing.py.md}`}`}>
+        <div className={`${useWrapper ? 'bg-white dark:bg-white p-2 rounded-md inline-block' : ''}`}>
           <img
             src="https://res.cloudinary.com/dgfuv7wif/image/upload/v1733267882/664b8c1e593a1e81556b4238_0760849fb8_yn6vdm.png"
             alt="Logo"
-            // Removed filter, apply size class.
-            className={`block transition-all ${logoSizeClass}`}
+            className={`block ${cc.transition.normal} ${logoSizeClass}`}
           />
         </div>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-grow space-y-1 px-2 py-4">
+      <nav className={`flex-grow ${cc.spacing.section.xs} px-2 ${cc.spacing.py.sm}`}>
         {filteredMenuItems.map((item: MenuItemOrGroup) =>
           'items' in item ? (
-            <div key={item.label} className="space-y-1">
+            <div key={item.label} className={cc.spacing.section.xs}>
               {!isCollapsed && variant !== 'mobile' && variant !== 'tablet' && (
-                <span className="block px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{item.label}</span>
+                <span className="block px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {item.label}
+                </span>
               )}
               <div className={!isCollapsed && variant === 'desktop' ? 'ml-0' : ''}>
                 {(item as MenuGroup).items.map((subItem: MenuItem) => (
@@ -76,12 +70,12 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
                     key={subItem.path}
                     to={subItem.path}
                     title={subItem.label}
-                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 dark:text-gray-300 rounded-md hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white dark:hover:text-white group"
+                    className={`flex items-center px-3 py-2 text-sm font-medium text-gray-300 dark:text-gray-300 rounded-md hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white dark:hover:text-white group ${cc.transition.colors}`}
                     onClick={onClose}
                   >
                     <subItem.icon className={`
                       flex-shrink-0 h-6 w-6
-                      transition-colors
+                      ${cc.transition.colors}
                       text-gray-400 dark:text-gray-500 group-hover:text-white dark:group-hover:text-gray-300
                       ${variant === 'tablet' || (variant === 'desktop' && isCollapsed) ? 'mx-auto' : 'mr-3'}
                     `} />
@@ -95,12 +89,12 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
               key={item.path}
               to={item.path}
               title={item.label}
-              className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 dark:text-gray-300 rounded-md hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white dark:hover:text-white group"
+              className={`flex items-center px-3 py-2 text-sm font-medium text-gray-300 dark:text-gray-300 rounded-md hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white dark:hover:text-white group ${cc.transition.colors}`}
               onClick={onClose}
             >
               <item.icon className={`
                 flex-shrink-0 h-6 w-6
-                transition-colors
+                ${cc.transition.colors}
                 text-gray-400 dark:text-gray-500 group-hover:text-white dark:group-hover:text-gray-300
                 ${variant === 'tablet' || (variant === 'desktop' && isCollapsed) ? 'mx-auto' : 'mr-3'}
               `} />
@@ -110,9 +104,9 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
         )}
       </nav>
 
-      {/* Divider and Optional Sections - Now based on showOptionalSections flag */}
+      {/* Divider and Optional Sections */}
       {showOptionalSections && (
-        <div className="px-2 py-4 flex-shrink-0">
+        <div className={`px-2 ${cc.spacing.py.sm} flex-shrink-0`}>
           <hr className="my-4 border-gray-600 dark:border-gray-700" />
           <FavoritePages />
           <RecentPages />
@@ -120,4 +114,4 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
       )}
     </div>
   )
-} 
+}

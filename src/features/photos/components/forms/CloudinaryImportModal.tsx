@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import { supabase } from '../../../../lib/supabase';
-import { Z_INDEX } from '../../../../constants/zIndex';
+import { supabase } from '../../../../api/client/supabase';
+import { Z_INDEX } from '../../../../config/zIndex';
 import type { Photo } from '../../types';
 import { cc } from '../../../../styles/shared';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -187,7 +187,7 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
           </div>
 
           <div className="p-6 flex-grow overflow-y-auto">
-            <div className="space-y-4 text-center">
+            <div className={`${cc.spacing.section.sm} text-center`}>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Importeer foto's rechtstreeks uit je Cloudinary Media Library.
               </p>

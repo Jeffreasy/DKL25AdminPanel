@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@mantine/core'
 import { userService } from '../features/users/services/userService'
 import { UserForm } from '../features/users/components/UserForm'
 import { usePermissions } from '../hooks/usePermissions'
-import { useAuth } from '../contexts/auth/useAuth'
-import { H1, SmallText } from '../components/typography'
+import { useAuth } from '../features/auth'
+import { useFilters, applyFilters } from '../hooks/useFilters'
+import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
 import type { User } from '../features/users/types'
 
@@ -14,9 +15,15 @@ export function UserManagementPage() {
   const { isLoading: authLoading } = useAuth()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterRole, setFilterRole] = useState<string>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+
+  // Use filters hook
+  const filters = useFilters<'search' | 'role' | 'status'>({
+    initialFilters: {
+      search: '',
+      role: 'all',
+      status: 'all'
+    }
+  })
 
   const canReadUsers = hasPermission('user', 'read')
   const canWriteUsers = hasPermission('user', 'write')
@@ -31,23 +38,35 @@ export function UserManagementPage() {
     retry: 1
   })
 
-  // Filter users
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.naam.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || user.rol === filterRole;
-    const matchesStatus = 
-      filterStatus === 'all' ||
-      (filterStatus === 'active' && user.is_actief) ||
-      (filterStatus === 'inactive' && !user.is_actief);
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Apply filters
+  const filteredUsers = useMemo(() => {
+    return applyFilters(users, filters.filters, (user, filterValues) => {
+      // Search filter
+      if (filterValues.search) {
+        const searchTerm = (filterValues.search as string).toLowerCase()
+        const matchesSearch =
+          user.naam.toLowerCase().includes(searchTerm) ||
+          user.email.toLowerCase().includes(searchTerm)
+        if (!matchesSearch) return false
+      }
+
+      // Role filter
+      if (filterValues.role && filterValues.role !== 'all') {
+        if (user.rol !== filterValues.role) return false
+      }
+
+      // Status filter
+      if (filterValues.status && filterValues.status !== 'all') {
+        if (filterValues.status === 'active' && !user.is_actief) return false
+        if (filterValues.status === 'inactive' && user.is_actief) return false
+      }
+
+      return true
+    })
+  }, [users, filters.filters])
 
   // Get unique roles
-  const roles = [...new Set(users.map(u => u.rol))].sort();
+  const roles = useMemo(() => [...new Set(users.map(u => u.rol))].sort(), [users])
 
   // Statistics
   const stats = {
@@ -244,16 +263,16 @@ export function UserManagementPage() {
                 <input
                   type="text"
                   placeholder="Zoek gebruikers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={filters.getFilterValue('search') as string || ''}
+                  onChange={(e) => filters.setFilter('search', e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
               
               <div className={`flex ${cc.spacing.gap.sm}`}>
                 <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
+                  value={filters.getFilterValue('role') as string || 'all'}
+                  onChange={(e) => filters.setFilter('role', e.target.value)}
                   className={cc.form.select({ className: 'text-sm' })}
                 >
                   <option value="all">Alle Rollen</option>
@@ -263,8 +282,8 @@ export function UserManagementPage() {
                 </select>
 
                 <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  value={filters.getFilterValue('status') as string || 'all'}
+                  onChange={(e) => filters.setFilter('status', e.target.value)}
                   className={cc.form.select({ className: 'text-sm' })}
                 >
                   <option value="all">Alle Status</option>
@@ -295,8 +314,8 @@ export function UserManagementPage() {
               </svg>
               <p className="text-gray-600 dark:text-gray-400 font-medium">Geen gebruikers gevonden</p>
               <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
-                {searchQuery || filterRole !== 'all' || filterStatus !== 'all' 
-                  ? 'Probeer een andere zoekopdracht of filter' 
+                {filters.hasActiveFilters
+                  ? 'Probeer een andere zoekopdracht of filter'
                   : 'Klik op "Nieuwe Gebruiker" om te beginnen'}
               </p>
             </div>

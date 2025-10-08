@@ -1,4 +1,4 @@
-import { LoadingSkeleton } from '../LoadingSkeleton'
+import { LoadingSkeleton } from '../common/LoadingSkeleton'
 import { cc } from '../../styles/shared'
 
 export interface LoadingGridProps {

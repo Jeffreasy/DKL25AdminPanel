@@ -1,14 +1,11 @@
-export interface Video {
-  id: string
+import type { OrderedEntity } from '../../types/base'
+
+export interface Video extends OrderedEntity {
   title: string
   description: string | null
   url: string
   video_id: string
   thumbnail_url: string | null
-  visible: boolean
-  order_number: number
-  created_at: string
-  updated_at: string
   deleted_at?: string
 }
 

@@ -1,17 +1,14 @@
 import { Fragment } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { Link } from 'react-router-dom'
-import { 
-  UserCircleIcon, 
-  Cog6ToothIcon, 
+import {
+  UserCircleIcon,
+  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  ChevronDownIcon 
+  ChevronDownIcon
 } from '@heroicons/react/24/outline'
-import { useAuth } from '../../contexts/auth/useAuth'
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ')
-}
+import { useAuth } from '../../features/auth'
+import { cc, cl } from '../../styles/shared'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
@@ -32,12 +29,12 @@ export function UserMenu() {
     <Menu as="div" className="relative">
       <Menu.Button className="-m-1.5 flex items-center p-1.5">
         <span className="sr-only">Open user menu</span>
-        <div className="flex items-center gap-x-3">
+        <div className={`flex items-center ${cc.spacing.gap.md}`}>
           {user.user_metadata?.avatar_url ? (
             <img
               className="h-8 w-8 rounded-full"
               src={user.user_metadata.avatar_url}
-              alt=""
+              alt={displayName}
             />
           ) : (
             <UserCircleIcon className="h-8 w-8 text-gray-500 dark:text-gray-400" aria-hidden="true" />
@@ -52,15 +49,15 @@ export function UserMenu() {
       </Menu.Button>
       <Transition
         as={Fragment}
-        enter="transition ease-out duration-100"
+        enter={`${cc.transition.fast} ease-out`}
         enterFrom="transform opacity-0 scale-95"
         enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75"
+        leave={`${cc.transition.fast} ease-in`}
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="absolute right-0 z-10 mt-2.5 w-auto min-w-[10rem] origin-top-right rounded-md bg-white dark:bg-gray-800 py-2 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none">
-          <div className="px-3 py-2 text-sm border-b border-gray-100 dark:border-gray-700">
+        <Menu.Items className={`absolute right-0 z-10 mt-2.5 w-auto min-w-[10rem] origin-top-right rounded-md bg-white dark:bg-gray-800 ${cc.spacing.py.sm} shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none`}>
+          <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} text-sm border-b border-gray-100 dark:border-gray-700`}>
             <div className="font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
             <div className="text-gray-500 dark:text-gray-400 text-xs truncate">{user.email}</div>
           </div>
@@ -69,13 +66,13 @@ export function UserMenu() {
             {({ active }) => (
               <Link
                 to="/profile"
-                className={classNames(
-                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                  'block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
+                className={cl(
+                  active && 'bg-gray-100 dark:bg-gray-700',
+                  `block ${cc.spacing.px.md} py-1 text-sm leading-6 text-gray-900 dark:text-gray-200 ${cc.transition.colors}`
                 )}
               >
                 <div className="flex items-center">
-                  <UserCircleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  <UserCircleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-hidden="true" />
                   Profiel
                 </div>
               </Link>
@@ -86,13 +83,13 @@ export function UserMenu() {
             {({ active }) => (
               <Link
                 to="/settings"
-                className={classNames(
-                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                  'block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
+                className={cl(
+                  active && 'bg-gray-100 dark:bg-gray-700',
+                  `block ${cc.spacing.px.md} py-1 text-sm leading-6 text-gray-900 dark:text-gray-200 ${cc.transition.colors}`
                 )}
               >
                 <div className="flex items-center">
-                  <Cog6ToothIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  <Cog6ToothIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-hidden="true" />
                   Instellingen
                 </div>
               </Link>
@@ -103,13 +100,13 @@ export function UserMenu() {
             {({ active }) => (
               <button
                 onClick={handleLogout}
-                className={classNames(
-                  active ? 'bg-gray-100 dark:bg-gray-700' : '',
-                  'block w-full text-left px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-200'
+                className={cl(
+                  active && 'bg-gray-100 dark:bg-gray-700',
+                  `block w-full text-left ${cc.spacing.px.md} py-1 text-sm leading-6 text-gray-900 dark:text-gray-200 ${cc.transition.colors}`
                 )}
               >
                 <div className="flex items-center">
-                  <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-hidden="true" />
                   Uitloggen
                 </div>
               </button>
@@ -119,4 +116,4 @@ export function UserMenu() {
       </Transition>
     </Menu>
   )
-} 
+}

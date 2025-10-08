@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Dialog } from '@headlessui/react'
-import { Z_INDEX } from '../../../../constants/zIndex'
+import { Z_INDEX } from '../../../../config/zIndex'
 import { cc } from '../../../../styles/shared'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import PhotoGalleryPreview from './PhotoGalleryPreview'

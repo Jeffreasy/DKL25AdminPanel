@@ -1,4 +1,4 @@
-import { authManager } from '../../../lib/auth'
+import { authManager } from '../../../api/client/auth'
 import type { Role, CreateRoleRequest, UpdateRoleRequest } from '../types'
 
 export const roleService = {

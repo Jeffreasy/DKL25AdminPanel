@@ -2,8 +2,8 @@ import { MessageItem } from './MessageItem'
 import { useOutletContext } from 'react-router-dom'
 import type { DashboardContext } from '../../../types/dashboard'
 import { useState, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase'
-import { EmailDialog } from '../../../components/email/EmailDialog'
+import { supabase } from '../../../api/client/supabase'
+import { EmailDialog } from '../../email/components/EmailDialog'
 import { adminEmailService } from '../../email/adminEmailService'
 import { cc } from '../../../styles/shared'
 import { usePermissions } from '../../../hooks/usePermissions'
@@ -76,7 +76,7 @@ export function ContactTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cc.spacing.section.md}>
       {/* Statistics Cards */}
       <div className={`${cc.grid.stats()} gap-4`}>
         <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm ${cc.hover.card}`}>
@@ -190,7 +190,7 @@ export function ContactTab() {
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
                   filterStatus === 'all'
                     ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -200,7 +200,7 @@ export function ContactTab() {
               </button>
               <button
                 onClick={() => setFilterStatus('nieuw')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
                   filterStatus === 'nieuw'
                     ? 'bg-green-600 dark:bg-green-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -210,7 +210,7 @@ export function ContactTab() {
               </button>
               <button
                 onClick={() => setFilterStatus('in_behandeling')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
                   filterStatus === 'in_behandeling'
                     ? 'bg-orange-600 dark:bg-orange-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -220,7 +220,7 @@ export function ContactTab() {
               </button>
               <button
                 onClick={() => setFilterStatus('afgehandeld')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${cc.transition.colors} ${
                   filterStatus === 'afgehandeld'
                     ? 'bg-blue-600 dark:bg-blue-500 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -247,7 +247,7 @@ export function ContactTab() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className={cc.spacing.section.sm}>
               {filteredMessages.map((message) => (
                 <MessageItem
                   key={message.id}

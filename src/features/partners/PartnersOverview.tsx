@@ -1,21 +1,30 @@
-import { useState, useEffect } from 'react'
-import { ErrorText, SmallText } from '../../components/typography'
+import { useState, useEffect, useMemo } from 'react'
+import { ErrorText, SmallText } from '../../components/typography/typography'
 import { PartnerCard } from './components'
 import { fetchPartners } from './services/partnerService'
+import { useFilters, applyFilters } from '../../hooks/useFilters'
+import { useSorting, applySorting } from '../../hooks/useSorting'
 import type { Partner } from './types'
 import { cc } from '../../styles/shared'
 import { EmptyState, LoadingGrid } from '../../components/ui'
-
-type SortField = 'name' | 'order_number'
-type SortOrder = 'asc' | 'desc'
 
 export function PartnersOverview() {
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sortField, setSortField] = useState<SortField>('order_number')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [filter, setFilter] = useState('')
+
+  // Use filters hook
+  const filters = useFilters<'search'>({
+    initialFilters: {
+      search: ''
+    }
+  })
+
+  // Use sorting hook
+  const sorting = useSorting<'name' | 'order_number'>({
+    initialSortKey: 'order_number',
+    initialSortDirection: 'asc'
+  })
 
   useEffect(() => {
     loadPartners()
@@ -36,34 +45,21 @@ export function PartnersOverview() {
     }
   }
 
-  const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortOrder('asc')
-    }
-  }
+  // Apply filters and sorting
+  const sortedAndFilteredPartners = useMemo(() => {
+    // First apply filters
+    const filtered = applyFilters(partners, filters.filters, (partner, filterValues) => {
+      if (!filterValues.search) return true
+      const searchTerm = (filterValues.search as string).toLowerCase()
+      return (
+        partner.name.toLowerCase().includes(searchTerm) ||
+        (partner.description?.toLowerCase().includes(searchTerm) ?? false)
+      )
+    })
 
-  const filteredPartners = partners.filter(partner => {
-    if (!filter) return true
-    const searchTerm = filter.toLowerCase()
-    return (
-      partner.name.toLowerCase().includes(searchTerm) ||
-      partner.description?.toLowerCase().includes(searchTerm)
-    )
-  })
-
-  const sortedAndFilteredPartners = filteredPartners.sort((a, b) => {
-    if (sortField === 'name') {
-      return sortOrder === 'asc' 
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name)
-    }
-    return sortOrder === 'asc'
-      ? a.order_number - b.order_number
-      : b.order_number - a.order_number
-  })
+    // Then apply sorting
+    return applySorting(filtered, sorting.sortConfig)
+  }, [partners, filters.filters, sorting.sortConfig])
 
   if (loading) {
     return <LoadingGrid variant="albums" count={6} />
@@ -86,8 +82,8 @@ export function PartnersOverview() {
             <input
               type="search"
               placeholder="Zoeken..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              value={filters.getFilterValue('search') as string || ''}
+              onChange={(e) => filters.setFilter('search', e.target.value)}
               className={cc.form.input({ className: 'w-full pl-10' })}
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -98,19 +94,19 @@ export function PartnersOverview() {
           </div>
           <div className={`flex ${cc.spacing.gap.sm}`}>
             <select
-              value={sortField}
-              onChange={(e) => handleSort(e.target.value as SortField)}
+              value={sorting.sortConfig.key || 'order_number'}
+              onChange={(e) => sorting.sortBy(e.target.value as 'name' | 'order_number')}
               className={cc.form.select({ className: 'h-full' })}
             >
               <option value="order_number">Volgorde</option>
               <option value="name">Naam</option>
             </select>
             <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              onClick={() => sorting.toggleSort(sorting.sortConfig.key || 'order_number')}
               className={`p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 ${cc.transition.colors}`}
-              title={sortOrder === 'asc' ? 'Oplopend sorteren' : 'Aflopend sorteren'}
+              title={sorting.sortConfig.direction === 'asc' ? 'Oplopend sorteren' : 'Aflopend sorteren'}
             >
-              {sortOrder === 'asc' ? (
+              {sorting.sortConfig.direction === 'asc' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9M3 12h5m0 0v8m0-8h14" />
                 </svg>
@@ -123,14 +119,14 @@ export function PartnersOverview() {
           </div>
         </div>
         <SmallText>
-          {filteredPartners.length} partner{filteredPartners.length !== 1 ? 's' : ''} gevonden
+          {sortedAndFilteredPartners.length} partner{sortedAndFilteredPartners.length !== 1 ? 's' : ''} gevonden
         </SmallText>
       </div>
 
       {/* Partners grid */}
       {sortedAndFilteredPartners.length > 0 ? (
         <div className={`${cc.grid.albums()} ${cc.spacing.container.sm} grid-auto-rows-fr ${cc.spacing.gap.lg}`}>
-          {sortedAndFilteredPartners.map((partner) => (
+          {sortedAndFilteredPartners.map((partner: Partner) => (
             <PartnerCard
               key={partner.id}
               partner={partner}
@@ -140,8 +136,8 @@ export function PartnersOverview() {
         </div>
       ) : (
         <EmptyState
-          title={filter ? 'Geen partners gevonden' : 'Geen partners'}
-          description={filter ? 'Probeer een andere zoekopdracht' : 'Voeg je eerste partner toe om te beginnen'}
+          title={filters.getFilterValue('search') ? 'Geen partners gevonden' : 'Geen partners'}
+          description={filters.getFilterValue('search') ? 'Probeer een andere zoekopdracht' : 'Voeg je eerste partner toe om te beginnen'}
         />
       )}
     </div>

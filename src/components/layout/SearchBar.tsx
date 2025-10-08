@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { Combobox } from '@headlessui/react'
+import { cc } from '../../styles/shared'
 
 interface SearchItem {
   id: string
@@ -10,7 +11,6 @@ interface SearchItem {
   section: string
 }
 
-// Alle zoekbare items
 const searchItems: SearchItem[] = [
   { id: '1', name: 'Dashboard', href: '/dashboard', section: 'Algemeen' },
   { id: '2', name: "Foto's", href: '/photos', section: 'Media' },
@@ -29,7 +29,6 @@ export function SearchBar() {
   const searchRef = useRef<HTMLDivElement>(null)
   const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null)
 
-  // Filter items based on search query
   const filteredItems = query === ''
     ? []
     : searchItems.filter((item) =>
@@ -37,7 +36,6 @@ export function SearchBar() {
         item.section.toLowerCase().includes(query.toLowerCase())
       )
 
-  // Group items by section
   const groupedItems = filteredItems.reduce((groups, item) => {
     const section = item.section
     if (!groups[section]) {
@@ -47,7 +45,6 @@ export function SearchBar() {
     return groups
   }, {} as Record<string, SearchItem[]>)
 
-  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'k') {
@@ -62,7 +59,6 @@ export function SearchBar() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -93,7 +89,7 @@ export function SearchBar() {
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
           </div>
           <Combobox.Input
-            className="block w-full rounded-md border-0 bg-white dark:bg-gray-700 py-1.5 pl-10 pr-3 text-gray-900 dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6"
+            className={`${cc.form.input()} py-1.5 pl-10 pr-3`}
             placeholder="Zoeken... (Ctrl + K)"
             onChange={(e) => setQuery(e.target.value)}
             value={query}
@@ -105,7 +101,7 @@ export function SearchBar() {
           <Combobox.Options className="absolute z-50 mt-2 max-h-96 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 focus:outline-none sm:text-sm">
             {Object.entries(groupedItems).map(([section, items]) => (
               <div key={section}>
-                <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-700 px-4 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <div className={`sticky top-0 z-10 bg-gray-50 dark:bg-gray-700 ${cc.spacing.px.sm} py-1 text-xs font-semibold text-gray-500 dark:text-gray-400`}>
                   {section}
                 </div>
                 {items.map((item) => (
@@ -113,16 +109,14 @@ export function SearchBar() {
                     key={item.id}
                     value={item}
                     className={({ active }) => `
-                      relative cursor-default select-none py-2 pl-10 pr-4
+                      relative cursor-default select-none py-2 pl-10 pr-4 ${cc.transition.colors}
                       ${active ? 'bg-indigo-600 text-white dark:bg-indigo-500' : 'text-gray-900 dark:text-gray-200'}
                     `}
                   >
                     {({ active }) => (
-                      <>
-                        <span className={`block truncate ${active ? 'font-semibold' : ''}`}>
-                          {item.name}
-                        </span>
-                      </>
+                      <span className={`block truncate ${active ? 'font-semibold' : ''}`}>
+                        {item.name}
+                      </span>
                     )}
                   </Combobox.Option>
                 ))}
@@ -133,4 +127,4 @@ export function SearchBar() {
       </Combobox>
     </div>
   )
-} 
+}

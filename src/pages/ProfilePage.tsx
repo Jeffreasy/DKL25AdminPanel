@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { useNavigate, Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from "../contexts/auth/useAuth"
-import { supabase } from '../lib/supabase'
+import { useAuth } from "../features/auth"
+import { supabase } from '../api/client/supabase'
 import {
   EyeIcon,
   EyeSlashIcon,

@@ -1,5 +1,6 @@
 import React from 'react'
 import { SidebarContent } from './SidebarContent'
+import { cc } from '../../../styles/shared'
 
 interface DesktopSidebarProps {
   isCollapsed: boolean;
@@ -7,14 +8,10 @@ interface DesktopSidebarProps {
 
 export function DesktopSidebar({ isCollapsed }: DesktopSidebarProps) {
   return (
-    // Changed background color to always be bg-gray-800
-    <div className="hidden lg:block bg-gray-800 h-screen sticky top-0">
-      {/* Inner container that handles width transition */}
-      <div className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all h-full`}>
-        {/* Render SidebarContent, passing the collapsed state and variant="desktop" */}
-        {/* No onClose needed for desktop */}
+    <div className="hidden lg:block bg-gray-800 dark:bg-gray-900 h-screen sticky top-0">
+      <div className={`${isCollapsed ? 'w-20' : 'w-64'} ${cc.transition.normal} h-full`}>
         <SidebarContent variant="desktop" isCollapsed={isCollapsed} />
       </div>
     </div>
   )
-} 
+}

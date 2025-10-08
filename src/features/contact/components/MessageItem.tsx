@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import type { ContactMessage, ContactStatus } from './../types'
 import { updateMessageStatus } from './../services/messageService'
 import { adminEmailService } from '../../email/adminEmailService'
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../api/client/supabase'
 import { cc } from '../../../styles/shared'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
-import { EmailDialog } from '../../../components/email/EmailDialog'
+import { EmailDialog } from '../../email/components/EmailDialog'
 
 interface MessageItemProps {
   message: ContactMessage
@@ -122,7 +122,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
         </div>
 
         {/* Card Body */}
-        <div className="p-6 space-y-4">
+        <div className={`${cc.spacing.container.md} ${cc.spacing.section.sm}`}>
           {/* Subject (if exists) */}
           {message.onderwerp && (
             <div>
@@ -168,7 +168,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
 
           {/* Expanded Content */}
           {isExpanded && (
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+            <div className={`pt-4 border-t border-gray-200 dark:border-gray-700 ${cc.spacing.section.sm}`}>
               {/* Status Selector */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">

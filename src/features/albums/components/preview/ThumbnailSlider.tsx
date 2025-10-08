@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import type { Photo } from '../../../photos/types';
-// Import debounce from lodash
 import debounce from 'lodash/debounce';
+import { cc } from '../../../../styles/shared';
 
 interface ThumbnailSliderProps {
   photos: Photo[];
@@ -131,7 +131,7 @@ const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({
       {renderLeftArrow && (
         <button
           onClick={() => handleScroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-full shadow-lg hover:bg-white transition-all z-10"
+          className={`absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 p-2 rounded-full shadow-lg hover:bg-white dark:hover:bg-gray-800 ${cc.transition.normal} z-10`}
           aria-label="Scroll thumbnails left"
         >
           {/* SVG Left Arrow */}
@@ -165,9 +165,9 @@ const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({
             }}
             className={`
               flex-none w-24 h-16 rounded-lg overflow-hidden
-              transition-all
+              ${cc.transition.normal}
               ${index === currentIndex
-                ? 'ring-2 ring-indigo-500 scale-105 shadow-lg opacity-100' // Use project's primary color (indigo-500)
+                ? 'ring-2 ring-indigo-500 dark:ring-indigo-400 scale-105 shadow-lg opacity-100'
                 : 'ring-1 ring-gray-200 dark:ring-gray-700 opacity-60 hover:opacity-80'
               }
               snap-center focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 dark:focus:ring-offset-gray-800
@@ -189,7 +189,7 @@ const ThumbnailSlider: React.FC<ThumbnailSliderProps> = ({
       {renderRightArrow && (
         <button
           onClick={() => handleScroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-full shadow-lg hover:bg-white transition-all z-10"
+          className={`absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 p-2 rounded-full shadow-lg hover:bg-white dark:hover:bg-gray-800 ${cc.transition.normal} z-10`}
           aria-label="Scroll thumbnails right"
         >
            {/* SVG Right Arrow */}

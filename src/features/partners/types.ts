@@ -1,28 +1,25 @@
-export interface Partner {
-  id: string
-  name: string
-  logo?: string
-  website?: string
-  description?: string
+import type { LogoEntity, FormData, UpdateData } from '../../types/base'
+
+/**
+ * Partner entity extending base LogoEntity
+ * Reduces redundancy by using shared base types
+ */
+export interface Partner extends LogoEntity {
   tier: 'bronze' | 'silver' | 'gold'
   since: string
-  visible: boolean
-  order_number: number
-  created_at: string
-  updated_at: string
 }
 
-export interface CreatePartnerData {
-  name: string
-  logo?: string
-  website?: string
-  description?: string
-  tier: Partner['tier']
-  since: string
-  visible: boolean
-  order_number: number
-}
+/**
+ * Form data for creating/editing partners
+ */
+export type PartnerFormData = FormData<Partner>
 
-export interface UpdatePartnerData extends Partial<CreatePartnerData> {
-  updated_at?: string
-} 
+/**
+ * Data for creating a new partner
+ */
+export type CreatePartnerData = PartnerFormData
+
+/**
+ * Data for updating an existing partner
+ */
+export type UpdatePartnerData = UpdateData<Partner>

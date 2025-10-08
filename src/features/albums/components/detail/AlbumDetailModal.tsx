@@ -8,8 +8,8 @@ import { AlbumDetailActions } from './AlbumDetailActions'
 import { AlbumDetailPhotos } from './AlbumDetailPhotos'
 import type { AlbumWithDetails } from '../../types'
 import type { Photo } from '../../../photos/types'
-import { supabase } from '../../../../lib/supabase'
-import { Z_INDEX } from '../../../../constants/zIndex'
+import { supabase } from '../../../../api/client/supabase'
+import { Z_INDEX } from '../../../../config/zIndex'
 import { toast } from 'react-hot-toast'
 
 interface AlbumDetailModalProps {
