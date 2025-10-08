@@ -114,10 +114,17 @@ Het DKL25 Admin Panel biedt een centrale plek voor het monitoren en beheren van 
   - Favorites management
 
 ### Backend Integration
-- **Database:** Supabase (PostgreSQL)
+- **Custom Backend API:** Go/Fiber server (zelfgebouwd)
+  - Authentication & Authorization (JWT + RBAC)
+  - User management
+  - Contact & Aanmeldingen
+  - Email & Newsletter
+  - Chat systeem
+- **Database:**
+  - PostgreSQL (via custom backend) - Users, roles, permissions, contact, aanmeldingen, chat
+  - Supabase - Media content (photos, videos, albums, partners, sponsors)
 - **Media Storage:** Cloudinary
-- **Email:** Nodemailer + ImapFlow
-- **Authentication:** JWT met refresh tokens
+- **Caching:** Redis (permission caching, 5 min TTL)
 
 ### Development Tools
 - **Build Tool:** Vite
