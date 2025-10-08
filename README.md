@@ -25,25 +25,74 @@ Het DKL25 Admin Panel biedt een centrale plek voor het monitoren en beheren van 
 
 ### Kernfunctionaliteiten
 
-#### 📊 Dashboard
+#### 📊 Dashboard & Monitoring
 - **Volledig Overzicht** - Real-time statistieken en metrics
-- **Aanmeldingen** - Beheer van deelnemersregistraties
-- **Contact** - Afhandeling van contactformulieren
-- **Email Inbox** - Geïntegreerd emailbeheer
+- **Aanmeldingen** - Beheer van deelnemersregistraties per afstand en rol
+- **Contact** - Afhandeling van contactformulieren met status tracking
+- **Email Inbox** - Geïntegreerd emailbeheer (info@ en bestuur@ accounts)
+- **Analytics** - Statistieken over deelnemers, rollen en afstanden
+
+#### 💬 Communicatie
+- **Chat Systeem** - Real-time chat met kanalen en direct messages
+  - Publieke en private kanalen
+  - Berichtgeschiedenis en zoekfunctie
+  - Typing indicators en online status
+  - Bestand uploads in chat
+- **Email Management** - Inbox beheer met reply functionaliteit
+- **Newsletter** - Nieuwsbrief creatie en verzending
+  - Rich text editor
+  - Template systeem
+  - Verzendgeschiedenis
 
 #### 🎨 Mediabeheer
 - **Fotobeheer** - Upload, organiseer en beheer foto's
+  - Bulk upload functionaliteit
+  - Cloudinary integratie
+  - Jaar filtering en categorisatie
+  - Zichtbaarheid controle
 - **Albumbeheer** - Creëer en beheer fotoalbums
+  - Drag-and-drop foto ordering
+  - Cover foto selectie
+  - Gallery preview met slideshow
+  - Album zichtbaarheid toggle
 - **Videobeheer** - Beheer video content
+  - YouTube/Vimeo embed support
+  - Drag-and-drop ordering
+  - Zichtbaarheid controle
 
 #### 🤝 Relatiebeheer
 - **Partnerbeheer** - Beheer van evenementpartners
+  - Logo upload en management
+  - Tier systeem (Bronze, Silver, Gold)
+  - Website links
+  - Zichtbaarheid toggle
 - **Sponsorbeheer** - Beheer van sponsors en sponsorships
+  - Logo upload
+  - Sponsor informatie
+  - Zichtbaarheid controle
 
-#### 👥 Gebruikersbeheer
+#### 👥 Gebruikersbeheer & Beveiliging
 - **RBAC Systeem** - Role-Based Access Control
+  - Granulaire permissies (40+ permissions)
+  - Rol management (Admin, Staff, User)
+  - Permission assignment per rol
+- **Gebruikersbeheer** - Volledige gebruikersadministratie
+  - User CRUD operaties
+  - Rol toewijzing
+  - Account activatie/deactivatie
+  - Email verificatie status
 - **Permissies** - Granulaire toegangscontrole
-- **Gebruikers** - Volledige gebruikersadministratie
+  - Resource:Action based permissions
+  - Permission management UI
+  - Real-time permission updates
+
+#### 🎨 UI/UX Features
+- **Responsive Design** - Optimaal op desktop, tablet en mobile
+- **Dark Mode** - Volledige dark mode support (100%)
+- **Favorieten** - Markeer veelgebruikte pagina's
+- **Recent Pages** - Automatische navigatie geschiedenis
+- **Quick Actions** - Snelle toegang tot veelgebruikte acties
+- **Global Search** - Zoek door alle pagina's (Cmd/Ctrl + K)
 
 ---
 
