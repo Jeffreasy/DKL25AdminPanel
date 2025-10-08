@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useChat } from '../ChatContext'
 import { PlusIcon, HashtagIcon, LockClosedIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { Button } from '@mantine/core'
+import { cc } from '../../../styles/shared'
 
 interface ChatSidebarProps {
   onClose: () => void
@@ -50,14 +51,15 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Team Chat
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            className={`p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 ${cc.transition.colors}`}
+            title="Sluiten"
           >
             ✕
           </button>
@@ -66,12 +68,12 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
 
           {/* Available Public Channels */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            <h3 className={`text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ${cc.spacing.gap.sm}`}>
               Beschikbare Publieke Kanalen
             </h3>
-            <div className="space-y-1">
+            <div className={cc.spacing.section.xs}>
               {publicChannels.filter(pc => !channels.some(c => c.id === pc.id)).map((channel) => (
-                <div key={channel.id} className="flex items-center justify-between p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md">
+                <div key={channel.id} className={`flex items-center justify-between ${cc.spacing.px.sm} ${cc.spacing.py.xs} text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ${cc.transition.colors}`}>
                   <span className="truncate">{channel.name}</span>
                   <Button size="xs" onClick={() => joinChannel(channel.id)}>Join</Button>
                 </div>
@@ -80,20 +82,20 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
           </div>
 
       {/* Channels */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
+      <div className={`flex-1 overflow-y-auto ${cc.spacing.container.sm}`}>
+        <div className={cc.spacing.section.sm}>
           {/* Create Channel */}
           <div>
             <button
               onClick={() => setShowCreateChannel(!showCreateChannel)}
-              className="w-full flex items-center gap-2 p-2 text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+              className={`w-full flex items-center ${cc.spacing.gap.sm} ${cc.spacing.px.sm} ${cc.spacing.py.xs} text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md ${cc.transition.colors}`}
             >
               <PlusIcon className="w-4 h-4" />
               Kanaal toevoegen
             </button>
 
             {showCreateChannel && (
-              <div className="mt-2 space-y-2">
+              <div className={`mt-2 ${cc.spacing.section.xs}`}>
                 <input
                   type="text"
                   value={newChannelName}
@@ -105,7 +107,7 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
                 {error && (
                   <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
                 )}
-                <div className="flex gap-2">
+                <div className={`flex ${cc.spacing.gap.sm}`}>
                   <button
                     onClick={handleCreateChannel}
                     disabled={loading.channels}
@@ -133,11 +135,11 @@ if (channels.some(c => c.name?.toLowerCase() === channelName.toLowerCase())) {
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
               Kanalen
             </h3>
-            <div className="space-y-1">
+            <div className={cc.spacing.section.xs}>
               {loading.channels ? (
-                <div className="space-y-2">
+                <div className={cc.spacing.section.xs}>
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div key={i} className={`h-8 bg-gray-200 dark:bg-gray-700 rounded ${cc.transition.opacity} animate-pulse`} />
                   ))}
                 </div>
               ) : (
@@ -148,7 +150,7 @@ channels.filter(channel => channel.id && channel.name).map((channel) => (
     selectChannel(channel.id)
     if (window.innerWidth < 768) onClose()
   }}
-  className={`w-full flex items-center gap-2 p-2 text-left text-sm rounded-md transition-colors ${
+  className={`w-full flex items-center ${cc.spacing.gap.sm} ${cc.spacing.px.sm} ${cc.spacing.py.xs} text-left text-sm rounded-md ${cc.transition.colors} ${
     activeChannelId === channel.id
       ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100'
       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -177,9 +179,9 @@ channels.filter(channel => channel.id && channel.name).map((channel) => (
               <UsersIcon className="w-3 h-3" />
               Online ({onlineUsers.length})
             </h3>
-            <div className="space-y-1">
+            <div className={cc.spacing.section.xs}>
               {onlineUsers.slice(0, 10).map((user) => (
-                <div key={user.id} className="flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300">
+                <div key={user.id} className={`flex items-center ${cc.spacing.gap.sm} ${cc.spacing.px.sm} ${cc.spacing.py.xs} text-sm text-gray-700 dark:text-gray-300`}>
                   <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
                   <span className="truncate flex-1">{user.full_name || user.email}</span>
                   <Button size="xs" variant="outline" onClick={() => createDirectChannel(user.id)}>Start chat</Button>

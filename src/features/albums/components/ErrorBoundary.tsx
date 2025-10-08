@@ -1,4 +1,5 @@
 import React, { Component, ReactNode } from 'react'
+import { cc } from '../../../styles/shared'
 
 interface Props {
   children: ReactNode
@@ -42,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              className={cc.button.base({ color: 'danger' })}
             >
               Pagina herladen
             </button>

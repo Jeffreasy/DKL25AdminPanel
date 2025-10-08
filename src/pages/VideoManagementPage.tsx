@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ErrorText, H1, SmallText } from '../components/typography'
+import { LoadingGrid, ConfirmDialog } from '../components/ui'
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../features/videos/services/videoService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { Video, VideoInsert } from '../features/videos/types'
@@ -10,6 +10,7 @@ import { XCircleIcon } from '@heroicons/react/24/solid'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
+import { usePermissions } from '../hooks/usePermissions'
 
 interface VideoFormData {
   title: string
@@ -62,6 +63,7 @@ function isValidVideoUrl(url: string): boolean {
 
 export function VideoManagementPage() {
   usePageTitle("Video's beheren")
+  const { hasPermission } = usePermissions()
   const [videos, setVideos] = useState<Video[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +82,11 @@ export function VideoManagementPage() {
   const [editVideoData, setEditVideoData] = useState<Video | null>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [videoToDelete, setVideoToDelete] = useState<Video | null>(null)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+
+  const canReadVideos = hasPermission('video', 'read')
+  const canWriteVideos = hasPermission('video', 'write')
 
   const filteredVideos = useMemo(() => {
     return videos
@@ -221,12 +228,13 @@ export function VideoManagementPage() {
     }
   }
 
-  const handleDelete = async (videoId: string) => {
-    if (!confirm('Weet je zeker dat je deze video wilt verwijderen?')) return
+  const handleDelete = async () => {
+    if (!videoToDelete) return
     try {
       setError(null)
-      await deleteVideo(videoId)
+      await deleteVideo(videoToDelete.id)
       await loadVideos()
+      setVideoToDelete(null)
     } catch (err) {
       console.error('Error deleting video:', err)
       setError('Er ging iets mis bij het verwijderen van de video')
@@ -234,12 +242,12 @@ export function VideoManagementPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedVideos.size === 0 || !confirm(`Weet je zeker dat je ${selectedVideos.size} video's wilt verwijderen?`)) return
     try {
       setError(null)
       await Promise.all(Array.from(selectedVideos).map(deleteVideo))
       await loadVideos()
       setSelectedVideos(new Set())
+      setShowBulkDeleteConfirm(false)
     } catch (err) {
       console.error('Error deleting videos:', err)
       setError('Er ging iets mis bij het verwijderen van de videos')
@@ -299,34 +307,46 @@ export function VideoManagementPage() {
     }
   };
 
+  if (!canReadVideos) {
+    return (
+      <div className={cc.spacing.container.md}>
+        <div className="text-center">
+          <H1>Geen toegang</H1>
+          <SmallText>U heeft geen toestemming om video's te beheren.</SmallText>
+        </div>
+      </div>
+    )
+  }
+
   if (loading && videos.length === 0) {
-    return <LoadingSkeleton />
+    return <LoadingGrid variant="compact" count={8} />
   }
 
   return (
-    <div className="space-y-6">
-      <div className={cc.card({ className: "p-0 overflow-hidden" })}> 
-        <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="flex-shrink min-w-0">
+    <div className={cc.spacing.section.md}>
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className={`${cc.spacing.px.sm} ${cc.spacing.py.lg} sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center ${cc.spacing.gap.lg}`}>
+          <div>
             <H1 className="mb-1">Video's</H1>
             <SmallText>
               Beheer de video's voor de Koninklijke Loop
             </SmallText>
           </div>
-          <div className="flex justify-end sm:justify-normal">
+          {canWriteVideos && (
             <button
               onClick={() => {
                 setEditingVideo(null);
                 setFormData({ title: '', description: '', url: '', visible: true });
                 setShowForm(true);
               }}
-              className={cc.button.base({ color: 'primary', className: "flex items-center gap-2" })}
+              className={cc.button.base({ color: 'primary', className: `flex items-center ${cc.spacing.gap.sm}` })}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
               <span className="hidden sm:inline">Video Toevoegen</span>
               <span className="sm:hidden">Toevoegen</span>
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -343,9 +363,10 @@ export function VideoManagementPage() {
         </div>
       )}
 
-      <div className={cc.card({ className: "p-0 overflow-hidden" })}> 
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row gap-4">
+      {/* Content */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700`}>
+          <div className={`flex flex-col sm:flex-row ${cc.spacing.gap.lg}`}>
             <div className="relative flex-1">
               <input
                 type="text"
@@ -358,7 +379,7 @@ export function VideoManagementPage() {
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <div className={`flex items-center ${cc.spacing.gap.sm} flex-shrink-0 flex-wrap`}>
               <button
                 onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                 className={cc.button.base({ color: 'secondary' })}
@@ -368,7 +389,7 @@ export function VideoManagementPage() {
               </button>
               {selectedVideos.size > 0 && (
                 <button
-                  onClick={handleBulkDelete}
+                  onClick={() => setShowBulkDeleteConfirm(true)}
                   className={cc.button.base({ color: 'danger', className: "flex items-center" })}
                   title={`Verwijder ${selectedVideos.size} video's`}
                 >
@@ -391,7 +412,7 @@ export function VideoManagementPage() {
                         <input 
                           ref={selectAllRef}
                           type="checkbox" 
-                          className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                          className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-blue-600 focus:ring-blue-500 dark:ring-offset-gray-800"
                           onChange={handleSelectAll}
                           aria-label="Selecteer alle video's"
                         />
@@ -421,12 +442,12 @@ export function VideoManagementPage() {
                             {/* Mobile Card View (hidden on md+) */}
                             <td className="block md:hidden p-3 border-b border-gray-200 dark:border-gray-700">
                               {/* --- Switched to Grid Layout --- */}
-                              <div className={`grid grid-cols-[auto_max-content_1fr] gap-3 items-start ${selectedVideos.has(video.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 rounded-md p-1' : 'p-1'}`}>
+                              <div className={`grid grid-cols-[auto_max-content_1fr] gap-3 items-start ${selectedVideos.has(video.id) ? 'bg-blue-50 dark:bg-blue-900/30 rounded-md p-1' : 'p-1'}`}>
                                 {/* Col 1: Checkbox */}
                                 <div className="pt-1">
                                   <input 
                                       type="checkbox" 
-                                      className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                                      className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-blue-600 focus:ring-blue-500 dark:ring-offset-gray-800"
                                       checked={selectedVideos.has(video.id)}
                                       onChange={() => handleSelectVideo(video.id)}
                                       aria-label={`Selecteer video ${video.title}`}
@@ -475,7 +496,7 @@ export function VideoManagementPage() {
                                     <PencilIcon className="h-4 w-4" />
                                   </button>
                                   {/* Delete Button */}
-                                  <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger({ size: 'sm' })} title="Verwijderen">
+                                  <button onClick={() => setVideoToDelete(video)} className={cc.button.iconDanger({ size: 'sm' })} title="Verwijderen">
                                     <TrashIcon className="h-4 w-4" />
                                   </button>
                                 </div>
@@ -487,7 +508,7 @@ export function VideoManagementPage() {
                               {/* Checkbox content for desktop */}
                                 <input 
                                     type="checkbox" 
-                                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-indigo-600 focus:ring-indigo-500 dark:ring-offset-gray-800"
+                                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-blue-600 focus:ring-blue-500 dark:ring-offset-gray-800"
                                     checked={selectedVideos.has(video.id)}
                                     onChange={() => handleSelectVideo(video.id)}
                                     aria-label={`Selecteer video ${video.title}`}
@@ -537,7 +558,7 @@ export function VideoManagementPage() {
                                 <button onClick={() => handleEdit(video)} className={cc.button.icon({ color: 'secondary'})} title="Bewerken">
                                   <PencilIcon className="h-5 w-5" />
                                 </button>
-                                <button onClick={() => handleDelete(video.id)} className={cc.button.iconDanger()} title="Verwijderen">
+                                <button onClick={() => setVideoToDelete(video)} className={cc.button.iconDanger()} title="Verwijderen">
                                   <TrashIcon className="h-5 w-5" />
                                 </button>
                             </td>
@@ -569,10 +590,10 @@ export function VideoManagementPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className={cc.card({ className: "p-0 w-full max-w-lg flex flex-col max-h-[90vh]" })}> 
+        <div className={`fixed inset-0 ${cc.overlay.medium} z-50 flex items-center justify-center p-4`}>
+          <div className={cc.card({ className: "p-0 w-full max-w-lg flex flex-col max-h-[90vh]" })}>
              <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
-               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+               <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0`}>
                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                    {editingVideo ? 'Video Bewerken' : 'Video Toevoegen'}
                  </h3>
@@ -585,7 +606,7 @@ export function VideoManagementPage() {
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                </div>
-               <div className="p-6 space-y-4 flex-grow overflow-y-auto">
+               <div className={`${cc.spacing.container.md} ${cc.spacing.section.sm} flex-grow overflow-y-auto`}>
                  <div>
                    <label htmlFor="title" className={cc.form.label()}>Titel</label>
                    <input 
@@ -628,7 +649,7 @@ export function VideoManagementPage() {
                      type="checkbox" 
                      checked={formData.visible}
                      onChange={(e) => setFormData({...formData, visible: e.target.checked})}
-                     className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
+                     className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
                    />
                    <label htmlFor="visible" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Zichtbaar op website</label>
                  </div>
@@ -636,7 +657,7 @@ export function VideoManagementPage() {
                     <p className={cc.form.error()}>{error}</p>
                  )}
                </div>
-               <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
+               <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} border-t border-gray-200 dark:border-gray-700 flex justify-end ${cc.spacing.gap.md} flex-shrink-0 bg-gray-50 dark:bg-gray-800/50`}>
                  <button type="button" className={cc.button.base({ color: 'secondary' })} onClick={handleCloseForm}>
                     Annuleren
                   </button>
@@ -649,7 +670,25 @@ export function VideoManagementPage() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={!!videoToDelete}
+        onClose={() => setVideoToDelete(null)}
+        onConfirm={handleDelete}
+        title="Video verwijderen"
+        message={`Weet je zeker dat je de video "${videoToDelete?.title}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        open={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Video's verwijderen"
+        message={`Weet je zeker dat je ${selectedVideos.size} video's wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`}
+        variant="danger"
+      />
+
       <Toaster position="bottom-center" />
     </div>
   )
-} 
+}

@@ -7,6 +7,7 @@ import { MessageSearch } from './MessageSearch'
 import { Modal, Button, Menu } from '@mantine/core'
 import { chat as chatStyles, cc } from '../../../styles/shared'
 import { H3, H4, Text, SmallText, Caption, ErrorText, SuccessText } from '../../../components/typography'
+import { ConfirmDialog } from '../../../components/ui'
 
 interface ChatWindowProps {
   onToggleSidebar: () => void
@@ -21,6 +22,9 @@ export function ChatWindow({ onToggleSidebar, onClose }: ChatWindowProps) {
   const [isTyping, setIsTyping] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
+  const [messageToEdit, setMessageToEdit] = useState<{ id: string; content: string } | null>(null)
+  const [editContent, setEditContent] = useState('')
   const currentUserId = getUserId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
@@ -104,11 +108,12 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
   return (
     <div className="h-full flex flex-col bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
+      <div className={`flex items-center justify-between ${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700`}>
+        <div className={`flex items-center ${cc.spacing.gap.md}`}>
           <button
             onClick={onToggleSidebar}
-            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden"
+            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden ${cc.transition.colors}`}
+            title="Toggle sidebar"
           >
             <Bars3Icon className="w-5 h-5" />
           </button>
@@ -136,19 +141,19 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${cc.spacing.gap.sm}`}>
           {activeChannel && (
             <>
               <button
                 onClick={() => setIsInviteModalOpen(true)}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${cc.transition.colors}`}
                 title="Invite users"
               >
                 <UsersIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${cc.transition.colors}`}
                 title="Zoek berichten"
               >
                 <MagnifyingGlassIcon className="w-5 h-5" />
@@ -157,7 +162,8 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
           )}
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${cc.transition.colors}`}
+            title="Sluiten"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
@@ -165,9 +171,9 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={`flex-1 overflow-y-auto ${cc.spacing.container.sm} ${cc.spacing.section.sm}`}>
         {loading.messages ? (
-          <div className="space-y-3">
+          <div className={cc.spacing.section.md}>
             {[...Array(5)].map((_, i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
                 <div className="max-w-xs lg:max-w-md px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse">
@@ -198,7 +204,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
             const canEditDelete = isOwnMessage || channels.find(c => c.id === activeChannelId)?.created_by === currentUserId;
 
             return (
-              <div key={message.id} className={`flex gap-3 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <div key={message.id} className={`flex ${cc.spacing.gap.md} ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
                 {!isOwnMessage && (
                   <div className={chatStyles.avatar({ userType: 'other' })}>
                     {(message.user?.full_name || message.user?.email || '?')[0].toUpperCase()}
@@ -215,7 +221,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                         })}
                       >
                         {/* Message Header */}
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className={`flex items-center ${cc.spacing.gap.sm} mb-2`}>
                           <span className="font-medium text-xs">
                             {message.user?.full_name || message.user?.email || 'Onbekend'}
                           </span>
@@ -282,7 +288,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                         )}
 
                         {/* Reaction Buttons */}
-                        <div className="flex gap-2 mt-3">
+                        <div className={`flex ${cc.spacing.gap.sm} mt-3`}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -301,21 +307,15 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                         <Menu.Item
                           className={chatStyles.contextMenuItem({ variant: 'default' })}
                           onClick={() => {
-                            const newContent = prompt('Edit message:', message.content);
-                            if (newContent && newContent.trim() !== message.content) {
-                              editMessage(message.id, newContent.trim());
-                            }
+                            setMessageToEdit({ id: message.id, content: message.content || '' });
+                            setEditContent(message.content || '');
                           }}
                         >
                           ✏️ Edit Message
                         </Menu.Item>
                         <Menu.Item
                           className={chatStyles.contextMenuItem({ variant: 'danger' })}
-                          onClick={() => {
-                            if (confirm('Delete this message?')) {
-                              deleteMessage(message.id);
-                            }
-                          }}
+                          onClick={() => setMessageToDelete(message.id)}
                         >
                           🗑️ Delete Message
                         </Menu.Item>
@@ -356,7 +356,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
 
       {/* Message Input */}
       {activeChannel && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className={`${cc.spacing.container.sm} border-t border-gray-200 dark:border-gray-700`}>
           {/* Upload Progress */}
           {isUploading && (
             <div className="mb-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
@@ -368,7 +368,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
                   </p>
                   <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-2 mt-1">
                     <div
-                      className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                      className="bg-indigo-600 h-2 rounded-full transition-all"
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>
@@ -377,13 +377,13 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className={`flex ${cc.spacing.gap.md}`}>
             {/* File Upload Buttons */}
-            <div className="flex gap-2 flex-shrink-0">
+            <div className={`flex ${cc.spacing.gap.sm} flex-shrink-0`}>
               <button
                 onClick={handleFileSelect}
                 disabled={isUploading}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className={`p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${cc.transition.colors}`}
                 title="Bestand bijvoegen"
               >
                 <PaperClipIcon className="w-5 h-5" />
@@ -408,7 +408,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
             <button
               onClick={handleSendMessage}
               disabled={!messageInput.trim() || loading.sending || isUploading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+              className={`${cc.spacing.px.sm} ${cc.spacing.py.xs} bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${cc.spacing.gap.sm} flex-shrink-0 ${cc.transition.colors}`}
             >
               {loading.sending ? (
                 <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
@@ -448,7 +448,7 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
         size="md"
         centered
       >
-        <div className="max-h-96 overflow-y-auto space-y-2">
+        <div className={`max-h-96 overflow-y-auto ${cc.spacing.section.xs}`}>
           {allUsers.filter(u => u.id !== currentUserId && !participants.some(p => p.user_id === u.id)).map(user => (
             <div key={user.id} className={chatStyles.inviteUserCard()}>
               <div className={chatStyles.inviteUserAvatar()}>
@@ -485,6 +485,75 @@ console.log('Debug ChatWindow', { activeChannelId, found: !!activeChannel, chann
           )}
         </div>
       </Modal>
+
+      {/* Delete Message Confirmation */}
+      <ConfirmDialog
+        open={!!messageToDelete}
+        onClose={() => setMessageToDelete(null)}
+        onConfirm={() => {
+          if (messageToDelete) {
+            deleteMessage(messageToDelete);
+            setMessageToDelete(null);
+          }
+        }}
+        title="Bericht verwijderen"
+        message="Weet je zeker dat je dit bericht wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+        variant="danger"
+      />
+
+      {/* Edit Message Dialog */}
+      {messageToEdit && (
+        <div className={`fixed inset-0 ${cc.overlay.medium} z-50 flex items-center justify-center ${cc.spacing.container.sm}`}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+            <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} border-b border-gray-200 dark:border-gray-700 flex justify-between items-center`}>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Bericht bewerken</h3>
+              <button
+                onClick={() => {
+                  setMessageToEdit(null);
+                  setEditContent('');
+                }}
+                className={cc.button.icon({ color: 'secondary' })}
+                title="Sluiten"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className={cc.spacing.container.md}>
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className={cc.form.input({ className: 'w-full' })}
+                rows={4}
+                autoFocus
+              />
+            </div>
+            <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end ${cc.spacing.gap.md}`}>
+              <button
+                onClick={() => {
+                  setMessageToEdit(null);
+                  setEditContent('');
+                }}
+                className={cc.button.base({ color: 'secondary' })}
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={() => {
+                  if (editContent.trim() && editContent.trim() !== messageToEdit.content) {
+                    editMessage(messageToEdit.id, editContent.trim());
+                  }
+                  setMessageToEdit(null);
+                  setEditContent('');
+                }}
+                disabled={!editContent.trim()}
+                className={cc.button.base({ color: 'primary' })}
+              >
+                Opslaan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

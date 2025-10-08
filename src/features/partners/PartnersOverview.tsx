@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 import { ErrorText, SmallText } from '../../components/typography'
 import { PartnerCard } from './components'
 import { fetchPartners } from './services/partnerService'
 import type { Partner } from './types'
 import { cc } from '../../styles/shared'
+import { EmptyState, LoadingGrid } from '../../components/ui'
 
 type SortField = 'name' | 'order_number'
 type SortOrder = 'asc' | 'desc'
@@ -66,27 +66,21 @@ export function PartnersOverview() {
   })
 
   if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        <LoadingSkeleton />
-        <LoadingSkeleton />
-        <LoadingSkeleton />
-      </div>
-    )
+    return <LoadingGrid variant="albums" count={6} />
   }
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className={cc.spacing.container.sm}>
         <ErrorText>{error}</ErrorText>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cc.spacing.section.sm}>
       {/* Filters en sortering */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
+      <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 ${cc.spacing.section.sm}`}>
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1">
             <input
@@ -102,7 +96,7 @@ export function PartnersOverview() {
               </svg>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className={`flex ${cc.spacing.gap.sm}`}>
             <select
               value={sortField}
               onChange={(e) => handleSort(e.target.value as SortField)}
@@ -113,7 +107,8 @@ export function PartnersOverview() {
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+              className={`p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 ${cc.transition.colors}`}
+              title={sortOrder === 'asc' ? 'Oplopend sorteren' : 'Aflopend sorteren'}
             >
               {sortOrder === 'asc' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,22 +128,21 @@ export function PartnersOverview() {
       </div>
 
       {/* Partners grid */}
-      <div className={cc.grid({ className: 'p-4 grid-auto-rows-fr' })}>
-        {sortedAndFilteredPartners.map((partner) => (
-          <PartnerCard
-            key={partner.id}
-            partner={partner}
-            onUpdate={loadPartners}
-          />
-        ))}
-      </div>
-
-      {filteredPartners.length === 0 && (
-        <div className="text-center py-12">
-          <SmallText>
-            Geen partners gevonden{filter ? ' voor deze zoekopdracht' : ''}
-          </SmallText>
+      {sortedAndFilteredPartners.length > 0 ? (
+        <div className={`${cc.grid.albums()} ${cc.spacing.container.sm} grid-auto-rows-fr ${cc.spacing.gap.lg}`}>
+          {sortedAndFilteredPartners.map((partner) => (
+            <PartnerCard
+              key={partner.id}
+              partner={partner}
+              onUpdate={loadPartners}
+            />
+          ))}
         </div>
+      ) : (
+        <EmptyState
+          title={filter ? 'Geen partners gevonden' : 'Geen partners'}
+          description={filter ? 'Probeer een andere zoekopdracht' : 'Voeg je eerste partner toe om te beginnen'}
+        />
       )}
     </div>
   )

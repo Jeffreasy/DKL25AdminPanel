@@ -1,5 +1,5 @@
 import type { Email } from '../types'
-import { cl } from '../../../styles/shared' // Import the utility
+import { cc } from '../../../styles/shared'
 
 interface EmailItemProps {
   email: Email
@@ -9,13 +9,13 @@ interface EmailItemProps {
 }
 
 export default function EmailItem({ email, isSelected, onClick, formattedDate }: EmailItemProps) {
-  const baseClasses = "p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer transition-colors duration-200"
+  const baseClasses = `${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 cursor-pointer ${cc.transition.colors}`
   
   const backgroundClasses = isSelected
-    ? "bg-indigo-100 dark:bg-indigo-900/50" // Selected state
+    ? "bg-blue-100 dark:bg-blue-900/50"
     : email.read
-    ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50" // Read state
-    : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600" // Unread state
+    ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+    : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
 
   const senderFontWeight = email.read ? "font-normal" : "font-semibold"
   const subjectFontWeight = email.read ? "font-normal" : "font-medium"
@@ -23,15 +23,13 @@ export default function EmailItem({ email, isSelected, onClick, formattedDate }:
   return (
     <div
       onClick={onClick}
-      className={cl(baseClasses, backgroundClasses)}
+      className={`${baseClasses} ${backgroundClasses}`}
     >
       <div className="flex justify-between items-center mb-1">
-        <p 
-          className={cl(
-            "text-sm truncate max-w-[70%]", // Tailwind for size, truncate
-            senderFontWeight, // Dynamic font weight
-            isSelected ? "text-indigo-800 dark:text-indigo-200" : "text-gray-900 dark:text-gray-100" // Text color based on selection
-          )}
+        <p
+          className={`text-sm truncate max-w-[70%] ${senderFontWeight} ${
+            isSelected ? "text-blue-800 dark:text-blue-200" : "text-gray-900 dark:text-white"
+          }`}
         >
           {email.sender}
         </p>
@@ -40,14 +38,12 @@ export default function EmailItem({ email, isSelected, onClick, formattedDate }:
         </span>
       </div>
       <p
-        className={cl(
-          "text-sm truncate", // Tailwind for size, truncate
-          subjectFontWeight, // Dynamic font weight
-          isSelected ? "text-indigo-700 dark:text-indigo-300" : "text-gray-700 dark:text-gray-300" // Text color based on selection
-        )}
+        className={`text-sm truncate ${subjectFontWeight} ${
+          isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
+        }`}
       >
         {email.subject}
       </p>
     </div>
   )
-} 
+}

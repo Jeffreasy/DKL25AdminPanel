@@ -1,57 +1,34 @@
 import { useState } from 'react'
-import {
-    CheckCircleIcon,
-    UserIcon,
-    MapPinIcon,
-    HandRaisedIcon,
-    ArrowPathIcon,
-    EnvelopeIcon,
-    ClipboardDocumentIcon,
-    CheckIcon
-} from '@heroicons/react/24/outline'
-import { updateAanmelding } from './../services/aanmeldingenService'
-import type { Aanmelding } from './../types'
-import type { ElementType } from 'react'
-import { cl } from '../../../styles/shared'
+import { updateAanmelding } from '../services/aanmeldingenService'
+import type { Aanmelding } from '../types'
 import { cc } from '../../../styles/shared'
+import { format } from 'date-fns'
+import { nl } from 'date-fns/locale'
 
 interface RegistrationItemProps {
   registration: Aanmelding
   onStatusUpdate: () => void
+  canWrite?: boolean
 }
 
-function DetailItem({ label, value, icon: Icon }: { label: string; value: string | number | null | undefined; icon: ElementType }) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
-      <div className="flex flex-col">
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-sm text-gray-900 dark:text-white">{value || '-'}</p>
-      </div>
-    </div>
-  )
-}
-
-export function RegistrationItem({ registration, onStatusUpdate }: RegistrationItemProps) {
-  const [loading, setLoading] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
+export function RegistrationItem({ registration, onStatusUpdate, canWrite = false }: RegistrationItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const handleStatusUpdate = async (newStatus: Aanmelding['status']) => {
-    setLoading(true)
+    if (newStatus === registration.status) return;
+    
+    setIsUpdating(true)
     try {
-      const { error } = await updateAanmelding(registration.id, {
+      await updateAanmelding(registration.id, {
         status: newStatus,
         behandeld_op: newStatus !== 'nieuw' ? new Date().toISOString() : null
       })
-      if (error) {
-        console.error('Error updating status:', error)
-      } else {
-        onStatusUpdate()
-      }
-    } catch (err) {
-      console.error('Error in handleStatusUpdate:', err)
+      onStatusUpdate()
+    } catch (error) {
+      console.error('Error updating status:', error)
     } finally {
-      setLoading(false)
+      setIsUpdating(false)
     }
   }
 
@@ -65,7 +42,7 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
     }
   }
 
-  const getStatusText = (status: Aanmelding['status']) => {
+  const getStatusLabel = (status: Aanmelding['status']) => {
     switch (status) {
       case 'nieuw': return 'Nieuw'
       case 'in_behandeling': return 'In behandeling'
@@ -75,131 +52,190 @@ export function RegistrationItem({ registration, onStatusUpdate }: RegistrationI
     }
   }
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('nl-NL', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    });
-  }
-
-  const handleCopyEmail = async () => {
-    if (!registration.email) return;
-    try {
-      await navigator.clipboard.writeText(registration.email);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 1500); 
-    } catch (err) {
-      console.error('Failed to copy email: ', err);
-    }
-  };
-
-  const roleIcon = UserIcon;
-  const distanceIcon = MapPinIcon;
-  const supportIcon = HandRaisedIcon;
-
   return (
-    <div 
-      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 sm:p-6 w-full"
-    >
-      <div className="space-y-4">
-        <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:items-start sm:gap-4">
-          <div className="space-y-1 flex-shrink-0">
-            <h3 className="font-medium text-lg text-gray-900 dark:text-white">{registration.naam}</h3>
-            <div className="flex items-center gap-1">
-              <a 
-                href={`mailto:${registration.email}`}
-                title={`Mail ${registration.email}`}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline break-all"
-              >
-                <EnvelopeIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span>{registration.email}</span>
-              </a>
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                title={isCopied ? "Gekopieerd!" : "Kopieer email"}
-                className="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-indigo-500 flex-shrink-0"
-              >
-                <span className="sr-only">Kopieer e-mailadres</span>
-                {isCopied ? (
-                  <CheckIcon className="h-4 w-4 text-green-500" aria-hidden="true" />
-                ) : (
-                  <ClipboardDocumentIcon className="h-4 w-4" aria-hidden="true" />
-                )}
-              </button>
-            </div>
-            {registration.telefoon && (
-              <p className="text-sm text-gray-500 dark:text-gray-500"> 
-                {`• ${registration.telefoon}`}
-              </p>
-            )}
-          </div>
-          
-          <div className="flex-shrink-0 w-full sm:w-auto">
-            <div className="flex flex-col gap-2">
-              <span className={cc.badge({
-                color: getStatusColor(registration.status),
-                className: 'inline-flex items-center gap-1.5 w-full sm:w-auto justify-center'
-              })}>
-                {getStatusText(registration.status)}
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${cc.hover.card}`}>
+      {/* Card Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 dark:from-indigo-500 dark:to-indigo-600 px-6 py-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="text-lg font-bold text-white">{registration.naam}</h3>
+              <span className={cc.badge({ color: getStatusColor(registration.status) })}>
+                {getStatusLabel(registration.status)}
               </span>
-              {registration.status === 'nieuw' && (
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => handleStatusUpdate('in_behandeling')}
-                  className={cl(
-                    cc.button.base({ color: 'secondary', size: 'sm', className: 'text-xs flex items-center gap-1.5 w-full sm:w-auto justify-center' }),
-                    loading && "opacity-75 cursor-not-allowed"
-                  )}
-                >
-                  {loading ? (
-                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                  ) : (
-                      <CheckCircleIcon className="w-4 h-4" />
-                  )}
-                  Start behandeling
-                </button>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-indigo-100 dark:text-indigo-200">
+              <div className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {registration.email}
+              </div>
+              {registration.telefoon && (
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  {registration.telefoon}
+                </div>
               )}
             </div>
           </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`bg-white/20 hover:bg-white/30 rounded-lg p-2 ${cc.transition.colors}`}
+          >
+            <svg 
+              className={`w-5 h-5 text-white ${cc.transition.transform} ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
-
-        <hr className="border-gray-200 dark:border-gray-700" />
-
-        <div className="space-y-3">
-          <DetailItem label="Rol" value={registration.rol} icon={roleIcon} />
-          <DetailItem label="Afstand" value={registration.afstand} icon={distanceIcon} />
-          <DetailItem label="Ondersteuning" value={registration.ondersteuning} icon={supportIcon} />
-        </div>
-
-        {registration.bijzonderheden && (
-          <>
-            <hr className="border-gray-200 dark:border-gray-700" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bijzonderheden</p>
-              <p className="text-sm whitespace-pre-line text-gray-800 dark:text-gray-200">
-                {registration.bijzonderheden}
-              </p>
-            </div>
-          </>
-        )}
-
-        {!registration.bijzonderheden && <hr className="border-gray-200 dark:border-gray-700" />}
-        
-        <div className="flex flex-col items-start gap-1 sm:flex-row sm:justify-between sm:items-center mt-2">
-           <p className="text-xs text-gray-500 dark:text-gray-400">
-             Aangemeld op: {formatDate(registration.created_at)}
-           </p>
-           {registration.behandeld_op && (
-             <p className="text-xs text-gray-500 dark:text-gray-400">
-               Behandeld op: {formatDate(registration.behandeld_op)}
-             </p>
-           )}
-         </div>
       </div>
+
+      {/* Card Body */}
+      <div className="p-6 space-y-4">
+        {/* Quick Info Grid */}
+        <div className={`${cc.grid.compact()} gap-4`}>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Rol</p>
+            <span className={cc.badge({ color: 'blue' })}>
+              {registration.rol}
+            </span>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Afstand</p>
+            <span className={cc.badge({ color: 'gray' })}>
+              {registration.afstand}
+            </span>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ondersteuning</p>
+            <span className={cc.badge({ color: registration.ondersteuning === 'Ja' ? 'green' : 'gray' })}>
+              {registration.ondersteuning}
+            </span>
+          </div>
+        </div>
+
+        {/* Expanded Content */}
+        {isExpanded && (
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+            {/* Bijzonderheden */}
+            {registration.bijzonderheden && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Bijzonderheden</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                  {registration.bijzonderheden}
+                </p>
+              </div>
+            )}
+
+            {/* Notities */}
+            {registration.notities && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Notities</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                  {registration.notities}
+                </p>
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div className={`${cc.grid.twoCol()} gap-3 text-xs text-gray-500 dark:text-gray-400`}>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Aangemeld: {format(new Date(registration.created_at), 'dd MMM yyyy HH:mm', { locale: nl })}
+              </div>
+              {registration.behandeld_op && (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Behandeld: {format(new Date(registration.behandeld_op), 'dd MMM yyyy HH:mm', { locale: nl })}
+                </div>
+              )}
+              {registration.behandeld_door && (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Door: {registration.behandeld_door}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email verzonden: {registration.email_verzonden ? 'Ja' : 'Nee'}
+              </div>
+            </div>
+
+            {/* Status Selector */}
+            {canWrite && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  Status wijzigen
+                </label>
+                <select
+                  value={registration.status}
+                  onChange={(e) => handleStatusUpdate(e.target.value as Aanmelding['status'])}
+                  disabled={isUpdating}
+                  className={cc.form.select({ className: 'text-sm' })}
+                >
+                  <option value="nieuw">Nieuw</option>
+                  <option value="in_behandeling">In behandeling</option>
+                  <option value="behandeld">Behandeld</option>
+                  <option value="geannuleerd">Geannuleerd</option>
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Quick Actions Footer (when collapsed) */}
+      {!isExpanded && (
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={cc.badge({ color: 'blue' })}>
+              {registration.rol}
+            </span>
+            <span className={cc.badge({ color: 'gray' })}>
+              {registration.afstand}
+            </span>
+          </div>
+          {canWrite && registration.status === 'nieuw' && (
+            <button
+              onClick={() => handleStatusUpdate('in_behandeling')}
+              disabled={isUpdating}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 ${cc.transition.colors}`}
+            >
+              {isUpdating ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Bezig...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Start behandeling
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
-} 
+}

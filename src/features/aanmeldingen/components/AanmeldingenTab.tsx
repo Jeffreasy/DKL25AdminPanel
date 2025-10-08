@@ -1,171 +1,185 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { updateAanmelding } from '../services/aanmeldingenService'
 import type { DashboardContext } from '../../../types/dashboard'
 import type { Aanmelding } from '../types'
-
-function StatusBadge({ status }: { status: Aanmelding['status'] }) {
-  const getStatusColor = (status: Aanmelding['status']) => {
-    switch (status) {
-      case 'nieuw': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
-      case 'in_behandeling': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-      case 'behandeld': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      case 'geannuleerd': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-    }
-  }
-
-  const getStatusText = (status: Aanmelding['status']) => {
-    switch (status) {
-      case 'nieuw': return 'Nieuw'
-      case 'in_behandeling': return 'In behandeling'
-      case 'behandeld': return 'Behandeld'
-      case 'geannuleerd': return 'Geannuleerd'
-      default: return status
-    }
-  }
-
-  return (
-    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(status)}`}>
-      {getStatusText(status)}
-    </span>
-  )
-}
-
-function formatDate(dateString: string | null | undefined) {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('nl-NL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+import { usePermissions } from '../../../hooks/usePermissions'
+import { RegistrationItem } from './RegistrationItem'
+import { cc } from '../../../styles/shared'
 
 export function AanmeldingenTab() {
   const { stats, aanmeldingen, handleUpdate } = useOutletContext<DashboardContext>()
-  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const { hasPermission } = usePermissions()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | Aanmelding['status']>('all')
+  const [filterRole, setFilterRole] = useState<'all' | Aanmelding['rol']>('all')
 
-  // Detect screen size
-  useEffect(() => {
-    const updateScreenSize = () => {
-      const width = window.innerWidth
-      if (width < 768) {
-        setScreenSize('mobile')
-      } else if (width < 1024) {
-        setScreenSize('tablet')
-      } else {
-        setScreenSize('desktop')
-      }
-    }
+  const canReadAanmeldingen = hasPermission('aanmelding', 'read')
+  const canWriteAanmeldingen = hasPermission('aanmelding', 'write')
 
-    updateScreenSize()
-    window.addEventListener('resize', updateScreenSize)
-    return () => window.removeEventListener('resize', updateScreenSize)
-  }, [])
+  // Filter aanmeldingen
+  const filteredAanmeldingen = aanmeldingen.filter(aanmelding => {
+    const matchesSearch = 
+      aanmelding.naam.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      aanmelding.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      aanmelding.telefoon?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || aanmelding.status === filterStatus;
+    const matchesRole = filterRole === 'all' || aanmelding.rol === filterRole;
+    
+    return matchesSearch && matchesStatus && matchesRole;
+  });
 
-  const handleStatusChange = async (id: string, newStatus: Aanmelding['status']) => {
-    try {
-      await updateAanmelding(id, { status: newStatus, behandeld_op: newStatus !== 'nieuw' ? new Date().toISOString() : null })
-      handleUpdate()
-    } catch (error) {
-      console.error('Error updating status:', error)
-    }
-  }
+  // Calculate additional stats
+  const statusStats = {
+    nieuw: aanmeldingen.filter(a => a.status === 'nieuw').length,
+    in_behandeling: aanmeldingen.filter(a => a.status === 'in_behandeling').length,
+    behandeld: aanmeldingen.filter(a => a.status === 'behandeld').length,
+    geannuleerd: aanmeldingen.filter(a => a.status === 'geannuleerd').length,
+  };
 
-  const toggleCardExpansion = (id: string) => {
-    const newExpanded = new Set(expandedCards)
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id)
-    } else {
-      newExpanded.add(id)
-    }
-    setExpandedCards(newExpanded)
-  }
-
-  // Mobile Card View
-  const MobileView = () => (
-    <div className="space-y-4">
-      {aanmeldingen.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          Geen aanmeldingen gevonden
+  if (!canReadAanmeldingen) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-red-100 dark:bg-red-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Geen Toegang</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Je hebt geen toestemming om aanmeldingen te bekijken.
+          </p>
         </div>
-      ) : (
-        aanmeldingen.map((aanmelding) => (
-          <div key={aanmelding.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{aanmelding.naam}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{aanmelding.email}</p>
-                  {aanmelding.telefoon && (
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{aanmelding.telefoon}</p>
-                  )}
-                </div>
-                <StatusBadge status={aanmelding.status} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Role Statistics */}
+      <div className={`${cc.grid.twoThree()} gap-4`}>
+        {Object.entries(stats.rollen).map(([rol, aantal]) => (
+          <div key={rol} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm ${cc.hover.card}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{rol}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{String(aantal)}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Rol:</span>
-                  <span className="ml-2 text-gray-900 dark:text-white">{aanmelding.rol}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Afstand:</span>
-                  <span className="ml-2 text-gray-900 dark:text-white">{aanmelding.afstand}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Ondersteuning:</span>
-                  <span className="ml-2 text-gray-900 dark:text-white">{aanmelding.ondersteuning}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Email verzonden:</span>
-                  <span className={`ml-2 ${aanmelding.email_verzonden ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {aanmelding.email_verzonden ? 'Ja' : 'Nee'}
-                  </span>
-                </div>
+              <div className="bg-indigo-100 dark:bg-indigo-900/50 rounded-lg p-2">
+                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
-
-              <button
-                onClick={() => toggleCardExpansion(aanmelding.id)}
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
-              >
-                {expandedCards.has(aanmelding.id) ? 'Minder details' : 'Meer details'}
-              </button>
-
-              {expandedCards.has(aanmelding.id) && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                  {aanmelding.bijzonderheden && (
-                    <div>
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Bijzonderheden:</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{aanmelding.bijzonderheden}</p>
-                    </div>
-                  )}
-                  {aanmelding.notities && (
-                    <div>
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Notities:</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{aanmelding.notities}</p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <div>Aangemeld: {formatDate(aanmelding.created_at)}</div>
-                    <div>Bijgewerkt: {formatDate(aanmelding.updated_at)}</div>
-                    {aanmelding.behandeld_door && (
-                      <div>Behandeld door: {aanmelding.behandeld_door}</div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
+          </div>
+        ))}
+      </div>
 
-            <div className="px-4 pb-4">
+      {/* Status Statistics */}
+      <div className={`${cc.grid.twoFour()} gap-4`}>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-1">Nieuw</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.nieuw}</p>
+            </div>
+            <div className="bg-orange-100 dark:bg-orange-900/50 rounded-lg p-2">
+              <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">In behandeling</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.in_behandeling}</p>
+            </div>
+            <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-2">
+              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Behandeld</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.behandeld}</p>
+            </div>
+            <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-2">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Geannuleerd</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.geannuleerd}</p>
+            </div>
+            <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-2">
+              <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Aanmeldingen Section */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Aanmeldingen</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {filteredAanmeldingen.length} {filteredAanmeldingen.length === 1 ? 'aanmelding' : 'aanmeldingen'}
+          </p>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative flex-1">
+              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Zoek aanmeldingen..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              />
+            </div>
+            
+            <div className="flex gap-2">
               <select
-                value={aanmelding.status}
-                onChange={(e) => handleStatusChange(aanmelding.id, e.target.value as Aanmelding['status'])}
-                className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value as any)}
+                className={cc.form.select({ className: 'text-sm' })}
               >
+                <option value="all">Alle Rollen</option>
+                <option value="Deelnemer">Deelnemer</option>
+                <option value="Begeleider">Begeleider</option>
+                <option value="Vrijwilliger">Vrijwilliger</option>
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className={cc.form.select({ className: 'text-sm' })}
+              >
+                <option value="all">Alle Status</option>
                 <option value="nieuw">Nieuw</option>
                 <option value="in_behandeling">In behandeling</option>
                 <option value="behandeld">Behandeld</option>
@@ -173,196 +187,34 @@ export function AanmeldingenTab() {
               </select>
             </div>
           </div>
-        ))
-      )}
-    </div>
-  )
-
-  // Tablet View (Condensed Table)
-  const TabletView = () => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Naam</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Afstand</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email verzonden</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acties</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {aanmeldingen.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                Geen aanmeldingen gevonden
-              </td>
-            </tr>
-          ) : (
-            aanmeldingen.map((aanmelding) => (
-              <tr key={aanmelding.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                  {aanmelding.naam}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.email}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <StatusBadge status={aanmelding.status} />
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.rol}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.afstand}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm">
-                  <span className={aanmelding.email_verzonden ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {aanmelding.email_verzonden ? 'Ja' : 'Nee'}
-                  </span>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                  <select
-                    value={aanmelding.status}
-                    onChange={(e) => handleStatusChange(aanmelding.id, e.target.value as Aanmelding['status'])}
-                    className="block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="nieuw">Nieuw</option>
-                    <option value="in_behandeling">In behandeling</option>
-                    <option value="behandeld">Behandeld</option>
-                    <option value="geannuleerd">Geannuleerd</option>
-                  </select>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )
-
-  // Desktop View (Full Table)
-  const DesktopView = () => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Naam</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Telefoon</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Afstand</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ondersteuning</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bijzonderheden</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Terms</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email Verzonden</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Behandeld Door</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notities</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created At</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Updated At</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acties</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {aanmeldingen.length === 0 ? (
-            <tr>
-              <td colSpan={15} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                Geen aanmeldingen gevonden
-              </td>
-            </tr>
-          ) : (
-            aanmeldingen.map((aanmelding) => (
-              <tr key={aanmelding.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                  {aanmelding.naam}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.telefoon || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <StatusBadge status={aanmelding.status} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.rol}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.afstand}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.ondersteuning}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={aanmelding.bijzonderheden || undefined}>
-                  {aanmelding.bijzonderheden || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.terms ? 'Ja' : 'Nee'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.email_verzonden ? 'Ja' : 'Nee'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {aanmelding.behandeld_door || '-'}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={aanmelding.notities || undefined}>
-                  {aanmelding.notities || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(aanmelding.created_at)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(aanmelding.updated_at)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <select
-                    value={aanmelding.status}
-                    onChange={(e) => handleStatusChange(aanmelding.id, e.target.value as Aanmelding['status'])}
-                    className="block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="nieuw">Nieuw</option>
-                    <option value="in_behandeling">In behandeling</option>
-                    <option value="behandeld">Behandeld</option>
-                    <option value="geannuleerd">Geannuleerd</option>
-                  </select>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )
-
-  return (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {Object.entries(stats.rollen).map(([rol, aantal]) => (
-          <div key={rol} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 shadow-sm">
-            <dt className="text-xs text-gray-500 dark:text-gray-400">{rol}</dt>
-            <dd className="mt-1 text-xl font-medium text-gray-900 dark:text-white">{String(aantal)}</dd>
-          </div>
-        ))}
-      </div>
-
-      {/* Aanmeldingen Container */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Aanmeldingen</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Totaal: {aanmeldingen.length} aanmeldingen
-          </p>
         </div>
 
+        {/* Aanmeldingen List */}
         <div className="p-6">
-          {screenSize === 'mobile' && <MobileView />}
-          {screenSize === 'tablet' && <TabletView />}
-          {screenSize === 'desktop' && <DesktopView />}
+          {filteredAanmeldingen.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Geen aanmeldingen gevonden</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
+                {searchQuery || filterStatus !== 'all' || filterRole !== 'all'
+                  ? 'Probeer een andere zoekopdracht of filter'
+                  : 'Er zijn nog geen aanmeldingen ontvangen'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredAanmeldingen.map((aanmelding) => (
+                <RegistrationItem
+                  key={aanmelding.id}
+                  registration={aanmelding}
+                  onStatusUpdate={handleUpdate}
+                  canWrite={canWriteAanmeldingen}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

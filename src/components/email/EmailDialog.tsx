@@ -11,7 +11,6 @@ import {
   ChevronUpDownIcon, 
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
-import { cl } from '../../styles/shared'
 import { cc } from '../../styles/shared'
 import TextStyle from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
@@ -208,7 +207,7 @@ export function EmailDialog({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black bg-opacity-30 dark:bg-black/50" />
+            <div className={`fixed inset-0 ${cc.overlay.light}`} />
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
@@ -222,12 +221,12 @@ export function EmailDialog({
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">
+                <Dialog.Panel className={`w-full max-w-3xl transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 ${cc.spacing.container.md} shadow-xl transition-all`}>
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
                     Email Opstellen
                   </Dialog.Title>
 
-                  <div className="space-y-6">
+                  <div className={cc.spacing.section.md}>
                     {error && (
                       <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-700/50">
                         <div className="flex">
@@ -260,7 +259,7 @@ export function EmailDialog({
                     {recipient ? (
                       <div className="flex items-center">
                         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">Aan:</label>
-                        <p className="text-sm text-gray-900 dark:text-gray-100">{recipient.name} ({recipient.email})</p>
+                        <p className="text-sm text-gray-900 dark:text-white">{recipient.name} ({recipient.email})</p>
                       </div>
                     ) : (
                       // Use Combobox for 'Aan:' field
@@ -296,7 +295,7 @@ export function EmailDialog({
                                 {filteredSuggestions.map((email) => (
                                   <Combobox.Option
                                     key={email}
-                                    className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${ active ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-gray-100' }`}
+                                    className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${ active ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white' }`}
                                     // Ensure value is always string
                                     value={email} 
                                   >
@@ -316,7 +315,7 @@ export function EmailDialog({
 
                     <div className="flex items-center">
                       <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">Van:</label>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">info@dekoninklijkeloop.nl</p>
+                      <p className="text-sm text-gray-900 dark:text-white">info@dekoninklijkeloop.nl</p>
                     </div>
 
                     <div>
@@ -334,7 +333,7 @@ export function EmailDialog({
 
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bericht</label>
-                      <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                      <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500">
                         <RichTextEditor editor={editor} style={{ minHeight: 200 }}>
                           <RichTextEditor.Toolbar sticky stickyOffset={0} className="bg-gray-50 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
                             {/* Group 1: Basic Formatting & Color */}
@@ -394,7 +393,7 @@ export function EmailDialog({
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className={`flex justify-end ${cc.spacing.gap.md} pt-4`}>
                       <button type="button" className={cc.button.base({ color: 'secondary' })} onClick={onClose}>
                         Annuleren
                       </button>
@@ -441,7 +440,7 @@ export function EmailDialog({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black bg-opacity-40 dark:bg-black/60" />
+            <div className={`fixed inset-0 ${cc.overlay.medium}`} />
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
@@ -455,8 +454,8 @@ export function EmailDialog({
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4 flex justify-between items-center">
+                <Dialog.Panel className={`w-full max-w-4xl transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 ${cc.spacing.container.md} shadow-xl transition-all`}>
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4 flex justify-between items-center">
                     Email Preview
                     <button onClick={() => setIsPreviewOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                        <XMarkIcon className="h-6 w-6" />
@@ -464,14 +463,14 @@ export function EmailDialog({
                   </Dialog.Title>
                   
                   {/* Add Subject, To, From fields */}
-                  <div className="mb-4 space-y-1 border-b border-gray-200 dark:border-gray-700 pb-3 text-sm">
-                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Van:</strong> <span className="text-gray-800 dark:text-gray-100">info@dekoninklijkeloop.nl</span></p>
-                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Aan:</strong> <span className="text-gray-800 dark:text-gray-100">{recipient ? `${recipient.name} <${recipient.email}>` : toEmail}</span></p>
-                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Onderwerp:</strong> <span className="text-gray-800 dark:text-gray-100">{subject}</span></p>
+                  <div className={`mb-4 ${cc.spacing.section.xs} border-b border-gray-200 dark:border-gray-700 pb-3 text-sm`}>
+                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Van:</strong> <span className="text-gray-800 dark:text-white">info@dekoninklijkeloop.nl</span></p>
+                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Aan:</strong> <span className="text-gray-800 dark:text-white">{recipient ? `${recipient.name} <${recipient.email}>` : toEmail}</span></p>
+                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Onderwerp:</strong> <span className="text-gray-800 dark:text-white">{subject}</span></p>
                   </div>
                   
                   {/* Render HTML Content within a constrained container */}
-                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded border border-gray-200 dark:border-gray-700">
+                  <div className={`bg-gray-50 dark:bg-gray-900 ${cc.spacing.container.sm} rounded border border-gray-200 dark:border-gray-700`}>
                     <div 
                       className="prose prose-sm max-w-3xl mx-auto bg-white text-gray-900 shadow-sm p-6 min-h-[200px]"
                       dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }}

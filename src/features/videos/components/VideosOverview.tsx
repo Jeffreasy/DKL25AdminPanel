@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { LoadingSkeleton } from '../../../components/LoadingSkeleton' // Adjusted path
-import { ErrorText, H1, SmallText } from '../../../components/typography' // Adjusted path
-import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/videoService' // Adjusted path
-import { usePageTitle } from '../../../hooks/usePageTitle' // Adjusted path
-import type { Video, VideoInsert } from '../types' // Adjusted path
-import { cl } from '../../../styles/shared' // Adjusted path - Changed cc to cl
+import { ErrorText, H1, SmallText } from '../../../components/typography'
+import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/videoService'
+import { usePageTitle } from '../../../hooks/usePageTitle'
+import type { Video, VideoInsert } from '../types'
+import { cl, cc } from '../../../styles/shared'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
-import { supabase } from '../../../lib/supabase' // Adjusted path
+import { supabase } from '../../../lib/supabase'
+import { ConfirmDialog, EmptyState, LoadingGrid } from '../../../components/ui'
 
 interface VideoFormData {
   title: string
@@ -78,6 +78,12 @@ export function VideosOverview() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
   const [isDragging, setIsDragging] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; videoId: string | null; videoTitle: string | null }>({
+    isOpen: false,
+    videoId: null,
+    videoTitle: null
+  })
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
 
   const filteredVideos = useMemo(() => {
     return videos
@@ -207,43 +213,51 @@ export function VideosOverview() {
     }
   }
 
-  const handleDelete = async (videoId: string, videoTitle: string) => {
-    if (!confirm(`Weet je zeker dat je de video "${videoTitle}" wilt verwijderen?`)) return
+  const handleDelete = (videoId: string, videoTitle: string) => {
+    setDeleteConfirm({ isOpen: true, videoId, videoTitle })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.videoId) return
+    
     try {
       setError(null)
-      await deleteVideo(videoId)
+      await deleteVideo(deleteConfirm.videoId)
       await loadVideos()
-      toast.success(`Video "${videoTitle}" succesvol verwijderd.`)
+      toast.success(`Video "${deleteConfirm.videoTitle}" succesvol verwijderd.`)
     } catch (err) {
       console.error('Error deleting video:', err)
       setError('Er ging iets mis bij het verwijderen van de video')
       toast.error('Fout bij verwijderen video.')
+    } finally {
+      setDeleteConfirm({ isOpen: false, videoId: null, videoTitle: null })
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedVideos.size === 0) {
-      toast.error("Geen video's geselecteerd om te verwijderen.");
-      return;
+      toast.error("Geen video's geselecteerd om te verwijderen.")
+      return
     }
+    setBulkDeleteConfirm(true)
+  }
 
-    const videoCount = selectedVideos.size;
-    const videoText = videoCount === 1 ? 'video' : 'video(\'s)'; // Fix: Escaped single quote
-
-    if (window.confirm(`Weet je zeker dat je ${videoCount} ${videoText} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`)) {
-      const idsToDelete = Array.from(selectedVideos);
-      try {
-        // Fix: Call deleteVideo for each selected ID
-        await Promise.all(idsToDelete.map(id => deleteVideo(id)));
-        toast.success(`${videoCount} ${videoText} succesvol verwijderd.`); // Reverted toast message
-        setVideos(currentVideos => currentVideos.filter(video => !idsToDelete.includes(video.id)));
-        setSelectedVideos(new Set()); // Clear selection after delete
-      } catch (error) {
-        console.error('Error deleting videos:', error);
-        toast.error(`Fout bij verwijderen ${videoText}.`); // Reverted toast message
-      }
+  const confirmBulkDelete = async () => {
+    const idsToDelete = Array.from(selectedVideos)
+    const videoCount = idsToDelete.length
+    
+    try {
+      await Promise.all(idsToDelete.map(id => deleteVideo(id)))
+      toast.success(`${videoCount} video${videoCount === 1 ? '' : "'s"} succesvol verwijderd.`)
+      setVideos(currentVideos => currentVideos.filter(video => !idsToDelete.includes(video.id)))
+      setSelectedVideos(new Set())
+    } catch (error) {
+      console.error('Error deleting videos:', error)
+      toast.error('Fout bij verwijderen video\'s.')
+    } finally {
+      setBulkDeleteConfirm(false)
     }
-  };
+  }
 
   const handleSelectVideo = (videoId: string) => {
     setSelectedVideos(prev => {
@@ -364,7 +378,7 @@ export function VideosOverview() {
       )}
 
       {loading ? (
-        <LoadingSkeleton className="dark:bg-gray-700" />
+        <LoadingGrid count={6} variant="albums" />
       ) : error ? (
         <ErrorText className="dark:text-red-400">{error}</ErrorText>
       ) : (
@@ -451,15 +465,17 @@ export function VideosOverview() {
                   </Draggable>
                 ))}
                 {provided.placeholder}
-                 {filteredVideos.length === 0 && !loading && (
-                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-                    Geen video's gevonden die voldoen aan de zoekopdracht.
-                  </div>
+                 {filteredVideos.length === 0 && !loading && videos.length > 0 && (
+                  <EmptyState
+                    title="Geen resultaten"
+                    description="Geen video's gevonden die voldoen aan de zoekopdracht."
+                  />
                 )}
                  {!loading && videos.length === 0 && (
-                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-                    Er zijn nog geen video's toegevoegd.
-                  </div>
+                  <EmptyState
+                    title="Geen video's"
+                    description="Er zijn nog geen video's toegevoegd. Klik op 'Nieuwe Video Toevoegen' om te beginnen."
+                  />
                 )}
               </div>
             )}
@@ -552,6 +568,26 @@ export function VideosOverview() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, videoId: null, videoTitle: null })}
+        onConfirm={confirmDelete}
+        title="Video verwijderen"
+        message={`Weet je zeker dat je de video "${deleteConfirm.videoTitle}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`}
+        confirmText="Verwijderen"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        onClose={() => setBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Video's verwijderen"
+        message={`Weet je zeker dat je ${selectedVideos.size} video${selectedVideos.size === 1 ? '' : "'s"} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`}
+        confirmText="Verwijderen"
+        variant="danger"
+      />
     </div>
   )
-} 
+}

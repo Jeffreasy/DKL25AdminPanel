@@ -1,24 +1,28 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlbumGrid } from '../features/albums/components/AlbumGrid'
-import { AlbumForm } from '../features/albums/components/AlbumForm'
-import { AlbumDetailModal } from '../features/albums/components/AlbumDetailModal'
-// Import the new preview modal
-import { GalleryPreviewModal } from '../features/albums/components/GalleryPreviewModal'
+import { AlbumGrid } from '../features/albums/components/display/AlbumGrid'
+import { AlbumForm } from '../features/albums/components/forms/AlbumForm'
+import { AlbumDetailModal } from '../features/albums/components/detail/AlbumDetailModal'
+import { GalleryPreviewModal } from '../features/albums/components/preview/GalleryPreviewModal'
 import { ErrorBoundary } from '../features/albums/components/ErrorBoundary'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
 import { supabase } from '../lib/supabase'
 import { H1, SmallText } from '../components/typography'
 import { cc } from '../styles/shared'
+import { usePermissions } from '../hooks/usePermissions'
 
 export function AlbumManagementPage() {
   usePageTitle("Albums beheren")
+  const { hasPermission } = usePermissions()
   const [isCreating, setIsCreating] = useState(false)
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithDetails | null>(null)
   const [showPreviewModal, setShowPreviewModal] = useState(false) // State for preview modal
   const [refreshKey, setRefreshKey] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
+
+  const canReadAlbums = hasPermission('album', 'read')
+  const canWriteAlbums = hasPermission('album', 'write')
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
@@ -63,31 +67,44 @@ export function AlbumManagementPage() {
     }
   }, [searchParams, handleAlbumSelect, selectedAlbum])
 
-  return (
-    <div className="space-y-6">
-      {/* Header: Use flex-col on mobile, sm:flex-row on larger screens */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <H1>Albums</H1>
-          <SmallText className="mt-1">
-            Beheer hier je foto albums. Elk album kan worden getoond op de hoofdpagina.
-          </SmallText>
+  if (!canReadAlbums) {
+    return (
+      <div className={cc.spacing.container.md}>
+        <div className="text-center">
+          <H1>Geen toegang</H1>
+          <SmallText>U heeft geen toestemming om albums te beheren.</SmallText>
         </div>
-        {/* Button group alignment adjustment for flex-col */}
-        <div className="flex gap-3 justify-end sm:justify-normal">
-          {/* Add Preview Button */}
-          <button
-            onClick={() => setShowPreviewModal(true)}
-            className={cc.button.base({ color: 'secondary' })}
-          >
-            Preview Galerij
-          </button>
-          <button
-            onClick={() => setIsCreating(true)}
-            className={cc.button.base({ color: 'primary' })}
-          >
-            Nieuw album
-          </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cc.spacing.section.md}>
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className={`${cc.spacing.px.sm} ${cc.spacing.py.lg} sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center ${cc.spacing.gap.lg}`}>
+          <div>
+            <H1 className="mb-1">Albums</H1>
+            <SmallText>
+              Beheer hier je foto albums. Elk album kan worden getoond op de hoofdpagina.
+            </SmallText>
+          </div>
+          <div className={`flex ${cc.spacing.gap.md} justify-end sm:justify-normal flex-shrink-0`}>
+            <button
+              onClick={() => setShowPreviewModal(true)}
+              className={cc.button.base({ color: 'secondary' })}
+            >
+              Preview Galerij
+            </button>
+            {canWriteAlbums && (
+              <button
+                onClick={() => setIsCreating(true)}
+                className={cc.button.base({ color: 'primary' })}
+              >
+                Nieuw album
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

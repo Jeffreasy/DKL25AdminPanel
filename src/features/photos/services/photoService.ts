@@ -1,6 +1,8 @@
 import { supabase } from '../../../lib/supabase'
 import type { Photo } from '../types'
-import type { AlbumWithDetails } from '../../albums/types' // Adjusted path for AlbumWithDetails
+import type { AlbumWithDetails } from '../../albums/types'
+// Import fetchAllAlbums from albumService to avoid duplication
+export { fetchAllAlbums } from '../../albums/services/albumService'
 
 interface PhotoAlbumRelation {
   photo_id: string
@@ -116,64 +118,8 @@ export async function fetchPhotoAlbums(photoId: string): Promise<string[]> {
   return data.map(item => item.album_id)
 }
 
-export async function fetchAllAlbums(): Promise<AlbumWithDetails[]> {
-  // 1. Fetch basic album data + cover_photo_id + photo count
-  const { data: albumsData, error: albumsError } = await supabase
-    .from('albums')
-    // Cleaned up select string
-    .select(`
-      id,
-      title,
-      description,
-      visible,
-      order_number,
-      created_at,
-      updated_at,
-      cover_photo_id,
-      photos_count:album_photos(count)
-    `)
-    .order('order_number')
-
-  if (albumsError) throw albumsError
-  if (!albumsData) return [];
-
-  // 2. Extract non-null cover photo IDs
-  const coverPhotoIds = albumsData
-    .map(album => album.cover_photo_id)
-    .filter((id): id is string => id !== null && id !== undefined);
-
-  // 3. Fetch cover photos if there are any IDs
-  const coverPhotosMap: Map<string, Photo> = new Map();
-  if (coverPhotoIds.length > 0) {
-    const { data: photosData, error: photosError } = await supabase
-      .from('photos')
-      .select('*') // Select all needed photo fields
-      .in('id', coverPhotoIds);
-
-    if (photosError) {
-      console.error("Error fetching cover photos:", photosError); 
-      // Continue without cover photos instead of throwing? Or throw photosError;
-    } else if (photosData) {
-      photosData.forEach(photo => coverPhotosMap.set(photo.id, photo as Photo));
-    }
-  }
-
-  // 4. Combine album data with fetched cover photos
-  const transformedData = albumsData.map(album => {
-    const coverPhoto = album.cover_photo_id ? coverPhotosMap.get(album.cover_photo_id) || null : null;
-    
-    return {
-      // Omit only cover_photo and photos, keep photos_count
-      ...(album as Omit<AlbumWithDetails, 'cover_photo' | 'photos'>),
-      cover_photo: coverPhoto, 
-      // Use the photos_count from the original album data
-      photos_count: album.photos_count || [{ count: 0 }],
-      photos: [] 
-    } as AlbumWithDetails;
-  });
-
-  return transformedData;
-}
+// fetchAllAlbums is now exported from albumService above (line 5)
+// This removes ~60 lines of duplicate code
 
 export async function addPhotoToAlbum(photoId: string, albumId: string): Promise<void> {
   // Haal laatste order number op

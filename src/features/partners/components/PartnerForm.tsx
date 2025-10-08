@@ -131,9 +131,9 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40 flex items-center justify-center p-4">
+    <div className={`fixed inset-0 ${cc.overlay.medium} overflow-y-auto h-full w-full z-40 flex items-center justify-center ${cc.spacing.container.sm}`}>
       <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-auto border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+        <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0`}>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {partner ? 'Partner Bewerken' : 'Partner Toevoegen'}
           </h2>
@@ -144,7 +144,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className={`flex-grow overflow-y-auto ${cc.spacing.container.md} ${cc.spacing.section.sm}`}>
           <div>
             <label htmlFor="name" className={cc.form.label()}>
               Naam *
@@ -240,7 +240,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
             <label className={cc.form.label()}>
               Logo
             </label>
-            <div className="mt-1 space-y-2">
+            <div className={`mt-1 ${cc.spacing.section.xs}`}>
               {previewUrl && (
                 <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                   <img
@@ -265,7 +265,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
                   </button>
                 </div>
               )}
-              <div className="flex items-center gap-3">
+              <div className={`flex items-center ${cc.spacing.gap.md}`}>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -297,7 +297,7 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
             </div>
           )}
 
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
+          <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end ${cc.spacing.gap.md} flex-shrink-0`}>
             <button
               type="button"
               onClick={onCancel}

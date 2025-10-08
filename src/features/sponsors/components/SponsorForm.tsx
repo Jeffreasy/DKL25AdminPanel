@@ -92,9 +92,9 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className={`fixed inset-0 ${cc.overlay.medium} backdrop-blur-sm z-50 flex items-center justify-center ${cc.spacing.container.sm}`}>
       <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+        <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0`}>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {initialData?.id ? 'Sponsor bewerken' : 'Nieuwe sponsor'}
           </h2>
@@ -107,7 +107,7 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
-          <div className="p-6 space-y-5">
+          <div className={`${cc.spacing.container.md} ${cc.spacing.section.md}`}>
             <div>
               <label htmlFor="name" className={cc.form.label()}>
                 Naam <span className="text-red-600 dark:text-red-400">*</span>
@@ -137,7 +137,7 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
 
             <div>
               <label className={cc.form.label()}>Logo</label>
-              <div className="mt-1 space-y-2">
+              <div className={`mt-1 ${cc.spacing.section.xs}`}>
                 {previewUrl && (
                   <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                     <img
@@ -161,7 +161,7 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-3">
+                <div className={`flex items-center ${cc.spacing.gap.md}`}>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -238,7 +238,7 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
+          <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end ${cc.spacing.gap.md} flex-shrink-0`}>
             <button
               type="button"
               onClick={onCancel}

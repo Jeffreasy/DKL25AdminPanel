@@ -5,24 +5,25 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from "../contexts/auth/useAuth"
 import { supabase } from '../lib/supabase'
-import { 
-  EyeIcon, 
+import {
+  EyeIcon,
   EyeSlashIcon,
   CheckIcon,
   XCircleIcon,
-  HomeIcon, 
+  HomeIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { 
-  PASSWORD_REQUIREMENTS, 
-  getPasswordStrength, 
+import {
+  PASSWORD_REQUIREMENTS,
+  getPasswordStrength,
   strengthColors,
-  strengthMessages 
+  strengthMessages
 } from '../utils/validation'
 import DOMPurify from 'dompurify'
 import { useTheme } from '../hooks/useTheme'
 import { cc } from '../styles/shared'
+import { ConfirmDialog, LoadingGrid } from '../components/ui'
 
 const profileSchema = z.object({
   email: z.string().email('Ongeldig email adres'),
@@ -76,6 +77,7 @@ export function ProfilePage() {
   const [networkError, setNetworkError] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(30)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   const currentPasswordRef = useRef<HTMLInputElement>(null)
   const lockTimeout = useRef<NodeJS.Timeout>()
@@ -88,11 +90,18 @@ export function ProfilePage() {
     met: newPassword ? req.validator(newPassword) : false
   }))
 
-  const handleCancel = useCallback(() => {
-    if (!isDirty || window.confirm('Weet je zeker dat je wilt annuleren?')) {
+  const handleCancelClick = useCallback(() => {
+    if (isDirty) {
+      setShowCancelConfirm(true)
+    } else {
       navigate('/dashboard')
     }
   }, [isDirty, navigate])
+
+  const confirmCancel = () => {
+    setShowCancelConfirm(false)
+    navigate('/dashboard')
+  }
 
   useEffect(() => {
     if (currentPasswordRef.current) {
@@ -128,22 +137,30 @@ export function ProfilePage() {
     }
   }, [])
 
+  // Session check - alleen periodiek, niet bij mount
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | number
+    let timeoutId: NodeJS.Timeout
 
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error || !session) {
         setSessionExpired(true)
+        // Geef gebruiker tijd om te zien wat er gebeurt
         setTimeout(() => {
           navigate('/login', { state: { from: 'profile', reason: 'session_expired' } })
         }, 3000)
-      } else {
-        timeoutId = setTimeout(checkSession, 5 * 60 * 1000)
       }
     }
 
-    checkSession()
+    // Check alleen periodiek (elke 5 minuten), NIET bij mount
+    // Bij mount hebben we al een user van useAuth()
+    timeoutId = setTimeout(() => {
+      checkSession()
+      // Daarna elke 5 minuten
+      const interval = setInterval(checkSession, 5 * 60 * 1000)
+      return () => clearInterval(interval)
+    }, 5 * 60 * 1000)
+
     return () => clearTimeout(timeoutId)
   }, [navigate])
 
@@ -237,12 +254,12 @@ export function ProfilePage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleCancel()
+        handleCancelClick()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleCancel])
+  }, [handleCancelClick])
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -266,27 +283,7 @@ export function ProfilePage() {
   }, [isLocked])
 
   if (isLoading) {
-    return (
-      <div className="animate-pulse">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white shadow sm:rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-              <div className="space-y-6">
-                <div>
-                  <div className="h-4 bg-gray-200 rounded w-1/6 mb-2"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                </div>
-                <div>
-                  <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingGrid count={4} variant="compact" />
   }
 
   return (
@@ -351,7 +348,7 @@ export function ProfilePage() {
                </div>
             )}
 
-            <div className="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+            <div className={`mt-6 ${cc.grid.formSix()}`}>
               <div className="sm:col-span-4">
                 <label htmlFor="email" className={cc.form.label()}>Email</label>
                 <input 
@@ -473,9 +470,9 @@ export function ProfilePage() {
 
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-right sm:px-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-end space-x-3">
-               <button 
-                 type="button" 
-                 onClick={handleCancel}
+               <button
+                 type="button"
+                 onClick={handleCancelClick}
                  className={cc.button.base({ color: 'secondary' })}
                  disabled={isSubmitting}
                >
@@ -492,6 +489,17 @@ export function ProfilePage() {
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        open={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={confirmCancel}
+        title="Wijzigingen annuleren"
+        message="Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je wilt annuleren?"
+        confirmText="Ja, annuleren"
+        cancelText="Nee, ga terug"
+        variant="warning"
+      />
     </div>
   )
-} 
+}

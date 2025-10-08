@@ -9,11 +9,12 @@ import {
   Cog6ToothIcon,
   FolderPlusIcon,
 } from '@heroicons/react/24/outline'
+import { usePermissions } from '../../hooks/usePermissions'
 
 // Lazy load heavy components
 const SponsorForm = lazy(() => import('../../features/sponsors/components/SponsorForm').then(module => ({ default: module.SponsorForm })))
-const PhotoForm = lazy(() => import('../../features/photos/components/PhotoForm').then(module => ({ default: module.PhotoForm })))
-const AlbumForm = lazy(() => import('../../features/albums/components/AlbumForm').then(module => ({ default: module.AlbumForm })))
+const PhotoForm = lazy(() => import('../../features/photos/components/forms/PhotoForm').then(module => ({ default: module.PhotoForm })))
+const AlbumForm = lazy(() => import('../../features/albums/components/forms/AlbumForm').then(module => ({ default: module.AlbumForm })))
 const PartnerForm = lazy(() => import('../../features/partners/components/PartnerForm').then(module => ({ default: module.PartnerForm })))
 
 const quickActions = [
@@ -22,35 +23,41 @@ const quickActions = [
     description: 'Upload nieuwe foto\'s naar de galerij',
     action: 'photos',
     icon: PhotoIcon,
+    permission: 'photo:write',
   },
   {
     name: 'Album maken',
     description: 'Maak een nieuw fotoalbum aan',
     action: 'albums',
     icon: FolderPlusIcon,
+    permission: 'album:write',
   },
   {
     name: 'Partner toevoegen',
     description: 'Voeg een nieuwe partner toe',
     action: 'partners',
     icon: UserPlusIcon,
+    permission: 'partner:write',
   },
   {
     name: 'Sponsor toevoegen',
     description: 'Registreer een nieuwe sponsor',
     action: 'sponsors',
     icon: CurrencyDollarIcon,
+    permission: 'sponsor:write',
   },
   {
     name: 'Instellingen',
     description: 'Beheer je account instellingen',
     href: '/settings',
     icon: Cog6ToothIcon,
+    // Settings accessible to all authenticated users
   },
 ]
 
 export function QuickActions() {
   const navigate = useNavigate()
+  const { hasPermission } = usePermissions()
   const [modals, setModals] = useState({
     sponsor: false,
     photo: false,
@@ -58,7 +65,10 @@ export function QuickActions() {
     partner: false,
   })
 
-  const memoizedQuickActions = useMemo(() => quickActions, [])
+  const memoizedQuickActions = useMemo(() =>
+    quickActions.filter(action =>
+      !action.permission || hasPermission(action.permission.split(':')[0], action.permission.split(':')[1])
+    ), [hasPermission])
 
   const handleAction = useCallback((action: string | undefined, href: string | undefined) => {
     if (href) {

@@ -6,6 +6,8 @@ import {
   UserGroupIcon,
   CurrencyDollarIcon,
   GlobeAltIcon,
+  EnvelopeIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 import type { ComponentType } from 'react'
 
@@ -13,6 +15,7 @@ export interface MenuItem {
   label: string
   path: string
   icon: ComponentType<{ className?: string }>
+  permission?: string // RBAC permission required to access this menu item
 }
 
 export interface MenuGroup {
@@ -27,26 +30,30 @@ export const menuItems: MenuItemOrGroup[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: HomeIcon,
+    // Dashboard is accessible to all authenticated users
   },
   {
     label: 'Media',
     items: [
-      { label: "Foto's", path: '/photos', icon: PhotoIcon },
-      { label: 'Albums', path: '/albums', icon: FolderIcon },
-      { label: "Video's", path: '/videos', icon: VideoCameraIcon },
+      { label: "Foto's", path: '/photos', icon: PhotoIcon, permission: 'photo:read' },
+      { label: 'Albums', path: '/albums', icon: FolderIcon, permission: 'album:read' },
+      { label: "Video's", path: '/videos', icon: VideoCameraIcon, permission: 'video:read' },
     ]
   },
   {
     label: 'Relaties',
     items: [
-      { label: 'Partners', path: '/partners', icon: UserGroupIcon },
-      { label: 'Sponsors', path: '/sponsors', icon: CurrencyDollarIcon },
+      { label: 'Partners', path: '/partners', icon: UserGroupIcon, permission: 'partner:read' },
+      { label: 'Sponsors', path: '/sponsors', icon: CurrencyDollarIcon, permission: 'sponsor:read' },
     ]
   },
-  { label: 'Gebruikers', path: '/users', icon: UserGroupIcon },
+  { label: 'Nieuwsbrieven', path: '/newsletters', icon: EnvelopeIcon, permission: 'newsletter:read' },
+  { label: 'Gebruikers', path: '/users', icon: UserGroupIcon, permission: 'user:read' },
+  { label: 'Admin', path: '/admin', icon: ShieldCheckIcon, permission: 'system:admin' },
   {
     label: 'Frontend',
     path: '/frontend',
     icon: GlobeAltIcon,
+    // Frontend is accessible to all authenticated users
   }
 ]

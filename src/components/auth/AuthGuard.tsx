@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/auth/useAuth'
-import { LoadingSkeleton } from '../LoadingSkeleton'
+import { LoadingGrid } from '../ui'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -18,7 +18,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }, [isAuthenticated, isLoading, navigate])
 
   if (isLoading) {
-    return <LoadingSkeleton />
+    return <LoadingGrid variant="compact" count={4} />
   }
 
   if (!isAuthenticated) {

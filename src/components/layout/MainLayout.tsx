@@ -23,7 +23,7 @@ export function MainLayout() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-40"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-40"
         title="Open Team Chat"
       >
         <ChatBubbleLeftRightIcon className="w-6 h-6" />

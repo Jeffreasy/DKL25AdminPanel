@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { LoadingSkeleton } from '../../../components/LoadingSkeleton'
 import { ErrorText, SmallText } from '../../../components/typography'
 import { sponsorService } from '../services/sponsorService'
 import type { Sponsor } from '../types'
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { SponsorForm } from './SponsorForm'
 import { cc } from '../../../styles/shared'
+import { ConfirmDialog, EmptyState, LoadingGrid } from '../../../components/ui'
 
 type SortField = 'name' | 'order'
 type SortOrder = 'asc' | 'desc'
@@ -15,7 +15,8 @@ export function SponsorGrid() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [sponsorToDelete, setSponsorToDelete] = useState<Sponsor | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [sortField, setSortField] = useState<SortField>('order')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [filter, setFilter] = useState('')
@@ -41,14 +42,19 @@ export function SponsorGrid() {
     setEditingSponsor(sponsor)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!sponsorToDelete) return
+    
     try {
-      await sponsorService.deleteSponsor(id)
-      await loadSponsors() // Herlaad de lijst na verwijderen
-      setShowDeleteConfirm(null)
+      setIsDeleting(true)
+      await sponsorService.deleteSponsor(sponsorToDelete.id)
+      await loadSponsors()
+      setSponsorToDelete(null)
     } catch (err) {
       console.error('Error deleting sponsor:', err)
-      // Toon eventueel een error message
+      setError('Kon sponsor niet verwijderen')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -87,27 +93,21 @@ export function SponsorGrid() {
   })
 
   if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        <LoadingSkeleton />
-        <LoadingSkeleton />
-        <LoadingSkeleton />
-      </div>
-    )
+    return <LoadingGrid variant="albums" count={6} />
   }
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className={cc.spacing.container.sm}>
         <ErrorText>{error}</ErrorText>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Filters en sortering - Apply dark mode and cc styles */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
+    <div className={cc.spacing.section.sm}>
+      {/* Filters en sortering */}
+      <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 ${cc.spacing.section.sm}`}>
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1">
             <input
@@ -134,7 +134,8 @@ export function SponsorGrid() {
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+              className={`p-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 ${cc.transition.colors}`}
+              title={sortOrder === 'asc' ? 'Oplopend sorteren' : 'Aflopend sorteren'}
             >
               {sortOrder === 'asc' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,10 +154,11 @@ export function SponsorGrid() {
         </SmallText>
       </div>
 
-      {/* Sponsors grid - Add grid-auto-rows-fr */}
-      <div className={cc.grid({ className: 'p-4 grid-auto-rows-fr' })}>
+      {/* Sponsors grid */}
+      {sortedAndFilteredSponsors.length > 0 ? (
+        <div className={`${cc.grid.albums()} ${cc.spacing.container.sm} grid-auto-rows-fr ${cc.spacing.gap.lg}`}>
         {sortedAndFilteredSponsors.map((sponsor) => (
-          <div key={sponsor.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col">
+          <div key={sponsor.id} className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-md border border-gray-200 dark:border-gray-700 flex flex-col ${cc.hover.cardLarge}`}>
             <div className="h-40 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-t-lg flex items-center justify-center border-b border-gray-200 dark:border-gray-600">
               <img
                 src={sponsor.logoUrl}
@@ -176,8 +178,8 @@ export function SponsorGrid() {
                     >
                       <PencilIcon className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => setShowDeleteConfirm(sponsor.id)}
+                    <button
+                      onClick={() => setSponsorToDelete(sponsor)}
                       className={cc.button.iconDanger({ size: 'sm' })}
                     >
                       <TrashIcon className="w-4 h-4" />
@@ -207,7 +209,7 @@ export function SponsorGrid() {
                       className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 rounded inline-flex items-center gap-1 mt-2 group"
                     >
                       Bezoek website
-                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${cc.transition.transform} group-hover:translate-x-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
@@ -216,15 +218,13 @@ export function SponsorGrid() {
               </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      {filteredSponsors.length === 0 && (
-        <div className="text-center py-12">
-          <SmallText>
-            Geen sponsors gevonden{filter ? ' voor deze zoekopdracht' : ''}
-          </SmallText>
+          ))}
         </div>
+      ) : (
+        <EmptyState
+          title={filter ? 'Geen sponsors gevonden' : 'Geen sponsors'}
+          description={filter ? 'Probeer een andere zoekopdracht' : 'Er zijn nog geen sponsors toegevoegd'}
+        />
       )}
 
       {/* Edit Modal */}
@@ -245,32 +245,16 @@ export function SponsorGrid() {
         />
       )}
 
-      {/* Delete Confirmation Modal - Add dark mode styles */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full border border-gray-200 dark:border-gray-700 shadow-xl">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Sponsor verwijderen
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Weet je zeker dat je deze sponsor wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className={cc.button.base({ color: 'secondary' })}
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={() => handleDelete(showDeleteConfirm)}
-                className={cc.button.base({ color: 'danger' })}
-              >
-                Verwijderen
-              </button>
-            </div>
-          </div>
-        </div>
+      {sponsorToDelete && (
+        <ConfirmDialog
+          open={!!sponsorToDelete}
+          onClose={() => setSponsorToDelete(null)}
+          onConfirm={handleDelete}
+          title="Sponsor verwijderen"
+          message={`Weet je zeker dat je "${sponsorToDelete.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`}
+          variant="danger"
+          isProcessing={isDeleting}
+        />
       )}
     </div>
   )

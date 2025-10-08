@@ -91,13 +91,7 @@ export const cc = {
     }),
   },
 
-  // ADDED: Grid styles using tv
-  grid: tv({
-    base: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
-    // Potential variants could be added here later if needed, e.g., different column counts
-  }),
-
-  // ADDED: Form element styles using tv
+  // Form element styles using tv
   form: {
     label: tv({
       base: 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1',
@@ -146,6 +140,23 @@ export const cc = {
     },
   }),
 
+  // Empty state styles
+  emptyState: tv({
+    base: 'text-center py-12 px-4',
+  }),
+
+  emptyStateIcon: tv({
+    base: 'w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600',
+  }),
+
+  emptyStateTitle: tv({
+    base: 'text-lg font-semibold text-gray-900 dark:text-white mb-2',
+  }),
+
+  emptyStateDescription: tv({
+    base: 'text-gray-500 dark:text-gray-400',
+  }),
+
   // Pagination styles
   pagination: {
     container: tv({
@@ -183,6 +194,140 @@ export const cc = {
         type: 'page',
        }
     })
+  },
+
+  // Grid layout presets
+  grid: {
+    photos: tv({
+      base: 'grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7',
+    }),
+    albums: tv({
+      base: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    }),
+    thumbnails: tv({
+      base: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8',
+    }),
+    stats: tv({
+      base: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    }),
+    compact: tv({
+      base: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
+    }),
+    recentPhotos: tv({
+      base: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6',
+    }),
+    photoOrderer: tv({
+      base: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8',
+    }),
+    // New presets for common patterns
+    statsThree: tv({
+      base: 'grid grid-cols-1 md:grid-cols-3',
+    }),
+    statsFour: tv({
+      base: 'grid grid-cols-1 md:grid-cols-4',
+    }),
+    twoCol: tv({
+      base: 'grid grid-cols-1 sm:grid-cols-2',
+    }),
+    threeCol: tv({
+      base: 'grid grid-cols-1 sm:grid-cols-3',
+    }),
+    twoThree: tv({
+      base: 'grid grid-cols-2 sm:grid-cols-3',
+    }),
+    twoFour: tv({
+      base: 'grid grid-cols-2 sm:grid-cols-4',
+    }),
+    userCards: tv({
+      base: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+    }),
+    permissions: tv({
+      base: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+    }),
+    detailTwo: tv({
+      base: 'grid grid-cols-2',
+    }),
+    responsive: tv({
+      base: 'grid grid-cols-1 lg:grid-cols-2',
+    }),
+    formSix: tv({
+      base: 'grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6',
+    }),
+  },
+
+  // Transition presets
+  transition: {
+    fast: 'transition-all duration-150',
+    normal: 'transition-all duration-200',
+    slow: 'transition-all duration-300',
+    slower: 'transition-all duration-500',
+    colors: 'transition-colors duration-200',
+    transform: 'transition-transform duration-200',
+    opacity: 'transition-opacity duration-300',
+    shadow: 'transition-shadow duration-200',
+  },
+
+  // Hover effect presets
+  hover: {
+    card: 'hover:shadow-md transition-shadow duration-200',
+    cardLarge: 'hover:shadow-lg transition-shadow duration-200',
+    scale: 'hover:scale-105 transition-transform duration-200',
+    scaleButton: 'hover:scale-110 transition-all duration-200',
+    fadeIn: 'opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+    fadeInFast: 'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+    imageZoom: 'transition-transform duration-300 group-hover:scale-110',
+  },
+
+  // Overlay presets
+  overlay: {
+    light: 'bg-black/30 dark:bg-black/60',
+    medium: 'bg-black/50 dark:bg-black/70',
+    heavy: 'bg-black/70 dark:bg-black/80',
+    gradient: {
+      bottom: 'bg-gradient-to-t from-black/60 to-transparent',
+      top: 'bg-gradient-to-b from-black/60 to-transparent',
+      full: 'bg-gradient-to-t from-black/30 via-black/10 to-transparent',
+    },
+  },
+
+  // Spacing presets
+  spacing: {
+    // Container padding
+    container: {
+      xs: 'p-2',
+      sm: 'p-4',
+      md: 'p-6',
+      lg: 'p-8',
+    },
+    // Section spacing
+    section: {
+      xs: 'space-y-2',
+      sm: 'space-y-4',
+      md: 'space-y-6',
+      lg: 'space-y-8',
+    },
+    // Gap spacing
+    gap: {
+      xs: 'gap-1',
+      sm: 'gap-2',
+      md: 'gap-3',
+      lg: 'gap-4',
+      xl: 'gap-6',
+    },
+    // Padding variants
+    px: {
+      xs: 'px-2',
+      sm: 'px-4',
+      md: 'px-6',
+      lg: 'px-8',
+    },
+    py: {
+      xs: 'py-1',
+      sm: 'py-2',
+      md: 'py-3',
+      lg: 'py-4',
+      xl: 'py-6',
+    },
   },
 };
 

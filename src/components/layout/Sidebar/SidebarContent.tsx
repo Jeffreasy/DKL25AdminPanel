@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { menuItems, MenuItem, MenuGroup, MenuItemOrGroup } from '../../../types/navigation'
 import { FavoritePages } from '../FavoritePages'
 import { RecentPages } from '../RecentPages'
+import { usePermissions } from '../../../hooks/usePermissions'
 
 interface SidebarContentProps {
   variant: 'mobile' | 'tablet' | 'desktop';
@@ -11,6 +12,29 @@ interface SidebarContentProps {
 }
 
 export function SidebarContent({ variant, isCollapsed = false, onClose }: SidebarContentProps) {
+  const { hasPermission } = usePermissions();
+
+  // Filter menu items based on permissions
+  const filterMenuItems = (items: MenuItemOrGroup[]): MenuItemOrGroup[] => {
+    return items
+      .map(item => {
+        if ('items' in item) {
+          // It's a MenuGroup, filter its sub-items
+          const filteredItems = item.items.filter(subItem =>
+            !subItem.permission || hasPermission(subItem.permission.split(':')[0], subItem.permission.split(':')[1])
+          );
+          // Only include the group if it has any items left
+          return filteredItems.length > 0 ? { ...item, items: filteredItems } : null;
+        } else {
+          // It's a MenuItem, check permission
+          return !item.permission || hasPermission(item.permission.split(':')[0], item.permission.split(':')[1]) ? item : null;
+        }
+      })
+      .filter((item): item is MenuItemOrGroup => item !== null);
+  };
+
+  const filteredMenuItems = filterMenuItems(menuItems);
+
   // Determine logo size based on variant and collapsed state
   const logoSizeClass =
     variant === 'mobile' ? 'w-24'
@@ -33,14 +57,14 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
             src="https://res.cloudinary.com/dgfuv7wif/image/upload/v1733267882/664b8c1e593a1e81556b4238_0760849fb8_yn6vdm.png"
             alt="Logo"
             // Removed filter, apply size class.
-            className={`block transition-all duration-300 ${logoSizeClass}`}
+            className={`block transition-all ${logoSizeClass}`}
           />
         </div>
       </div>
 
       {/* Main Navigation */}
       <nav className="flex-grow space-y-1 px-2 py-4">
-        {menuItems.map((item: MenuItemOrGroup) =>
+        {filteredMenuItems.map((item: MenuItemOrGroup) =>
           'items' in item ? (
             <div key={item.label} className="space-y-1">
               {!isCollapsed && variant !== 'mobile' && variant !== 'tablet' && (
@@ -57,7 +81,7 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
                   >
                     <subItem.icon className={`
                       flex-shrink-0 h-6 w-6
-                      transition-colors duration-200
+                      transition-colors
                       text-gray-400 dark:text-gray-500 group-hover:text-white dark:group-hover:text-gray-300
                       ${variant === 'tablet' || (variant === 'desktop' && isCollapsed) ? 'mx-auto' : 'mr-3'}
                     `} />
@@ -76,7 +100,7 @@ export function SidebarContent({ variant, isCollapsed = false, onClose }: Sideba
             >
               <item.icon className={`
                 flex-shrink-0 h-6 w-6
-                transition-colors duration-200
+                transition-colors
                 text-gray-400 dark:text-gray-500 group-hover:text-white dark:group-hover:text-gray-300
                 ${variant === 'tablet' || (variant === 'desktop' && isCollapsed) ? 'mx-auto' : 'mr-3'}
               `} />

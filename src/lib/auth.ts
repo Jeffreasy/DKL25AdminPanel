@@ -5,7 +5,7 @@ class AuthManager {
   private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.token = localStorage.getItem('authToken');
+    this.token = localStorage.getItem('jwtToken');
     if (this.token) {
       this.scheduleRefresh();
     }
@@ -43,7 +43,7 @@ class AuthManager {
 
   setToken(token: string) {
     this.token = token;
-    localStorage.setItem('authToken', token);
+    localStorage.setItem('jwtToken', token);
     this.scheduleRefresh();
   }
 
@@ -79,7 +79,7 @@ class AuthManager {
       }
     } finally {
       this.token = null;
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('jwtToken');
       if (this.refreshTimer) clearTimeout(this.refreshTimer);
       window.location.href = '/login';
     }

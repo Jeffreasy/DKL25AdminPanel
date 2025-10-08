@@ -4,7 +4,8 @@ import { fetchAanmeldingen } from '../features/aanmeldingen/services/aanmeldinge
 import { fetchMessages, getContactStats } from '../features/contact/services/messageService'
 import type { Aanmelding } from '../features/aanmeldingen/types'
 import type { ContactMessage, ContactStats } from '../features/contact/types'
-import { UserManagementPage } from './UserManagementPage'
+import { usePermissions } from '../hooks/usePermissions'
+import { cc } from '../styles/shared'
 
 interface DashboardStats {
   totaal: number
@@ -22,6 +23,7 @@ const tabs = [
 ]
 
 export function DashboardPage() {
+  const { hasPermission } = usePermissions()
   const [stats, setStats] = useState<DashboardStats>({
     totaal: 0,
     rollen: {},
@@ -46,6 +48,15 @@ export function DashboardPage() {
 
   const [aanmeldingen, setAanmeldingen] = useState<Aanmelding[]>([])
   const [messages, setMessages] = useState<ContactMessage[]>([])
+
+  // Filter tabs based on permissions
+  const filteredTabs = tabs.filter(tab => {
+    if (tab.id === 'users') {
+      return hasPermission('user', 'read')
+    }
+    // Other tabs are accessible to all authenticated users
+    return true
+  })
 
   const loadStats = useCallback(async () => {
     try {
@@ -109,22 +120,22 @@ export function DashboardPage() {
   }, [loadStats, loadMessages])
 
   return (
-    <div className="space-y-6">
-      {/* Tab navigatie - Adjusted for dark mode */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-md">
+    <div className={cc.spacing.section.md}>
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-8 px-4 overflow-x-auto">
-            {tabs.map(tab => (
+          <nav className="-mb-px flex space-x-8 px-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+            {filteredTabs.map(tab => (
               <NavLink
                 key={tab.id}
                 to={tab.path}
-                className={({ isActive }) => `
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                  ${isActive 
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                  }
-                `}
+                className={({ isActive }) =>
+                  `whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${cc.transition.colors} ${
+                    isActive
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`
+                }
                 end={tab.path === ''}
               >
                 {tab.label}
@@ -134,14 +145,16 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Content voor de huidige tab (Outlet) */}
-      <Outlet context={{ 
-        stats,
-        contactStats,
-        aanmeldingen,
-        messages,
-        handleUpdate 
-      }} />
+      {/* Tab Content */}
+      <Outlet
+        context={{
+          stats,
+          contactStats,
+          aanmeldingen,
+          messages,
+          handleUpdate,
+        }}
+      />
     </div>
   )
 }

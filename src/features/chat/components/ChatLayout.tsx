@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChatSidebar } from './ChatSidebar'
 import { ChatWindow } from './ChatWindow'
 import { ChatProvider } from '../ChatContext'
+import { cc } from '../../../styles/shared'
 
 interface ChatLayoutProps {
   isOpen: boolean
@@ -17,7 +18,7 @@ return (
   <div className="fixed inset-0 z-50 flex">
     {/* Backdrop */}
     <div
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      className={`absolute inset-0 ${cc.overlay.medium} backdrop-blur-sm`}
       onClick={onClose}
     />
 

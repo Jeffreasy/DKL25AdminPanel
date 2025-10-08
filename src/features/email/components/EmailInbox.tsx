@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState, Fragment } from 'react'
 import { Listbox, Dialog, Transition } from '@headlessui/react'
 import {
-  ArrowPathIcon, 
-  CloudArrowDownIcon, 
-  TrashIcon, 
-  XMarkIcon, 
-  ArrowLeftIcon, 
+  ArrowPathIcon,
+  CloudArrowDownIcon,
+  TrashIcon,
+  XMarkIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   ChevronUpDownIcon,
   CheckIcon
@@ -20,8 +20,8 @@ import EmailDetail from './EmailDetail'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { usePageTitle } from '../../../hooks/usePageTitle'
-import { cl } from '../../../styles/shared'
 import { cc } from '../../../styles/shared'
+import { ConfirmDialog, EmptyState, LoadingGrid } from '../../../components/ui'
 
 interface Props {
   account?: 'info' | 'inschrijving'
@@ -119,21 +119,31 @@ export default function EmailInbox({ account = 'info' }: Props) {
     }
   };
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; emailId: string | null }>({
+    isOpen: false,
+    emailId: null
+  });
+
   const handleDeleteEmail = async (id: string) => {
-     if (!window.confirm('Weet je zeker dat je deze e-mail wilt verwijderen?')) {
-       return;
-     }
-     try {
-       await adminEmailService.deleteEmail(id);
-       setEmails(prev => prev.filter(e => e.id !== id));
-       setSelectedEmailId(null);
-       setSelectedEmail(null);
-       toast.success('E-mail succesvol verwijderd.');
-     } catch (err) {
-       console.error('Error deleting email:', err);
-       toast.error(err instanceof Error ? err.message : 'Fout bij het verwijderen van de e-mail.');
-     }
-   };
+    setDeleteConfirm({ isOpen: true, emailId: id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.emailId) return;
+    
+    try {
+      await adminEmailService.deleteEmail(deleteConfirm.emailId);
+      setEmails(prev => prev.filter(e => e.id !== deleteConfirm.emailId));
+      setSelectedEmailId(null);
+      setSelectedEmail(null);
+      toast.success('E-mail succesvol verwijderd.');
+    } catch (err) {
+      console.error('Error deleting email:', err);
+      toast.error(err instanceof Error ? err.message : 'Fout bij het verwijderen van de e-mail.');
+    } finally {
+      setDeleteConfirm({ isOpen: false, emailId: null });
+    }
+  };
 
   useEffect(() => {
     loadEmails(1)
@@ -239,13 +249,13 @@ export default function EmailInbox({ account = 'info' }: Props) {
     <>
       <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-wrap gap-4">
+        <div className={`flex items-center justify-between ${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 flex-wrap ${cc.spacing.gap.lg}`}>
           
           <div className="flex-shrink-0 w-48 z-10">
             <Listbox value={selectedAccount} onChange={setSelectedAccount}>
               <div className="relative">
-                <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 pl-3 pr-10 text-left shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                  <span className="block truncate text-gray-900 dark:text-gray-100">
+                <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 pl-3 pr-10 text-left shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
+                  <span className="block truncate text-gray-900 dark:text-white">
                     {selectedAccount === 'info' ? 'Info Account' : 'Inschrijving Account'}
                   </span>
                   <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -262,7 +272,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     <Listbox.Option
                       key="info"
                       className={({ active }) =>
-                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-gray-100'}`
+                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white'}`
                       }
                       value="info"
                     >
@@ -272,7 +282,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                             Info Account
                           </span>
                           {selected ? (
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600 dark:text-indigo-400">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 dark:text-blue-400">
                               <CheckIcon className="h-5 w-5" aria-hidden="true" />
                             </span>
                           ) : null}
@@ -282,7 +292,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     <Listbox.Option
                       key="inschrijving"
                       className={({ active }) =>
-                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-gray-100'}`
+                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white'}`
                       }
                       value="inschrijving"
                     >
@@ -292,7 +302,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                             Inschrijving Account
                           </span>
                           {selected ? (
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600 dark:text-indigo-400">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 dark:text-blue-400">
                               <CheckIcon className="h-5 w-5" aria-hidden="true" />
                             </span>
                           ) : null}
@@ -311,7 +321,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
 
           <div className="flex-grow"></div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className={`flex items-center ${cc.spacing.gap.sm} flex-wrap`}>
             <button
               type="button"
               className={cc.button.base({ color: 'primary', size: 'sm' })} 
@@ -354,13 +364,12 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     </div>
                  )}
                  {isLoading ? (
-                    <div className="flex justify-center items-center h-full p-8">
-                       <ArrowPathIcon className="h-8 w-8 animate-spin text-indigo-500" />
-                    </div>
+                    <LoadingGrid count={5} variant="compact" />
                  ) : sortedEmails.length === 0 && !error ? (
-                    <div className="flex justify-center items-center h-full p-4 text-center text-gray-500 dark:text-gray-400">
-                       Geen e-mails gevonden
-                    </div>
+                    <EmptyState
+                      title="Geen e-mails"
+                      description="Er zijn nog geen e-mails in deze inbox"
+                    />
                  ) : (
                     <div>
                        {sortedEmails.map(email => (
@@ -375,11 +384,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     </div>
                  )}
                  {totalPages > 1 && !isLoading && (
-                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-center items-center gap-2 flex-shrink-0">
+                    <div className={`${cc.spacing.container.xs} border-t border-gray-200 dark:border-gray-700 flex justify-center items-center ${cc.spacing.gap.sm} flex-shrink-0`}>
                        <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className={cl(cc.button.icon({ color: 'secondary', className: "rounded-md" }), currentPage === 1 && "opacity-50 cursor-not-allowed")}
+                          className={`${cc.button.icon({ color: 'secondary', className: "rounded-md" })} ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""}`}
                           title="Vorige pagina"
                        >
                           <ArrowLeftIcon className="h-5 w-5" />
@@ -390,7 +399,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                        <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className={cl(cc.button.icon({ color: 'secondary', className: "rounded-md" }), currentPage === totalPages && "opacity-50 cursor-not-allowed")}
+                          className={`${cc.button.icon({ color: 'secondary', className: "rounded-md" })} ${currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""}`}
                           title="Volgende pagina"
                        >
                           <ArrowRightIcon className="h-5 w-5" />
@@ -402,12 +411,10 @@ export default function EmailInbox({ account = 'info' }: Props) {
            <div className="hidden md:flex flex-1 flex-col overflow-hidden h-full">
               {selectedEmailId ? (
                  isFetchingDetail ? (
-                    <div className="flex justify-center items-center h-full">
-                       <ArrowPathIcon className="h-8 w-8 animate-spin text-indigo-500" />
-                    </div>
+                    <LoadingGrid count={3} variant="compact" />
                  ) : selectedEmail ? (
                     <>
-                       <div className="flex justify-end p-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                       <div className={`flex justify-end ${cc.spacing.container.xs} border-b border-gray-200 dark:border-gray-700 flex-shrink-0`}>
                            <button 
                               aria-label="Verwijder e-mail"
                               onClick={() => handleDeleteEmail(selectedEmail.id)}
@@ -431,17 +438,10 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     </div>
                  )
               ) : (
-                 <div className="flex flex-col justify-center items-center h-full text-center text-gray-500 dark:text-gray-400 px-4">
-                    {error && (
-                       <div className="p-4 mb-4 bg-red-100 dark:bg-red-800/80 text-red-700 dark:text-red-100 rounded-md text-sm">
-                          {error}
-                       </div>
-                    )}
-                    <h3 className="text-lg font-medium">Selecteer een e-mail</h3>
-                    <p className="mt-1 text-sm">
-                       Klik op een e-mail in de lijst om deze te bekijken.
-                    </p>
-                 </div>
+                 <EmptyState
+                   title="Selecteer een e-mail"
+                   description="Klik op een e-mail in de lijst om deze te bekijken"
+                 />
               )}
            </div>
         </div>
@@ -475,11 +475,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
                   leaveTo="opacity-0 scale-95"
                 >
                   <Dialog.Panel className="w-full h-screen transform overflow-hidden bg-white dark:bg-gray-800 text-left align-middle shadow-xl transition-all flex flex-col">
-                    <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                      <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 truncate pr-4">
+                    <div className={`flex justify-between items-center ${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 flex-shrink-0`}>
+                      <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white truncate pr-4">
                         {selectedEmail?.subject || 'Laden...'}
                       </Dialog.Title>
-                      <div className="flex items-center gap-2">
+                      <div className={`flex items-center ${cc.spacing.gap.sm}`}>
                          <button 
                             aria-label="Verwijder e-mail"
                             onClick={() => selectedEmail && handleDeleteEmail(selectedEmail.id)}
@@ -497,9 +497,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
 
                     <div className="overflow-y-auto flex-1">
                       {isFetchingDetail ? (
-                        <div className="flex justify-center items-center h-full p-8">
-                           <ArrowPathIcon className="h-8 w-8 animate-spin text-indigo-500" />
-                        </div>
+                        <LoadingGrid count={3} variant="compact" />
                       ) : selectedEmail ? (
                         <EmailDetail email={selectedEmail} />
                       ) : error ? (
@@ -513,11 +511,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
                       )}
                     </div>
 
-                    <div className="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                    <div className={`flex justify-between items-center ${cc.spacing.container.sm} border-t border-gray-200 dark:border-gray-700 flex-shrink-0`}>
                       <button 
                         onClick={handlePreviousEmail} 
                         disabled={!canGoPrevious}
-                        className={cl(cc.button.icon({ color: 'secondary' }), !canGoPrevious && "opacity-50 cursor-not-allowed")}
+                        className={`${cc.button.icon({ color: 'secondary' })} ${!canGoPrevious ? "opacity-50 cursor-not-allowed" : ""}`}
                         title="Vorige e-mail"
                       >
                         <ArrowLeftIcon className="h-5 w-5" />
@@ -525,7 +523,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
                       <button 
                         onClick={handleNextEmail} 
                         disabled={!canGoNext}
-                        className={cl(cc.button.icon({ color: 'secondary' }), !canGoNext && "opacity-50 cursor-not-allowed")}
+                        className={`${cc.button.icon({ color: 'secondary' })} ${!canGoNext ? "opacity-50 cursor-not-allowed" : ""}`}
                         title="Volgende e-mail"
                       >
                         <ArrowRightIcon className="h-5 w-5" />
@@ -548,6 +546,16 @@ export default function EmailInbox({ account = 'info' }: Props) {
               suggestionEmails={suggestionEmails}
           />
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, emailId: null })}
+        onConfirm={confirmDelete}
+        title="E-mail verwijderen"
+        message="Weet je zeker dat je deze e-mail wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+        confirmText="Verwijderen"
+        variant="danger"
+      />
     </>
   )
-} 
+}

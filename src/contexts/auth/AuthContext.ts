@@ -1,9 +1,11 @@
 import { createContext } from 'react'
+import type { Permission } from '../../features/users/types'
 
 export interface User {
   id: string
   email: string | undefined
   role: string
+  permissions?: Permission[]
   metadata?: Record<string, unknown>
   user_metadata?: {
     full_name?: string
@@ -21,6 +23,9 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   logout: () => Promise<void>
+  login?: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  loadUserProfile?: () => Promise<any>
+  refreshToken?: () => Promise<string | null>
 }
 
 export const AuthContext = createContext<AuthContextType>({

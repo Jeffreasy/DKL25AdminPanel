@@ -140,7 +140,7 @@ export function UnderConstructionForm({ onSave }: Props) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -149,7 +149,7 @@ export function UnderConstructionForm({ onSave }: Props) {
     <>
       {message && (
         <div
-          className={`p-4 mb-6 rounded-md border flex items-center gap-3 animate-in slide-in-from-top-2 duration-300 ${
+          className={`${cc.spacing.container.sm} mb-6 rounded-md border flex items-center ${cc.spacing.gap.md} animate-in slide-in-from-top-2 duration-300 ${
             messageType === 'success'
               ? 'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
               : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
@@ -163,7 +163,7 @@ export function UnderConstructionForm({ onSave }: Props) {
           <span>{message}</span>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className={cc.spacing.section.md}>
         <div>
           <label htmlFor="isActive" className="flex items-center">
             <input
@@ -171,7 +171,7 @@ export function UnderConstructionForm({ onSave }: Props) {
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
+              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
               aria-label="Onder constructie pagina activeren"
             />
             <span className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -265,11 +265,10 @@ export function UnderConstructionForm({ onSave }: Props) {
 
         <div>
           <label className={cc.form.label()}>Sociale media links</label>
-          <div className="space-y-2">
+          <div className={cc.spacing.section.xs}>
             {formData.socialLinks.map((link, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <input
-                  type="text"
+              <div key={index} className={`flex items-center ${cc.spacing.gap.sm}`}>
+                <select
                   value={link.platform}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -279,10 +278,18 @@ export function UnderConstructionForm({ onSave }: Props) {
                       ),
                     }))
                   }
-                  className={cc.form.input({ className: 'mt-1 flex-1' })}
-                  placeholder="Platform (bijv. Twitter)"
+                  className={cc.form.select({ className: 'mt-1 flex-1' })}
                   aria-label={`Platform voor sociale media link ${index + 1}`}
-                />
+                >
+                  <option value="">Selecteer platform</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Twitter">Twitter</option>
+                  <option value="YouTube">YouTube</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="Website">Website</option>
+                </select>
                 <input
                   type="url"
                   value={link.url}
@@ -301,24 +308,34 @@ export function UnderConstructionForm({ onSave }: Props) {
                 <button
                   type="button"
                   onClick={() => handleRemoveSocialLink(index)}
-                  className="px-2 py-1 text-red-600 hover:text-red-800"
+                  className={cc.button.iconDanger({ size: 'sm', className: 'mt-1' })}
                   aria-label={`Verwijder sociale media link ${index + 1}`}
+                  title="Verwijder"
                 >
-                  Verwijder
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             ))}
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
+            <div className={`flex items-center ${cc.spacing.gap.sm}`}>
+              <select
                 value={newSocialLink.platform}
                 onChange={(e) =>
                   setNewSocialLink((prev) => ({ ...prev, platform: e.target.value }))
                 }
-                className={cc.form.input({ className: 'mt-1 flex-1' })}
-                placeholder="Platform (bijv. Twitter)"
+                className={cc.form.select({ className: 'mt-1 flex-1' })}
                 aria-label="Nieuw platform voor sociale media link"
-              />
+              >
+                <option value="">Selecteer platform</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Twitter">Twitter</option>
+                <option value="YouTube">YouTube</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Website">Website</option>
+              </select>
               <input
                 type="url"
                 value={newSocialLink.url}
@@ -332,15 +349,17 @@ export function UnderConstructionForm({ onSave }: Props) {
               <button
                 type="button"
                 onClick={handleAddSocialLink}
-                className={cc.button.base({ color: 'secondary', className: 'mt-1' })}
+                className={cc.button.base({ color: 'primary', className: 'mt-1' })}
                 aria-label="Voeg sociale media link toe"
               >
-                Toevoegen
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
               </button>
             </div>
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Voeg links toe naar sociale media accounts die op de onder constructie pagina worden getoond.
+            Voeg links toe naar sociale media accounts (Facebook, Instagram, Twitter, YouTube, LinkedIn, TikTok) die op de onder constructie pagina worden getoond.
           </p>
         </div>
 
@@ -395,7 +414,7 @@ export function UnderConstructionForm({ onSave }: Props) {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, newsletterEnabled: e.target.checked }))
               }
-              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500 dark:focus:ring-offset-gray-800"
+              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
               aria-label="Nieuwsbrief signup activeren"
             />
             <span className="ml-2 block text-sm text-gray-700 dark:text-gray-300">

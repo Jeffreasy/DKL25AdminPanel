@@ -10,7 +10,7 @@ export function DesktopSidebar({ isCollapsed }: DesktopSidebarProps) {
     // Changed background color to always be bg-gray-800
     <div className="hidden lg:block bg-gray-800 h-screen sticky top-0">
       {/* Inner container that handles width transition */}
-      <div className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 h-full`}>
+      <div className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all h-full`}>
         {/* Render SidebarContent, passing the collapsed state and variant="desktop" */}
         {/* No onClose needed for desktop */}
         <SidebarContent variant="desktop" isCollapsed={isCollapsed} />
