@@ -34,6 +34,12 @@ jobs:
         run: npx tsc --noEmit
       
       - name: Run tests
+        env:
+          VITE_SUPABASE_URL: http://localhost:54321
+          VITE_SUPABASE_ANON_KEY: test-anon-key-for-ci
+          VITE_API_BASE_URL: http://localhost:3000
+          VITE_EMAIL_API_URL: http://localhost:5000
+          VITE_EMAIL_API_KEY: test-email-key
         run: npm test -- --coverage
       
       - name: Upload coverage to Codecov
