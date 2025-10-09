@@ -3,7 +3,6 @@ import { supabase } from '../../../../api/client/supabase'
 import { Dialog } from '@headlessui/react'
 import type { Photo } from '../../../photos/types'
 import { Z_INDEX } from '../../../../config/zIndex'
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { cc } from '../../../../styles/shared'
 import { LoadingGrid } from '../../../../components/ui'
 
@@ -14,7 +13,7 @@ interface PhotoSelectorProps {
   onCancel: () => void
 }
 
-export function PhotoSelector({ albumId, existingPhotoIds, onComplete, onCancel }: PhotoSelectorProps) {
+export function PhotoSelector({ existingPhotoIds, onComplete, onCancel }: PhotoSelectorProps) {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
   const [availablePhotos, setAvailablePhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)

@@ -59,7 +59,7 @@ describe('AuthGuard', () => {
     it('renders children when authenticated', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
 
       render(
@@ -74,7 +74,7 @@ describe('AuthGuard', () => {
     it('does not navigate when authenticated', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
 
       render(
@@ -158,7 +158,7 @@ describe('AuthGuard', () => {
       // Transition to authenticated
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
 
       rerender(

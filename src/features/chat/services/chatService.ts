@@ -53,7 +53,7 @@ export const connectWebSocket = (token: string, channelId: string) => {
       if (data.type === 'connected') {
         console.log('WebSocket: successfully joined channel', channelId);
       }
-    } catch (e) {
+    } catch {
       console.error('Failed to parse WS message:', event.data);
     }
   };
@@ -200,13 +200,13 @@ export const chatService = {
         format: file.type.split('/')[1] || 'unknown',
         bytes: file.size
       }
-    } catch (error) {
+    } catch {
       throw new Error('File upload failed')
     }
   },
 
   async sendFileMessage(channelId: string, file: File, caption?: string): Promise<ChatMessage> {
-    const uploadResult = await this.uploadFile(file)
+    await this.uploadFile(file)
     let messageType = 'file'
     if (file.type.startsWith('image/')) messageType = 'image'
     return this.sendMessage({
@@ -221,12 +221,12 @@ export const chatService = {
   },
 
   // Search and history (add if not stubbed)
-  async searchMessages(query: string, channelIds?: string[], limit = 50, offset = 0): Promise<MessageSearchResult[]> {
+  async searchMessages(): Promise<MessageSearchResult[]> {
     // Implement if backend adds endpoint
     return []
   },
 
-  async getMessageHistory(channelId: string, beforeTimestamp?: string, limit = 50): Promise<MessageHistoryResult[]> {
+  async getMessageHistory(): Promise<MessageHistoryResult[]> {
     // Implement if backend adds endpoint
     return []
   },

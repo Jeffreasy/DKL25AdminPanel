@@ -34,12 +34,7 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
       } catch (parseError) {
         // If JSON parsing fails, try to get text content
         console.warn('Failed to parse 403 error as JSON:', parseError)
-        try {
-          const errorText = await response.text()
-          throw new Error(`API Error ${response.status}: ${errorText}`)
-        } catch (textError) {
-          throw new Error(`API Error ${response.status}: Permission denied`)
-        }
+        throw new Error(`API Error ${response.status}: Permission denied`)
       }
     }
 

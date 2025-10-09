@@ -24,6 +24,7 @@ export interface AuthContextType {
   signOut: () => Promise<void>
   logout: () => Promise<void>
   login?: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   loadUserProfile?: () => Promise<any>
   refreshToken?: () => Promise<string | null>
 }

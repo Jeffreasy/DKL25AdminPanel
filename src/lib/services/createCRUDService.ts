@@ -9,7 +9,9 @@ export interface CRUDServiceConfig<T extends BaseEntity> {
   orderBy?: keyof T
   orderDirection?: 'asc' | 'desc'
   selectQuery?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mapFromDB?: (data: any) => T
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mapToDB?: (data: Partial<T>) => any
 }
 
@@ -43,7 +45,9 @@ export function createCRUDService<T extends BaseEntity>(
     orderBy = 'created_at' as keyof T,
     orderDirection = 'asc',
     selectQuery = '*',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapFromDB = (data: any) => data as T,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapToDB = (data: any) => data
   } = config
 
@@ -90,6 +94,7 @@ export function createCRUDService<T extends BaseEntity>(
      * Create a new record
      */
     create: async (data: Omit<T, 'id' | 'created_at' | 'updated_at'>): Promise<T> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mappedData = mapToDB(data as any)
       
       const { data: result, error } = await supabase
@@ -116,6 +121,7 @@ export function createCRUDService<T extends BaseEntity>(
       const mappedUpdates = mapToDB({
         ...updates,
         updated_at: new Date().toISOString()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       const { data, error } = await supabase

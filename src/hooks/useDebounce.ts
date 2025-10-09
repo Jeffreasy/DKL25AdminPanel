@@ -39,7 +39,7 @@ export function useDebounce<T>(
  * Debounce a callback function
  * Returns a debounced version of the callback
  */
-export function useDebouncedCallback<T extends (...args: any[]) => any>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 500,
   options: UseDebounceOptions = {}
@@ -59,7 +59,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   const maxWaitTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastCallTimeRef = useRef<number>(0)
   const lastInvokeTimeRef = useRef<number>(0)
-  const argsRef = useRef<any[]>([])
+  const argsRef = useRef<unknown[]>([])
   const [isPendingState, setIsPendingState] = useState(false)
 
   const invokeCallback = useCallback(() => {
@@ -92,10 +92,9 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
     return isPendingState
   }, [isPendingState])
 
-  const debouncedCallback = useCallback((...args: any[]) => {
+  const debouncedCallback = useCallback((...args: unknown[]) => {
     const now = Date.now()
     const timeSinceLastCall = now - lastCallTimeRef.current
-    const timeSinceLastInvoke = now - lastInvokeTimeRef.current
 
     lastCallTimeRef.current = now
     argsRef.current = args

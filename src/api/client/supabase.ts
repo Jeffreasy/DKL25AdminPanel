@@ -55,7 +55,7 @@ export const isAdmin = async () => {
     }
 
     return !!admin
-  } catch (err) {
+  } catch {
     // console.error('isAdmin check failed:', err)
     return false
   }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatService, chatRealtime } from '../services/chatService'
-import type { CreateChannelRequest, TypingIndicator, ChatUserPresence, ChatChannel, ChannelWithDetails } from '../types'
+import type { CreateChannelRequest, TypingIndicator, ChatUserPresence, ChannelWithDetails } from '../types'
 import { authManager } from '../../../api/client/auth'
 import { connectWebSocket } from '../services/chatService'
 

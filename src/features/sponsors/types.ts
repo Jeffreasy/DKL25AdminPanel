@@ -1,4 +1,3 @@
-import type { OrderedEntity, FormData, UpdateData } from '../../types/base'
 
 /**
  * Sponsor entity with camelCase naming convention

@@ -23,7 +23,7 @@ test.describe('Navigation & Dashboard', () => {
 
   test('sidebar navigation works', async ({ page }) => {
     // Click on Photos link
-    await page.click('text=/foto\'s|photos/i')
+    await page.click("text=/foto's|photos/i")
     
     // Should navigate to photos page
     await expect(page).toHaveURL(/\/photos/, { timeout: 3000 })
@@ -84,7 +84,7 @@ test.describe('Navigation & Dashboard', () => {
   test('navigation between pages', async ({ page }) => {
     // Navigate to different pages
     const pages = [
-      { link: /foto\'s|photos/i, url: /photos/ },
+      { link: /fotos|photos/i, url: /photos/ },
       { link: /albums/i, url: /albums/ },
       { link: /dashboard/i, url: /dashboard/ },
     ]
@@ -101,7 +101,7 @@ test.describe('Navigation & Dashboard', () => {
 
   test('breadcrumb navigation', async ({ page }) => {
     // Navigate to a sub-page
-    await page.click('text=/foto\'s|photos/i')
+    await page.click("text=/foto's|photos/i")
     
     // Check if breadcrumbs exist
     const breadcrumb = page.locator('[aria-label="breadcrumb"]').or(page.locator('.breadcrumb'))

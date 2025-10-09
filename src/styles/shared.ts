@@ -1,4 +1,4 @@
-import { tv, type VariantProps } from 'tailwind-variants';
+import { tv } from 'tailwind-variants';
 
 // Utility functie voor conditional classes (als je die nog niet hebt)
 export const cl = (...classes: (string | boolean | undefined | null)[]) => 
@@ -514,7 +514,7 @@ export const chat = {
 };
 
 // Type helper for extracting props from tv functions
-export type TVProps<T> = T extends (props: infer P) => any ? P : never;
+export type TVProps<T> = T extends (props: infer P) => string ? P : never;
 
 // Helper function to apply styles, potentially useful for complex components
 // export function applyStyles<T>(variantFn: (props?: TVProps<T>) => string, props?: TVProps<T>) {

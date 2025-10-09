@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authManager } from '../../../api/client/auth'
 import { AuthContext, User } from './AuthContext'
-import type { User as BackendUser, Permission } from '../../users/types'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -207,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     checkAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

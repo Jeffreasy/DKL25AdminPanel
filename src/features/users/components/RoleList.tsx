@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { Modal, Text } from '@mantine/core'
 import { roleService } from '../services/roleService'
 import { permissionService } from '../services/permissionService'
 import { RoleForm } from './RoleForm'
-import type { Role } from '../types'
+import type { Role, CreateRoleRequest } from '../types'
 import { cc } from '../../../styles/shared'
 
 export function RoleList() {
@@ -32,7 +32,6 @@ export function RoleList() {
 
   const [rolesQuery, permissionsQuery] = queries;
   const roles = rolesQuery.data || [];
-  const permissions = permissionsQuery.data || [];
   const isLoading = rolesQuery.isLoading || permissionsQuery.isLoading;
   const hasError = rolesQuery.error || permissionsQuery.error;
 
@@ -55,7 +54,7 @@ export function RoleList() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => roleService.updateRole(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Role> }) => roleService.updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       setIsModalOpen(false)
@@ -94,7 +93,7 @@ export function RoleList() {
     }
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CreateRoleRequest) => {
     if (selectedRole) {
       await updateMutation.mutateAsync({ id: selectedRole.id, data: values })
     } else {

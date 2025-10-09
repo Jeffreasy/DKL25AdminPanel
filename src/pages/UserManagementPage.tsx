@@ -8,7 +8,7 @@ import { useAuth } from '../features/auth'
 import { useFilters, applyFilters } from '../hooks/useFilters'
 import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
-import type { User } from '../features/users/types'
+import type { User, CreateUserRequest, UpdateUserRequest } from '../features/users/types'
 
 export function UserManagementPage() {
   const { hasPermission } = usePermissions()
@@ -85,7 +85,7 @@ export function UserManagementPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => userService.updateUser(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) => userService.updateUser(id, data),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['users'], (oldData: User[] = []) => {
         return oldData.map(user => user.id === updatedUser.id ? updatedUser : user)
@@ -116,19 +116,19 @@ export function UserManagementPage() {
     }
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CreateUserRequest | UpdateUserRequest) => {
     if (selectedUser) {
-      const updateData = {
+      const updateData: UpdateUserRequest = {
         email: values.email,
         naam: values.naam,
         rol: values.rol,
         is_actief: values.is_actief,
         newsletter_subscribed: values.newsletter_subscribed,
-        ...(values.password && values.password.trim() !== '' && { password: values.password })
+        ...(values.password && typeof values.password === 'string' && values.password.trim() !== '' && { password: values.password })
       }
       await updateMutation.mutateAsync({ id: selectedUser.id, data: updateData })
     } else {
-      await createMutation.mutateAsync(values)
+      await createMutation.mutateAsync(values as CreateUserRequest)
     }
   }
 

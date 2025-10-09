@@ -64,7 +64,7 @@ test.describe('Permission Management', () => {
     await expect(adminLink).toBeVisible({ timeout: 2000 })
   })
 
-  test('access denied for restricted pages', async ({ page, context }) => {
+  test('access denied for restricted pages', async ({ page }) => {
     // This test would require a non-admin user
     // For now, verify access denied page exists
     await page.goto('/access-denied')

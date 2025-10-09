@@ -1,7 +1,6 @@
 import { PhotoOrderer } from '../forms/PhotoOrderer'
 import type { AlbumWithDetails } from '../../types'
 import { LoadingGrid } from '../../../../components/ui'
-import { cc } from '../../../../styles/shared'
 
 interface AlbumDetailPhotosProps {
   album: AlbumWithDetails

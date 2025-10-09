@@ -80,7 +80,7 @@ describe('ProtectedRoute', () => {
     it('renders children when authenticated without permission requirement', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: vi.fn(),
@@ -116,7 +116,7 @@ describe('ProtectedRoute', () => {
     it('renders children when user has required permission', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: vi.fn().mockReturnValue(true),
@@ -133,7 +133,7 @@ describe('ProtectedRoute', () => {
     it('redirects to access-denied when user lacks permission', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: vi.fn().mockReturnValue(false),
@@ -153,7 +153,7 @@ describe('ProtectedRoute', () => {
       
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: mockHasPermission,
@@ -172,7 +172,7 @@ describe('ProtectedRoute', () => {
       
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: mockHasPermission,
@@ -193,7 +193,7 @@ describe('ProtectedRoute', () => {
     it('handles undefined requiredPermission', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: vi.fn(),
@@ -210,7 +210,7 @@ describe('ProtectedRoute', () => {
     it('handles empty permission string', () => {
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: vi.fn().mockReturnValue(false),
@@ -230,7 +230,7 @@ describe('ProtectedRoute', () => {
       
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
       vi.mocked(usePermissions).mockReturnValue({
         hasPermission: mockHasPermission,
@@ -293,7 +293,7 @@ describe('ProtectedRoute', () => {
       // Transition to authenticated
       vi.mocked(useAuth).mockReturnValue(mockAuthContext({
         isAuthenticated: true,
-        user: { id: '1', email: 'test@example.com' } as any,
+        user: { id: '1', email: 'test@example.com' } as { id: string; email: string },
       }))
 
       rerender(

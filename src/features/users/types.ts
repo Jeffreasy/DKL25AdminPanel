@@ -41,7 +41,14 @@ export interface CreateUserRequest {
   newsletter_subscribed: boolean
 }
 
-export interface UpdateUserRequest extends Partial<CreateUserRequest> {}
+export interface UpdateUserRequest {
+  email?: string
+  naam?: string
+  rol?: string
+  password?: string
+  is_actief?: boolean
+  newsletter_subscribed?: boolean
+}
 
 export interface CreatePermissionRequest {
   resource: string
@@ -56,4 +63,8 @@ export interface CreateRoleRequest {
   permission_ids?: string[]
 }
 
-export interface UpdateRoleRequest extends Partial<CreateRoleRequest> {}
+export interface UpdateRoleRequest {
+  name?: string
+  description?: string
+  permission_ids?: string[]
+}

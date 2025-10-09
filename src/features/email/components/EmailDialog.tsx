@@ -1,4 +1,4 @@
-import { Dialog, Transition, Listbox, Combobox } from '@headlessui/react'
+import { Dialog, Transition, Combobox } from '@headlessui/react'
 import { Fragment, useState, useEffect } from 'react'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -7,8 +7,7 @@ import { RichTextEditor } from '@mantine/tiptap'
 import {
   ExclamationTriangleIcon, 
   XMarkIcon, 
-  CheckIcon, 
-  ChevronUpDownIcon, 
+  ChevronUpDownIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import { cc } from '../../../styles/shared'
@@ -58,10 +57,6 @@ const EMAIL_TEMPLATES = {
 
 type TemplateKey = keyof typeof EMAIL_TEMPLATES
 
-const TEMPLATE_OPTIONS = Object.entries(EMAIL_TEMPLATES).map(([key, value]) => ({
-  value: key,
-  label: value.subject // Use subject as label, or create specific labels
-}));
 
 // Define colors for the color picker
 const COLORS = [
@@ -151,7 +146,7 @@ export function EmailDialog({
     } else {
       editor?.commands.clearContent();
     }
-  // Add recipient?.name to dependency array
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editor, recipient?.name]);
 
   const handleSend = async () => {
@@ -299,7 +294,7 @@ export function EmailDialog({
                                     // Ensure value is always string
                                     value={email} 
                                   >
-                                    {({ selected, active }) => (
+                                    {({ selected }) => (
                                         <span className={`block truncate ${ selected ? 'font-medium' : 'font-normal' }`}>
                                           {email}
                                         </span>

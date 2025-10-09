@@ -1,12 +1,10 @@
 import { useState, useRef } from 'react'
 import { useChat } from '../ChatContext'
 import { Bars3Icon, XMarkIcon, PaperAirplaneIcon, PaperClipIcon, MagnifyingGlassIcon, UsersIcon } from '@heroicons/react/24/outline'
-import { HeartIcon } from '@heroicons/react/24/solid'
 import { chatService, getUserId } from '../services/chatService'
 import { MessageSearch } from './MessageSearch'
-import { Modal, Button, Menu } from '@mantine/core'
+import { Modal, Menu } from '@mantine/core'
 import { chat as chatStyles, cc } from '../../../styles/shared'
-import { H3, H4, Text, SmallText, Caption, ErrorText, SuccessText } from '../../../components/typography/typography'
 import { ConfirmDialog } from '../../../components/ui'
 
 interface ChatWindowProps {

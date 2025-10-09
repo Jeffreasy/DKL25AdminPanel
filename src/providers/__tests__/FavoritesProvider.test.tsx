@@ -138,8 +138,6 @@ describe('FavoritesProvider', () => {
     it('removes page from favorites', () => {
       const { result } = renderHook(() => useFavorites(), { wrapper })
 
-      let favoriteId: string
-
       act(() => {
         result.current.addFavorite({
           name: 'Dashboard',
@@ -148,7 +146,7 @@ describe('FavoritesProvider', () => {
         })
       })
 
-      favoriteId = result.current.favorites[0].id
+      const favoriteId = result.current.favorites[0].id
       expect(result.current.favorites).toHaveLength(1)
 
       act(() => {
@@ -161,8 +159,6 @@ describe('FavoritesProvider', () => {
     it('updates localStorage after removal', () => {
       const { result } = renderHook(() => useFavorites(), { wrapper })
 
-      let favoriteId: string
-
       act(() => {
         result.current.addFavorite({
           name: 'Dashboard',
@@ -171,7 +167,7 @@ describe('FavoritesProvider', () => {
         })
       })
 
-      favoriteId = result.current.favorites[0].id
+      const favoriteId = result.current.favorites[0].id
 
       act(() => {
         result.current.removeFavorite(favoriteId)

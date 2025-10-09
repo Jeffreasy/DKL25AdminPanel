@@ -7,6 +7,7 @@ import { useState, useCallback, useMemo } from 'react'
 
 export type FilterValue = string | number | boolean | null | undefined | string[]
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface FilterConfig<T extends string = string> {
   [key: string]: FilterValue
 }

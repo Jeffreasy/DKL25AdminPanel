@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { EyeIcon, EyeSlashIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { ErrorText, H1, SmallText } from '../components/typography/typography'
+import { H1, SmallText } from '../components/typography/typography'
 import { LoadingGrid, ConfirmDialog } from '../components/ui'
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../features/videos/services/videoService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { Video, VideoInsert } from '../features/videos/types'
 import { cc } from '../styles/shared'
 import { XCircleIcon } from '@heroicons/react/24/solid'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { Toaster, toast } from 'react-hot-toast'
 import { supabase } from '../api/client/supabase'
 import { usePermissions } from '../hooks/usePermissions'
@@ -79,9 +79,7 @@ export function VideoManagementPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
-  const [editVideoData, setEditVideoData] = useState<Video | null>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null)
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
 
@@ -274,13 +272,7 @@ export function VideoManagementPage() {
     }
   }
 
-  const handleEditVideo = (video: Video) => {
-    setEditVideoData(video)
-    setShowForm(true)
-  }
-
-  const handleDragEnd = async (result: any) => {
-    setIsDragging(false);
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
 
     const items = Array.from(videos);
@@ -403,7 +395,7 @@ export function VideoManagementPage() {
         <div className="overflow-x-auto">
            <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="videos">
-              {(provided, snapshot) => (
+              {(provided) => (
                 <table ref={provided.innerRef} {...provided.droppableProps} className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   {/* Hide thead on mobile */}
                   <thead className="bg-gray-50 dark:bg-gray-800/50 hidden md:table-header-group">
@@ -433,7 +425,7 @@ export function VideoManagementPage() {
                       <Draggable key={video.id} draggableId={video.id} index={index} isDragDisabled={window.innerWidth < 768}>
                          {(provided, snapshot) => (
                           // TR acts as a simple container on mobile
-                          <tr 
+                          <tr
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}

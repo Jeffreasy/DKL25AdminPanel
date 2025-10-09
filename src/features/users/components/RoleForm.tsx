@@ -34,7 +34,7 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
       try {
         setName(initialValues.name || '')
         setDescription(initialValues.description || '')
-        const permissionIds = initialValues.permissions?.map((p: any) => {
+        const permissionIds = initialValues.permissions?.map((p: PermissionWithId | string) => {
           return typeof p === 'string' ? p : p?.id
         }).filter(Boolean) || []
         setSelectedPermissionIds(permissionIds)

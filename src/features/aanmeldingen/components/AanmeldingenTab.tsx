@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { updateAanmelding } from '../services/aanmeldingenService'
 import type { DashboardContext } from '../../../types/dashboard'
 import type { Aanmelding } from '../types'
 import { usePermissions } from '../../../hooks/usePermissions'
@@ -165,7 +164,7 @@ export function AanmeldingenTab() {
             <div className="flex gap-2">
               <select
                 value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value as any)}
+                onChange={(e) => setFilterRole(e.target.value as 'all' | Aanmelding['rol'])}
                 className={cc.form.select({ className: 'text-sm' })}
               >
                 <option value="all">Alle Rollen</option>
@@ -176,7 +175,7 @@ export function AanmeldingenTab() {
 
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => setFilterStatus(e.target.value as 'all' | Aanmelding['status'])}
                 className={cc.form.select({ className: 'text-sm' })}
               >
                 <option value="all">Alle Status</option>

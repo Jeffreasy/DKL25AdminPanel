@@ -17,14 +17,14 @@ export function AdminPermissionsPage() {
   const canManagePermissions = hasPermission('admin', 'access') || hasPermission('user', 'manage_roles')
 
   // Fetch statistics - only enable when auth is loaded AND user has permission
-  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useQuery({
+  const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
     queryFn: () => roleService.getRoles(),
     enabled: !authLoading && canManagePermissions,
     retry: 1
   })
 
-  const { data: permissions = [], isLoading: permissionsLoading, error: permissionsError } = useQuery({
+  const { data: permissions = [] } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => permissionService.getPermissions(),
     enabled: !authLoading && canManagePermissions,

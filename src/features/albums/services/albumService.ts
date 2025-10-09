@@ -21,6 +21,7 @@ interface CacheEntry<T> {
 }
 
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cache = new Map<string, CacheEntry<any>>()
 
 function getCachedData<T>(key: string): T | null {

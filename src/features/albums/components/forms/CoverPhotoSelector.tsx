@@ -27,6 +27,7 @@ export function CoverPhotoSelector({ albumId, currentCoverPhotoId, onSelect }: C
         .order('order_number', { ascending: true })
 
       if (error) throw error
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const photosData = data?.map(item => item.photo as any).filter(p => p && typeof p === 'object') || []
       setPhotos(photosData as Photo[])
     } catch (err) {

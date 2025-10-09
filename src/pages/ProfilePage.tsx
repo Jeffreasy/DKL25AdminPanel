@@ -21,7 +21,6 @@ import {
   strengthMessages
 } from '../utils/validation'
 import DOMPurify from 'dompurify'
-import { useTheme } from '../hooks/useTheme'
 import { cc } from '../styles/shared'
 import { ConfirmDialog, LoadingGrid } from '../components/ui'
 
@@ -47,7 +46,6 @@ type ProfileFormData = z.infer<typeof profileSchema>
 
 export function ProfilePage() {
   const { user } = useAuth()
-  const { isDarkMode } = useTheme()
   const navigate = useNavigate()
 
   const {
@@ -70,7 +68,7 @@ export function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading] = useState(false)
   const [resetAttempts, setResetAttempts] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
@@ -139,7 +137,7 @@ export function ProfilePage() {
 
   // Session check - alleen periodiek, niet bij mount
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    const timeoutId = setTimeout(() => {
 
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession()
@@ -152,9 +150,6 @@ export function ProfilePage() {
       }
     }
 
-    // Check alleen periodiek (elke 5 minuten), NIET bij mount
-    // Bij mount hebben we al een user van useAuth()
-    timeoutId = setTimeout(() => {
       checkSession()
       // Daarna elke 5 minuten
       const interval = setInterval(checkSession, 5 * 60 * 1000)

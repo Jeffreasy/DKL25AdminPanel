@@ -22,6 +22,7 @@ export const fetchVideos = async () => {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const addVideo = async (video: Omit<Video, 'id' | 'created_at' | 'updated_at'> | any) => {
   try {
     const data = await baseService.create(video)
@@ -54,6 +55,7 @@ export const deleteVideo = async (videoId: string) => {
 
 export const updateVideoOrder = async (videoId: string, newOrder: number) => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await baseService.update(videoId, { order_number: newOrder } as any)
     return { error: null }
   } catch (err) {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 
 /**
  * Generic sorting hook for tables and lists
@@ -127,8 +127,8 @@ export function applySorting<T>(
     }
 
     // Default comparison
-    const aValue = (a as any)[sortConfig.key!]
-    const bValue = (b as any)[sortConfig.key!]
+    const aValue = (a as Record<string, unknown>)[sortConfig.key!]
+    const bValue = (b as Record<string, unknown>)[sortConfig.key!]
 
     // Handle null/undefined
     if (aValue == null && bValue == null) return 0

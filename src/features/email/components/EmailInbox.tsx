@@ -164,6 +164,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
     };
     fetchInitialData();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount, refreshTrigger])
 
   useEffect(() => {
@@ -174,6 +175,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
           setIsModalOpen(false);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEmailId])
 
   const sortedEmails = useMemo(() => {

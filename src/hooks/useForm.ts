@@ -19,10 +19,10 @@ export interface UseFormReturn<T> {
   isSubmitting: boolean
   isValid: boolean
   isDirty: boolean
-  handleChange: (field: keyof T) => (value: any) => void
+  handleChange: (field: keyof T) => (value: T[keyof T]) => void
   handleBlur: (field: keyof T) => () => void
   handleSubmit: (e?: FormEvent) => Promise<void>
-  setFieldValue: (field: keyof T, value: any) => void
+  setFieldValue: (field: keyof T, value: T[keyof T]) => void
   setFieldError: (field: keyof T, error: string) => void
   setFieldTouched: (field: keyof T, touched: boolean) => void
   setValues: (values: Partial<T>) => void
@@ -32,6 +32,7 @@ export interface UseFormReturn<T> {
   validateForm: () => boolean
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useForm<T extends Record<string, any>>({
   initialValues,
   onSubmit,
@@ -75,7 +76,7 @@ export function useForm<T extends Record<string, any>>({
   }, [values, validate])
 
   // Handle field change
-  const handleChange = useCallback((field: keyof T) => (value: any) => {
+  const handleChange = useCallback((field: keyof T) => (value: T[keyof T]) => {
     setValuesState(prev => ({ ...prev, [field]: value }))
     
     // Clear error when user starts typing
@@ -95,7 +96,7 @@ export function useForm<T extends Record<string, any>>({
   }, [validateField])
 
   // Set field value programmatically
-  const setFieldValue = useCallback((field: keyof T, value: any) => {
+  const setFieldValue = useCallback((field: keyof T, value: T[keyof T]) => {
     setValuesState(prev => ({ ...prev, [field]: value }))
   }, [])
 

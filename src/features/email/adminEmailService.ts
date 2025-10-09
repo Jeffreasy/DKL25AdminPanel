@@ -43,6 +43,7 @@ const getAuthHeaders = () => {
 };
 
 // Helper functie om te mappen van backend model naar frontend model
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapIncomingEmailToEmail(incomingEmail: any): Email {
   // Backend stuurt gedecodeerde/gesanitized body in 'html' veld
   const decodedContent = incomingEmail.html || ''; 
@@ -217,7 +218,7 @@ export const adminEmailService = {
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorJson.message || errorMessage;
-        } catch (e) { /* Ignore parsing error */ }
+        } catch { /* Ignore parsing error */ }
         throw new Error(errorMessage);
       }
 
@@ -453,7 +454,7 @@ export const adminEmailService = {
          try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.error || errorJson.message || errorMessage;
-         } catch (e) { /* Ignore parsing error */ }
+         } catch { /* Ignore parsing error */ }
         throw new Error(errorMessage);
       }
 
@@ -480,7 +481,7 @@ export const adminEmailService = {
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorJson.message || errorMessage;
-        } catch (e) { /* Ignore parsing error */ }
+        } catch { /* Ignore parsing error */ }
         throw new Error(errorMessage);
       }
 
@@ -543,7 +544,7 @@ export const adminEmailService = {
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorJson.message || errorMessage;
-        } catch (e) { /* Ignore parsing error */ }
+        } catch { /* Ignore parsing error */ }
         console.error(`[sendMailAsAdmin] Error response: ${errorMessage}`);
         throw new Error(errorMessage);
       }

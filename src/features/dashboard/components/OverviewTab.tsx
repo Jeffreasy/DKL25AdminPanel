@@ -155,8 +155,7 @@ export function OverviewTab() {
             <div className={cc.spacing.section.xs}>
               {Object.entries(stats.ondersteuning).map(([type, aantal]) => {
                 const percentage = stats.totaal > 0 ? (Number(aantal) / stats.totaal * 100).toFixed(0) : 0
-                const color = type === 'Ja' ? 'green' : type === 'Nee' ? 'red' : 'orange'
-                const bgColor = type === 'Ja' 
+                const bgColor = type === 'Ja'
                   ? 'bg-green-600 dark:bg-green-500' 
                   : type === 'Nee' 
                   ? 'bg-red-600 dark:bg-red-500' 

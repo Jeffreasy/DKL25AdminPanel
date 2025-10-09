@@ -42,11 +42,13 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/photos`, async ({ request }) => {
     const body = await request.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return HttpResponse.json(mockPhoto(body as any))
   }),
 
   http.put(`${API_BASE_URL}/api/photos/:id`, async ({ params, request }) => {
     const body = await request.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return HttpResponse.json(mockPhoto({ id: params.id as string, ...body as any }))
   }),
 
@@ -68,11 +70,13 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/albums`, async ({ request }) => {
     const body = await request.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return HttpResponse.json(mockAlbum(body as any))
   }),
 
   http.put(`${API_BASE_URL}/api/albums/:id`, async ({ params, request }) => {
     const body = await request.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return HttpResponse.json(mockAlbum({ id: params.id as string, ...body as any }))
   }),
 

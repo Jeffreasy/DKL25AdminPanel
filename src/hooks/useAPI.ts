@@ -29,13 +29,13 @@ export interface UseAPIReturn<T> {
   mutate: (newData: T | ((prev: T | undefined) => T)) => void
 }
 
-interface CacheEntry<T> {
-  data: T
+interface CacheEntry {
+  data: unknown
   timestamp: number
 }
 
 // Global cache
-const cache = new Map<string, CacheEntry<any>>()
+const cache = new Map<string, CacheEntry>()
 
 export function useAPI<T>(
   key: string | null,
@@ -91,7 +91,7 @@ export function useAPI<T>(
 
     // Check if data is stale
     if (age < staleTime) {
-      return cached.data
+      return cached.data as T
     }
 
     return null

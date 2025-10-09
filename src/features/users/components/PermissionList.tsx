@@ -4,7 +4,7 @@ import { Modal, Text } from '@mantine/core'
 import { permissionService } from '../services/permissionService'
 import { PermissionForm } from './PermissionForm'
 import { useFilters, applyFilters } from '../../../hooks/useFilters'
-import type { PermissionWithId } from '../types'
+import type { PermissionWithId, CreatePermissionRequest } from '../types'
 import { cc } from '../../../styles/shared'
 
 export function PermissionList() {
@@ -70,7 +70,7 @@ export function PermissionList() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => permissionService.updatePermission(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<PermissionWithId> }) => permissionService.updatePermission(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['permissions'] })
       setIsModalOpen(false)
@@ -99,11 +99,11 @@ export function PermissionList() {
     }
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CreatePermissionRequest | Partial<PermissionWithId>) => {
     if (selectedPermission) {
-      await updateMutation.mutateAsync({ id: selectedPermission.id, data: values })
+      await updateMutation.mutateAsync({ id: selectedPermission.id, data: values as Partial<PermissionWithId> })
     } else {
-      await createMutation.mutateAsync(values)
+      await createMutation.mutateAsync(values as CreatePermissionRequest)
     }
   }
 
