@@ -16,7 +16,7 @@ export function MessageSearch({ isOpen, onClose, onSelectMessage }: MessageSearc
 
   const { data: searchResults = [], isLoading } = useQuery({
     queryKey: ['chat-search', query],
-    queryFn: () => chatService.searchMessages(query),
+    queryFn: () => chatService.searchMessages(),
     enabled: query.length > 2,
     staleTime: 30000
   })
