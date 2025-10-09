@@ -20,46 +20,38 @@ export function PermissionList() {
     }
   })
 
-  const { data: permissions = [], isLoading, error } = useQuery({
+  const { data: permissions = { groups: [], total: 0 }, isLoading, error } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => permissionService.getPermissions(),
     retry: 1,
     staleTime: 5 * 60 * 1000,
   })
 
-  // Apply filters
-  const filteredPermissions = useMemo(() => {
-    return applyFilters(permissions, filters.filters, (permission, filterValues) => {
-      // Search filter
-      if (filterValues.search) {
-        const searchTerm = (filterValues.search as string).toLowerCase()
-        const matchesSearch =
-          permission.resource.toLowerCase().includes(searchTerm) ||
-          permission.action.toLowerCase().includes(searchTerm) ||
-          permission.description.toLowerCase().includes(searchTerm)
-        if (!matchesSearch) return false
-      }
+  // Apply filters to groups
+  const filteredGroups = useMemo(() => {
+    return permissions.groups.map(group => ({
+      ...group,
+      permissions: applyFilters(group.permissions, filters.filters, (permission, filterValues) => {
+        // Search filter
+        if (filterValues.search) {
+          const searchTerm = (filterValues.search as string).toLowerCase()
+          const matchesSearch =
+            permission.resource.toLowerCase().includes(searchTerm) ||
+            permission.action.toLowerCase().includes(searchTerm) ||
+            permission.description.toLowerCase().includes(searchTerm)
+          if (!matchesSearch) return false
+        }
 
-      // Type filter
-      if (filterValues.type && filterValues.type !== 'all') {
-        if (filterValues.type === 'system' && !permission.is_system_permission) return false
-        if (filterValues.type === 'custom' && permission.is_system_permission) return false
-      }
+        // Type filter
+        if (filterValues.type && filterValues.type !== 'all') {
+          if (filterValues.type === 'system' && !permission.is_system_permission) return false
+          if (filterValues.type === 'custom' && permission.is_system_permission) return false
+        }
 
-      return true
-    })
-  }, [permissions, filters.filters])
-
-  // Group permissions by resource
-  const groupedPermissions = useMemo(() => {
-    return filteredPermissions.reduce((acc, permission) => {
-      if (!acc[permission.resource]) {
-        acc[permission.resource] = []
-      }
-      acc[permission.resource].push(permission)
-      return acc
-    }, {} as Record<string, PermissionWithId[]>)
-  }, [filteredPermissions])
+        return true
+      })
+    })).filter(group => group.permissions.length > 0)
+  }, [permissions.groups, filters.filters])
 
   const createMutation = useMutation({
     mutationFn: permissionService.createPermission,
@@ -198,7 +190,7 @@ export function PermissionList() {
       </div>
 
       {/* Permissions by Resource */}
-      {Object.keys(groupedPermissions).length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
           <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -210,8 +202,8 @@ export function PermissionList() {
         </div>
       ) : (
         <div className={cc.spacing.section.md}>
-          {Object.entries(groupedPermissions).map(([resource, resourcePermissions]) => (
-            <div key={resource} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {filteredGroups.map(group => (
+            <div key={group.resource} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* Resource Header */}
               <div className={`bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 ${cc.spacing.px.md} ${cc.spacing.py.sm}`}>
                 <div className={`flex items-center ${cc.spacing.gap.md}`}>
@@ -221,8 +213,8 @@ export function PermissionList() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white capitalize">{resource}</h3>
-                    <p className="text-blue-100 dark:text-blue-200 text-sm">{resourcePermissions.length} permissie(s)</p>
+                    <h3 className="text-xl font-bold text-white capitalize">{group.resource}</h3>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">{group.permissions.length} permissie(s)</p>
                   </div>
                 </div>
               </div>
@@ -230,7 +222,7 @@ export function PermissionList() {
               {/* Permissions Grid */}
               <div className={`${cc.spacing.container.md} bg-gray-50 dark:bg-gray-700/30`}>
                 <div className={`${cc.grid.permissions()} ${cc.spacing.gap.lg}`}>
-                  {resourcePermissions.map(permission => (
+                  {group.permissions.map(permission => (
                     <div
                       key={permission.id}
                       className={`bg-white dark:bg-gray-800 rounded-lg ${cc.spacing.container.sm} border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 ${cc.hover.card} ${cc.transition.shadow} group`}

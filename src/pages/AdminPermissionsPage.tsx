@@ -24,7 +24,7 @@ export function AdminPermissionsPage() {
     retry: 1
   })
 
-  const { data: permissions = [] } = useQuery({
+  const { data: permissions = { groups: [], total: 0 } } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => permissionService.getPermissions(),
     enabled: !authLoading && canManagePermissions,
@@ -93,7 +93,7 @@ export function AdminPermissionsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Totaal Permissies</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{permissions.length}</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{permissions.total}</p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3">
               <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +108,7 @@ export function AdminPermissionsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Systeem Permissies</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {permissions.filter(p => p.is_system_permission).length}
+                {permissions.groups.reduce((total, group) => total + group.permissions.filter(p => p.is_system_permission).length, 0)}
               </p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3">
@@ -151,7 +151,7 @@ export function AdminPermissionsPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              Permissies ({permissions.length})
+              Permissies ({permissions.total})
             </div>
           </button>
         </div>

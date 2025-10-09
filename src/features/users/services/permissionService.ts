@@ -1,9 +1,9 @@
 import { authManager } from '../../../api/client/auth'
-import type { PermissionWithId, CreatePermissionRequest } from '../types'
+import type { PermissionWithId, CreatePermissionRequest, GroupedPermissionsResponse } from '../types'
 
 export const permissionService = {
-  async getPermissions(): Promise<PermissionWithId[]> {
-    return await authManager.makeAuthenticatedRequest('/api/rbac/permissions') as PermissionWithId[]
+  async getPermissions(): Promise<GroupedPermissionsResponse> {
+    return await authManager.makeAuthenticatedRequest('/api/rbac/permissions') as GroupedPermissionsResponse
   },
 
   async createPermission(request: CreatePermissionRequest): Promise<PermissionWithId> {

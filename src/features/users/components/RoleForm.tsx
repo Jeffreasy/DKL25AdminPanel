@@ -24,7 +24,7 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
 
   const isPermissionOnlyEdit = isEdit && !!initialValues?.id
 
-  const { data: permissions = [], isLoading: permissionsLoading, error: permissionsError } = useQuery({
+  const { data: permissions = { groups: [], total: 0 }, isLoading: permissionsLoading, error: permissionsError } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => permissionService.getPermissions()
   })
@@ -50,30 +50,23 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
   }, [initialValues])
 
   const resources = React.useMemo(() => {
-    const uniqueResources = [...new Set(permissions.map(p => p.resource))].sort()
-    return uniqueResources
-  }, [permissions])
+    return permissions.groups.map(g => g.resource).sort()
+  }, [permissions.groups])
 
-  const filteredPermissions = React.useMemo(() => {
-    return permissions.filter(p => {
-      const matchesSearch = 
-        p.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesResource = selectedResource === 'all' || p.resource === selectedResource
-      return matchesSearch && matchesResource
-    })
-  }, [permissions, searchQuery, selectedResource])
+  const filteredGroups = React.useMemo(() => {
+    return permissions.groups
+      .filter(group => selectedResource === 'all' || group.resource === selectedResource)
+      .map(group => ({
+        ...group,
+        permissions: group.permissions.filter(p =>
+          p.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      }))
+      .filter(group => group.permissions.length > 0)
+  }, [permissions.groups, searchQuery, selectedResource])
 
-  const groupedPermissions = React.useMemo(() => {
-    return filteredPermissions.reduce((acc, permission) => {
-      if (!acc[permission.resource]) {
-        acc[permission.resource] = []
-      }
-      acc[permission.resource].push(permission)
-      return acc
-    }, {} as Record<string, PermissionWithId[]>)
-  }, [filteredPermissions])
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {}
@@ -117,13 +110,15 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
   }
 
   const selectAllInResource = (resource: string) => {
-    const resourcePermissions = permissions.filter(p => p.resource === resource)
-    const allSelected = resourcePermissions.every(p => selectedPermissionIds.includes(p.id))
-    
+    const group = permissions.groups.find(g => g.resource === resource)
+    if (!group) return
+
+    const allSelected = group.permissions.every(p => selectedPermissionIds.includes(p.id))
+
     if (allSelected) {
-      setSelectedPermissionIds(prev => prev.filter(id => !resourcePermissions.some(p => p.id === id)))
+      setSelectedPermissionIds(prev => prev.filter(id => !group.permissions.some(p => p.id === id)))
     } else {
-      const newIds = resourcePermissions.map(p => p.id).filter(id => !selectedPermissionIds.includes(id))
+      const newIds = group.permissions.map(p => p.id).filter(id => !selectedPermissionIds.includes(id))
       setSelectedPermissionIds(prev => [...prev, ...newIds])
     }
   }
@@ -203,7 +198,7 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-600/50 rounded-lg p-4">
             <p className="text-sm text-red-700 dark:text-red-400">Fout bij laden permissies: {permissionsError.message}</p>
           </div>
-        ) : permissions.length > 0 ? (
+        ) : permissions.total > 0 ? (
           <>
             {/* Search and Filter */}
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -233,12 +228,12 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
 
             {/* Permissions List */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-96 overflow-y-auto bg-white dark:bg-gray-800">
-              {Object.entries(groupedPermissions).map(([resource, resourcePermissions]) => {
-                const allSelected = resourcePermissions.every(p => selectedPermissionIds.includes(p.id))
-                const someSelected = resourcePermissions.some(p => selectedPermissionIds.includes(p.id))
-                
+              {filteredGroups.map(group => {
+                const allSelected = group.permissions.every(p => selectedPermissionIds.includes(p.id))
+                const someSelected = group.permissions.some(p => selectedPermissionIds.includes(p.id))
+
                 return (
-                  <div key={resource} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                  <div key={group.resource} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                     {/* Resource Header */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 flex items-center justify-between sticky top-0">
                       <div className="flex items-center gap-3">
@@ -248,19 +243,19 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
                           ref={input => {
                             if (input) input.indeterminate = someSelected && !allSelected
                           }}
-                          onChange={() => selectAllInResource(resource)}
+                          onChange={() => selectAllInResource(group.resource)}
                           className="w-4 h-4 text-blue-600 dark:text-blue-500 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-400"
                         />
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{resource}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{group.resource}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          ({resourcePermissions.filter(p => selectedPermissionIds.includes(p.id)).length}/{resourcePermissions.length})
+                          ({group.permissions.filter(p => selectedPermissionIds.includes(p.id)).length}/{group.permissions.length})
                         </span>
                       </div>
                     </div>
 
                     {/* Permissions */}
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {resourcePermissions.map(permission => {
+                      {group.permissions.map(permission => {
                         const isChecked = selectedPermissionIds.includes(permission.id);
                         return (
                           <label

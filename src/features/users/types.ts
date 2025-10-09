@@ -68,3 +68,12 @@ export interface UpdateRoleRequest {
   description?: string
   permission_ids?: string[]
 }
+
+export interface GroupedPermissionsResponse {
+  groups: Array<{
+    resource: string;
+    permissions: PermissionWithId[];
+    count: number;
+  }>;
+  total: number;
+}
