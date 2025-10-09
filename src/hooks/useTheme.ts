@@ -5,10 +5,24 @@ export function useTheme() {
     // Initialize state based on system preference and Tailwind class
     if (typeof window !== 'undefined') {
       const storedPreference = localStorage.getItem('theme'); // Optional: Add local storage persistence
+      let isDark: boolean;
       if (storedPreference) {
-        return storedPreference === 'dark';
+        isDark = storedPreference === 'dark';
+      } else {
+        isDark = true; // Default to dark mode
       }
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
+      // Always default to dark if no preference or if preference is light
+      if (!storedPreference || storedPreference === 'light') {
+        isDark = true;
+      }
+      // Set the class synchronously
+      const root = window.document.documentElement
+      if (isDark) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+      return isDark
     }
     return false
   })
