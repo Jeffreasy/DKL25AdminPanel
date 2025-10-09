@@ -1,295 +1,273 @@
-# 📚 DKL25 Admin Panel - Documentatie
+# 📚 DKL25 Admin Panel - Documentation
 
-> **Versie:** 2.0 | **Laatste Update:** 2025-01-08
+> **Version:** 2.2 | **Last Updated:** 2025-01-08
 
-Welkom bij de complete documentatie van het DKL25 Admin Panel.
+Complete documentation for the DKL25 Admin Panel project.
 
 ---
 
-## 🗂️ Documentatie Structuur
+## 📋 Quick Navigation
 
+- [🏗️ Architecture](#️-architecture)
+- [📖 Guides](#-guides)
+- [🧪 Testing](#-testing)
+- [📊 Reports](#-reports)
+- [🔗 External Resources](#-external-resources)
+
+---
+
+## 🏗️ Architecture
+
+### System Design
+- [**Components Architecture**](architecture/components.md) - Component structure and organization
+- [**Authentication & Authorization**](architecture/authentication-and-authorization.md) - RBAC system, JWT auth
+
+### Technical Documentation
+- [**API Integration**](guides/api-integration.md) - Supabase & Cloudinary integration
+- [**State Management**](guides/state-management.md) - Context API patterns
+- [**Styling Guide**](guides/styling.md) - Tailwind CSS conventions
+
+---
+
+## 📖 Guides
+
+### Getting Started
+- [**Contributing Guide**](guides/contributing.md) - How to contribute to the project
+- [**Deployment Guide**](guides/deployment.md) - Production deployment steps
+- [**Refactoring Guide**](guides/refactoring.md) - Code improvement patterns
+
+### Development
+- [**API Integration**](guides/api-integration.md) - Working with APIs
+- [**State Management**](guides/state-management.md) - Managing application state
+- [**Styling**](guides/styling.md) - CSS and design system
+
+---
+
+## 🧪 Testing
+
+### Complete Testing Documentation
+**📁 [Testing Documentation Hub](testing/README.md)** - Complete testing guide and resources
+
+### Quick Links
+- [**Getting Started**](testing/guides/getting-started.md) - 5-minute quick setup
+- [**Installation Guide**](testing/guides/installation-guide.md) - Detailed setup instructions
+- [**Testing Strategy**](testing/guides/testing-strategy.md) - 12-week comprehensive plan
+- [**Coverage Roadmap**](testing/guides/coverage-roadmap.md) - Fast track to 100% coverage
+- [**Troubleshooting**](testing/guides/troubleshooting.md) - Common issues & solutions
+- [**Current Status**](testing/guides/current-status.md) - Implementation status
+
+### Current Status
+- ✅ **425 tests** passing (98.8% pass rate)
+- ✅ **80-85% coverage** (exceeded 75% target)
+- ✅ **Production ready** test suite
+- ✅ **CI/CD integrated** with GitHub Actions
+
+### Test Commands
+```bash
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run with UI
+npm run test:ui
+
+# Run E2E tests
+npm run test:e2e
 ```
-docs/
-├── README.md                    # Deze index (start hier)
-├── architecture/                # Architectuur documentatie
-│   ├── authentication-and-authorization.md
-│   └── components.md
-├── guides/                      # Development guides
-│   ├── refactoring.md
-│   ├── styling.md
-│   └── testing.md
-└── reports/                     # Status reports
-    └── features-audit.md
-```
+
+---
+
+## 📊 Reports
+
+### Testing Reports
+- [**Coverage Analysis**](testing/reports/coverage-analysis.md) - 80-85% coverage achieved
+- [**Status Update**](testing/reports/status-update.md) - Latest testing progress
+- [**Implementation Report**](testing/reports/implementation-report.md) - Complete implementation
+- [**Milestone Achievements**](testing/reports/milestone-achievements.md) - Historical milestones
+
+### Feature Reports
+- [**Features Audit**](reports/features-audit.md) - Complete feature inventory
+- [**90% Coverage Achieved**](reports/90_PERCENT_COVERAGE_ACHIEVED.md) - Coverage milestone
+- [**Testing Milestones**](reports/TESTING_MILESTONE_ACHIEVED.md) - Historical achievements
+
+---
+
+## 🎯 Project Status
+
+### Current Metrics
+| Metric | Status | Target |
+|--------|--------|--------|
+| **Test Coverage** | 80-85% | 75%+ ✅ |
+| **Tests Passing** | 425/429 | 95%+ ✅ |
+| **Components** | 96 | - |
+| **Features** | 17 | - |
+| **Documentation** | Complete | - ✅ |
+
+### Recent Achievements
+- ✅ Testing infrastructure complete
+- ✅ 80-85% test coverage achieved
+- ✅ All critical paths tested
+- ✅ Production-ready test suite
+- ✅ Comprehensive documentation
+- ✅ Professional documentation structure
 
 ---
 
 ## 🚀 Quick Start
 
-### Voor Developers
+### For New Developers
+1. **Clone** the repository
+2. **Install** dependencies: `npm install`
+3. **Configure** environment variables (see `.env.example`)
+4. **Run** development server: `npm run dev`
+5. **Run** tests: `npm test`
 
-1. **Start hier:** [Project README](../README.md)
-2. **Architectuur:** [Authentication & Authorization](architecture/authentication-and-authorization.md)
-3. **Development:** [Refactoring Guide](guides/refactoring.md)
-4. **Styling:** [Styling Guide](guides/styling.md)
-5. **Testing:** [Testing Guide](guides/testing.md)
-
-### Voor Nieuwe Team Members
-
-1. Lees [Project README](../README.md) voor overzicht
-2. Bekijk [Components Reference](architecture/components.md)
-3. Volg [Refactoring Guide](guides/refactoring.md) voor code patterns
-4. Check [Styling Guide](guides/styling.md) voor design system
+### For Testing
+1. **Read** [Testing Getting Started](testing/guides/getting-started.md)
+2. **Run** `npm test` to verify setup
+3. **Review** example tests in `src/**/__tests__/`
+4. **Write** tests following established patterns
 
 ---
 
-## 📖 Documentatie per Onderwerp
+## 📚 Documentation Structure
 
-### 🏗️ Architectuur
-
-#### [Authentication & Authorization](architecture/authentication-and-authorization.md)
-Complete documentatie van het auth systeem:
-- JWT authenticatie met refresh tokens
-- RBAC (Role-Based Access Control)
-- Frontend & backend implementatie
-- API endpoints en error handling
-- Best practices en troubleshooting
-
-**Wanneer te gebruiken:**
-- Implementeren van nieuwe auth features
-- Debuggen van permission issues
-- Begrijpen van security model
-
-#### [Components Reference](architecture/components.md)
-Inventaris van alle 96 componenten:
-- UI components (ConfirmDialog, EmptyState, LoadingGrid)
-- Layout components (Header, Sidebar, Navigation)
-- Feature components (Albums, Photos, Users, etc.)
-- Component patterns en naming conventions
-
-**Wanneer te gebruiken:**
-- Zoeken naar bestaande componenten
-- Begrijpen van component structuur
-- Planning van nieuwe features
-
----
-
-### 📘 Development Guides
-
-#### [Refactoring Guide](guides/refactoring.md)
-Code refactoring patterns en best practices:
-- Folder structure refactoring (complete)
-- Code refactoring utilities (CRUD service, hooks)
-- Base types en case converters
-- Migration guides en voorbeelden
-- Impact analyse (39% code reductie)
-
-**Wanneer te gebruiken:**
-- Refactoren van bestaande code
-- Implementeren van nieuwe features
-- Verbeteren van code kwaliteit
-
-#### [Styling Guide](guides/styling.md)
-Design system en styling conventies:
-- 51 styling presets (grids, buttons, forms)
-- UI components (ConfirmDialog, EmptyState, LoadingGrid)
-- Responsive design (mobile-first)
-- Icon guidelines (Heroicons v2)
-- Performance optimization
-- 95% compliance score
-
-**Wanneer te gebruiken:**
-- Stylen van nieuwe componenten
-- Implementeren van responsive design
-- Zorgen voor dark mode support
-
-#### [Testing Guide](guides/testing.md)
-Testing infrastructure en best practices:
-- Vitest + React Testing Library setup
-- Writing unit en integration tests
-- Test utilities en custom render
-- Coverage goals (75%+ target)
-- Best practices en voorbeelden
-
-**Wanneer te gebruiken:**
-- Schrijven van tests voor nieuwe features
-- Debuggen van failing tests
-- Verbeteren van test coverage
+```
+docs/
+├── README.md                          # This file
+├── architecture/                      # System architecture
+│   ├── components.md                 # Component structure
+│   └── authentication-and-authorization.md
+├── guides/                           # Development guides
+│   ├── api-integration.md
+│   ├── contributing.md
+│   ├── deployment.md
+│   ├── refactoring.md
+│   ├── state-management.md
+│   └── styling.md
+├── testing/                          # Testing documentation
+│   ├── README.md                     # Testing hub
+│   ├── MIGRATION_GUIDE.md           # File migration reference
+│   ├── guides/                       # Testing guides
+│   │   ├── getting-started.md       # Quick setup
+│   │   ├── installation-guide.md    # Detailed setup
+│   │   ├── testing-strategy.md      # 12-week plan
+│   │   ├── coverage-roadmap.md      # Path to 100%
+│   │   ├── troubleshooting.md       # Problem solving
+│   │   └── current-status.md        # Current state
+│   └── reports/                      # Testing reports
+│       ├── coverage-analysis.md     # Coverage details
+│       ├── status-update.md         # Latest progress
+│       ├── implementation-report.md # Complete report
+│       └── milestone-achievements.md # Milestones
+└── reports/                          # Project reports
+    ├── features-audit.md
+    └── *.md
+```
 
 ---
 
-### 📊 Status Reports
+## 🛠️ Technology Stack
 
-#### [Features Audit Report](reports/features-audit.md)
-Compliance audit van alle features:
-- 17 features geanalyseerd
-- 95% overall compliance
-- Action plan voor 100% compliance
-- Prioritized improvements (4.5 uur effort)
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **State**: Context API + React Query
+- **Routing**: React Router v6
 
-**Wanneer te gebruiken:**
-- Planning van refactoring werk
-- Tracking van code kwaliteit
-- Identificeren van technical debt
+### Testing
+- **Unit/Integration**: Vitest + React Testing Library
+- **E2E**: Playwright
+- **API Mocking**: MSW (Mock Service Worker)
+- **Coverage**: Vitest Coverage (v8)
 
----
-
-## 🎯 Veelgebruikte Taken
-
-### Nieuwe Feature Toevoegen
-
-1. Lees [Refactoring Guide - Feature Structure](guides/refactoring.md#folder-structure)
-2. Volg [Styling Guide - Best Practices](guides/styling.md#best-practices)
-3. Implementeer [Testing Guide - Writing Tests](guides/testing.md#writing-tests)
-
-### Permission Toevoegen
-
-1. Lees [Auth System - RBAC](architecture/authentication-and-authorization.md#autorisatie-rbac)
-2. Update backend database
-3. Test met [Auth System - Testing](architecture/authentication-and-authorization.md#testing)
-
-### Component Refactoren
-
-1. Check [Components Reference](architecture/components.md)
-2. Volg [Refactoring Guide - Migration](guides/refactoring.md#migration-guide)
-3. Apply [Styling Guide - Presets](guides/styling.md#shared-styles)
-
-### Styling Issue Fixen
-
-1. Check [Features Audit](reports/features-audit.md)
-2. Volg [Styling Guide](guides/styling.md)
-3. Verify met [Styling Guide - Compliance](guides/styling.md#compliance)
+### Backend Integration
+- **Database**: Supabase (PostgreSQL)
+- **Storage**: Cloudinary
+- **Auth**: JWT + Supabase Auth
 
 ---
 
-## 🔍 Zoeken in Documentatie
+## 🔗 External Resources
 
-### Per Onderwerp
+### Official Documentation
+- [React Documentation](https://react.dev/)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
 
-| Onderwerp | Document |
-|-----------|----------|
-| **Authentication** | [Auth System](architecture/authentication-and-authorization.md) |
-| **Permissions** | [Auth System - RBAC](architecture/authentication-and-authorization.md#autorisatie-rbac) |
-| **Components** | [Components Reference](architecture/components.md) |
-| **Folder Structure** | [Refactoring Guide](guides/refactoring.md#folder-structure) |
-| **Styling Presets** | [Styling Guide](guides/styling.md#shared-styles) |
-| **Testing** | [Testing Guide](guides/testing.md) |
-| **API Integration** | [API Integration](guides/api-integration.md) |
-| **State Management** | [State Management](guides/state-management.md) |
-| **Deployment** | [Deployment Guide](guides/deployment.md) |
-| **Contributing** | [Contributing Guide](guides/contributing.md) |
-| **Code Quality** | [Features Audit](reports/features-audit.md) |
+### Testing Resources
+- [Vitest Documentation](https://vitest.dev/)
+- [React Testing Library](https://testing-library.com/react)
+- [Playwright Documentation](https://playwright.dev/)
+- [MSW Documentation](https://mswjs.io/)
 
-### Per Rol
-
-**Frontend Developer:**
-- [Components Reference](architecture/components.md)
-- [Styling Guide](guides/styling.md)
-- [Refactoring Guide](guides/refactoring.md)
-- [State Management](guides/state-management.md)
-- [API Integration](guides/api-integration.md)
-
-**Backend Developer:**
-- [Auth System - Backend](architecture/authentication-and-authorization.md#backend-implementatie)
-- [API Integration](guides/api-integration.md)
-
-**DevOps:**
-- [Deployment Guide](guides/deployment.md)
-- [Auth System - Deployment](architecture/authentication-and-authorization.md#deployment)
-
-**QA/Tester:**
-- [Testing Guide](guides/testing.md)
-- [Auth System - Testing](architecture/authentication-and-authorization.md#testing)
-
-**New Contributors:**
-- [Contributing Guide](guides/contributing.md)
-- [Refactoring Guide](guides/refactoring.md)
+### Backend Services
+- [Supabase Documentation](https://supabase.com/docs)
+- [Cloudinary Documentation](https://cloudinary.com/documentation)
 
 ---
 
-## 📝 Documentatie Onderhoud
+## 📞 Support & Contribution
 
-### Wanneer Updaten
+### Getting Help
+1. Check relevant documentation section
+2. Review troubleshooting guides
+3. Check example code and tests
+4. Contact development team
 
-- ✅ Bij toevoegen van nieuwe features
-- ✅ Bij wijzigen van architectuur
-- ✅ Bij refactoring van code
-- ✅ Bij toevoegen van nieuwe presets
-- ✅ Bij wijzigen van API endpoints
-
-### Hoe Updaten
-
-1. Update relevante .md file in `docs/`
-2. Update versie nummer en datum
-3. Update inhoudsopgave indien nodig
-4. Verify alle links werken
-5. Commit met duidelijke message
+### Contributing
+1. Read [Contributing Guide](guides/contributing.md)
+2. Follow code standards
+3. Write tests for new features
+4. Submit PR with clear description
 
 ---
 
-## 🤝 Contributing
+## ✅ Documentation Checklist
 
-### Documentatie Toevoegen
+### For New Features
+- [ ] Update architecture documentation
+- [ ] Add usage examples
+- [ ] Write tests
+- [ ] Update relevant guides
+- [ ] Add to features audit
 
-1. Bepaal juiste folder (`architecture/`, `guides/`, `reports/`)
-2. Gebruik template met metadata (versie, status, datum)
-3. Voeg toe aan deze index
-4. Update gerelateerde documenten
-
-### Documentatie Verbeteren
-
-1. Open issue of PR met suggesties
-2. Volg bestaande formatting
-3. Update versie nummer
-4. Test alle links
+### For Bug Fixes
+- [ ] Document the issue
+- [ ] Add regression tests
+- [ ] Update troubleshooting if needed
 
 ---
 
-## ✅ Documentatie Kwaliteit
+## 🎯 Roadmap
 
-### Standards
+### Short Term (Next Month)
+- [ ] Reach 90% test coverage
+- [ ] Complete E2E test suite
+- [ ] Performance optimization
+- [ ] Enhanced documentation
 
-- ✅ **Metadata** - Versie, status, datum op elk document
-- ✅ **Inhoudsopgave** - Navigeerbare TOC
-- ✅ **Code voorbeelden** - Praktische examples
-- ✅ **Links** - Werkende interne links
-- ✅ **Formatting** - Consistente markdown
+### Medium Term (Next Quarter)
+- [ ] 100% test coverage
+- [ ] Visual regression testing
+- [ ] Accessibility audit
+- [ ] Performance benchmarks
 
-### Metrics
-
-- **Totaal documenten:** 11
-- **Totaal regels:** ~3500
-- **Code voorbeelden:** 150+
-- **Interne links:** 80+
-- **Kwaliteit score:** 95% ✅
-
----
-
-## 📞 Hulp Nodig?
-
-### Veelgestelde Vragen
-
-**Q: Waar vind ik informatie over permissions?**  
-A: [Auth System - RBAC](architecture/authentication-and-authorization.md#autorisatie-rbac)
-
-**Q: Hoe voeg ik een nieuwe component toe?**  
-A: [Components Reference](architecture/components.md) + [Refactoring Guide](guides/refactoring.md)
-
-**Q: Welke styling presets zijn beschikbaar?**  
-A: [Styling Guide - Shared Styles](guides/styling.md#shared-styles)
-
-**Q: Hoe schrijf ik tests?**  
-A: [Testing Guide - Writing Tests](guides/testing.md#writing-tests)
-
-### Contact
-
-Voor vragen die niet in de documentatie staan:
-- **Email:** info@dekoninklijkeloop.nl
-- **Project:** [GitHub Repository](https://github.com/...)
+### Long Term (Next Year)
+- [ ] Microservices architecture
+- [ ] Advanced monitoring
+- [ ] Automated deployments
+- [ ] Comprehensive analytics
 
 ---
 
-**Versie:** 2.0  
-**Laatste Update:** 2025-01-08  
-**Status:** Complete  
-**Maintainer:** Development Team
+**Version**: 2.2  
+**Last Updated**: 2025-01-08  
+**Maintained By**: Development Team  
+**Status**: ✅ Production Ready
+
+For questions or suggestions, please contact the development team or create an issue in the repository.

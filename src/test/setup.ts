@@ -1,10 +1,17 @@
-import { expect, afterEach, vi } from 'vitest'
+import '@testing-library/jest-dom/vitest'
+import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
-import '@testing-library/jest-dom'
+import { server } from './mocks/server'
+
+// Setup MSW server
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 // Cleanup after each test
 afterEach(() => {
   cleanup()
+  vi.clearAllMocks()
 })
 
 // Mock window.matchMedia
@@ -31,4 +38,11 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
   unobserve() {}
+} as any
+
+// Mock ResizeObserver for HeadlessUI components
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
 } as any
