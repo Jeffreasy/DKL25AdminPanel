@@ -9,6 +9,7 @@ export interface ImageUploadConfig {
   allowedTypes?: string[]
   apiBaseUrl?: string
   authToken?: string
+  uploadFunction?: (file: File) => Promise<{ secure_url: string }>
 }
 
 /**
@@ -49,7 +50,8 @@ export function useImageUpload(config: ImageUploadConfig = {}): ImageUploadResul
     maxSizeMB = 2,
     allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
     apiBaseUrl = '/api',
-    authToken
+    authToken,
+    uploadFunction
   } = config
 
   const [file, setFile] = useState<File | null>(null)
@@ -181,7 +183,7 @@ export function useImageUpload(config: ImageUploadConfig = {}): ImageUploadResul
   }
 
   /**
-   * Upload single file using ImageUploadClient
+   * Upload single file using ImageUploadClient or custom upload function
    * Returns the uploaded file URL or null on error
    */
   const uploadFile = async (): Promise<string | null> => {
@@ -190,7 +192,7 @@ export function useImageUpload(config: ImageUploadConfig = {}): ImageUploadResul
       return null
     }
 
-    if (!client) {
+    if (!client && !uploadFunction) {
       setError('Upload client niet geconfigureerd')
       return null
     }
@@ -200,10 +202,15 @@ export function useImageUpload(config: ImageUploadConfig = {}): ImageUploadResul
     setError(null)
 
     try {
-      const result = await client.uploadImage(file, {
-        onProgress: setProgress
-      })
-      return result.data.secure_url
+      if (uploadFunction) {
+        const result = await uploadFunction(file)
+        return result.secure_url
+      } else {
+        const result = await client!.uploadImage(file, {
+          onProgress: setProgress
+        })
+        return result.data.secure_url
+      }
     } catch (err) {
       console.error('Upload error:', err)
       setError(err instanceof Error ? err.message : 'Upload mislukt. Probeer het opnieuw.')
