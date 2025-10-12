@@ -15,16 +15,16 @@ interface SocialLink {
 
 export function UnderConstructionForm({ onSave }: Props) {
   const [formData, setFormData] = useState<UnderConstructionFormData>({
-    isActive: false,
+    is_active: false,
     title: 'Onder Constructie',
     message: 'Deze website is momenteel onder constructie...',
-    footerText: 'Bedankt voor uw geduld!',
-    logoUrl: '',
-    expectedDate: null,
-    socialLinks: [],
-    progressPercentage: 0,
-    contactEmail: '',
-    newsletterEnabled: false,
+    footer_text: 'Bedankt voor uw geduld!',
+    logo_url: '',
+    expected_date: null,
+    social_links: [],
+    progress_percentage: 0,
+    contact_email: '',
+    newsletter_enabled: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,22 +38,25 @@ export function UnderConstructionForm({ onSave }: Props) {
       try {
         const data = await underConstructionService.getUnderConstruction();
         setFormData({
-          isActive: data.isActive,
+          is_active: data.isActive,
           title: data.title,
           message: data.message,
-          footerText: data.footerText,
-          logoUrl: data.logoUrl,
-          expectedDate: data.expectedDate ? new Date(data.expectedDate).toISOString().slice(0, 16) : null,
-          socialLinks: data.socialLinks,
-          progressPercentage: data.progressPercentage,
-          contactEmail: data.contactEmail,
-          newsletterEnabled: data.newsletterEnabled,
+          footer_text: data.footerText,
+          logo_url: data.logoUrl,
+          expected_date: data.expectedDate ? new Date(data.expectedDate).toISOString().slice(0, 16) : null,
+          social_links: data.socialLinks,
+          progress_percentage: data.progressPercentage,
+          contact_email: data.contactEmail,
+          newsletter_enabled: data.newsletterEnabled,
         });
         setId(data.id);
       } catch (error) {
-        console.error('Error loading under construction data:', error);
-        setMessage('Fout bij het laden van gegevens');
-        setMessageType('error');
+        // Only show error for actual API errors, not for expected 404s
+        if (!(error instanceof Error) || !error.message.includes('404')) {
+          console.error('Error loading under construction data:', error);
+          setMessage('Fout bij het laden van gegevens');
+          setMessageType('error');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -76,13 +79,13 @@ export function UnderConstructionForm({ onSave }: Props) {
     setIsSubmitting(true);
 
     // Client-side validatie
-    if (formData.progressPercentage < 0 || formData.progressPercentage > 100) {
+    if (formData.progress_percentage < 0 || formData.progress_percentage > 100) {
       setMessage('Voortgangspercentage moet tussen 0 en 100 liggen');
       setMessageType('error');
       setIsSubmitting(false);
       return;
     }
-    if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
+    if (formData.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contact_email)) {
       setMessage('Voer een geldig e-mailadres in');
       setMessageType('error');
       setIsSubmitting(false);
@@ -92,7 +95,7 @@ export function UnderConstructionForm({ onSave }: Props) {
     try {
       const payload = {
         ...formData,
-        expectedDate: formData.expectedDate ? new Date(formData.expectedDate).toISOString() : null,
+        expected_date: formData.expected_date ? new Date(formData.expected_date).toISOString() : null,
       };
       if (id) {
         await underConstructionService.updateUnderConstruction(id, payload);
@@ -125,7 +128,7 @@ export function UnderConstructionForm({ onSave }: Props) {
     }
     setFormData((prev) => ({
       ...prev,
-      socialLinks: [...prev.socialLinks, newSocialLink],
+      social_links: [...prev.social_links, newSocialLink],
     }));
     setNewSocialLink({ platform: '', url: '' });
   };
@@ -133,7 +136,7 @@ export function UnderConstructionForm({ onSave }: Props) {
   const handleRemoveSocialLink = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      socialLinks: prev.socialLinks.filter((_, i) => i !== index),
+      social_links: prev.social_links.filter((_, i) => i !== index),
     }));
   };
 
@@ -169,8 +172,8 @@ export function UnderConstructionForm({ onSave }: Props) {
             <input
               type="checkbox"
               id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+              checked={formData.is_active}
+              onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
               className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
               aria-label="Onder constructie pagina activeren"
             />
@@ -220,8 +223,8 @@ export function UnderConstructionForm({ onSave }: Props) {
           <input
             type="text"
             id="footerText"
-            value={formData.footerText}
-            onChange={(e) => setFormData((prev) => ({ ...prev, footerText: e.target.value }))}
+            value={formData.footer_text}
+            onChange={(e) => setFormData((prev) => ({ ...prev, footer_text: e.target.value }))}
             className={cc.form.input({ className: 'mt-1' })}
             required
             aria-required="true"
@@ -235,8 +238,8 @@ export function UnderConstructionForm({ onSave }: Props) {
           <input
             type="url"
             id="logoUrl"
-            value={formData.logoUrl}
-            onChange={(e) => setFormData((prev) => ({ ...prev, logoUrl: e.target.value }))}
+            value={formData.logo_url}
+            onChange={(e) => setFormData((prev) => ({ ...prev, logo_url: e.target.value }))}
             className={cc.form.input({ className: 'mt-1' })}
             placeholder="https://example.com/logo.png"
             aria-label="URL van het logo"
@@ -253,8 +256,8 @@ export function UnderConstructionForm({ onSave }: Props) {
           <input
             type="datetime-local"
             id="expectedDate"
-            value={formData.expectedDate || ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, expectedDate: e.target.value || null }))}
+            value={formData.expected_date || ''}
+            onChange={(e) => setFormData((prev) => ({ ...prev, expected_date: e.target.value || null }))}
             className={cc.form.input({ className: 'mt-1' })}
             aria-label="Verwachte lanceringsdatum"
           />
@@ -266,14 +269,14 @@ export function UnderConstructionForm({ onSave }: Props) {
         <div>
           <label className={cc.form.label()}>Sociale media links</label>
           <div className={cc.spacing.section.xs}>
-            {formData.socialLinks.map((link, index) => (
+            {formData.social_links.map((link, index) => (
               <div key={index} className={`flex items-center ${cc.spacing.gap.sm}`}>
                 <select
                   value={link.platform}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      socialLinks: prev.socialLinks.map((l, i) =>
+                      social_links: prev.social_links.map((l, i) =>
                         i === index ? { ...l, platform: e.target.value } : l
                       ),
                     }))
@@ -296,7 +299,7 @@ export function UnderConstructionForm({ onSave }: Props) {
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      socialLinks: prev.socialLinks.map((l, i) =>
+                      social_links: prev.social_links.map((l, i) =>
                         i === index ? { ...l, url: e.target.value } : l
                       ),
                     }))
@@ -370,11 +373,11 @@ export function UnderConstructionForm({ onSave }: Props) {
           <input
             type="number"
             id="progressPercentage"
-            value={formData.progressPercentage}
+            value={formData.progress_percentage}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
-                progressPercentage: parseInt(e.target.value) || 0,
+                progress_percentage: parseInt(e.target.value) || 0,
               }))
             }
             min="0"
@@ -394,8 +397,8 @@ export function UnderConstructionForm({ onSave }: Props) {
           <input
             type="email"
             id="contactEmail"
-            value={formData.contactEmail}
-            onChange={(e) => setFormData((prev) => ({ ...prev, contactEmail: e.target.value }))}
+            value={formData.contact_email}
+            onChange={(e) => setFormData((prev) => ({ ...prev, contact_email: e.target.value }))}
             className={cc.form.input({ className: 'mt-1' })}
             placeholder="info@koninklijkeloop.nl"
             aria-label="Contact e-mailadres"
@@ -410,9 +413,9 @@ export function UnderConstructionForm({ onSave }: Props) {
             <input
               type="checkbox"
               id="newsletterEnabled"
-              checked={formData.newsletterEnabled}
+              checked={formData.newsletter_enabled}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, newsletterEnabled: e.target.checked }))
+                setFormData((prev) => ({ ...prev, newsletter_enabled: e.target.checked }))
               }
               className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
               aria-label="Nieuwsbrief signup activeren"

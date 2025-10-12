@@ -1,71 +1,48 @@
-import { supabase } from '../../../api/client/supabase'
-import { keysToCamel, keysToSnake } from '../../../utils/caseConverter'
-import type { UnderConstruction, UnderConstructionFormData } from '../types'
+import { underConstructionClient } from '../../../api/client/underConstructionClient'
+import type { UnderConstructionResponse, UnderConstructionFormData } from '../types'
 
 export const underConstructionService = {
-  getUnderConstruction: async (): Promise<UnderConstruction> => {
-    const { data, error } = await supabase
-      .from('under_construction')
-      .select('*')
-      .limit(1)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned, create default
-        return await underConstructionService.createUnderConstruction({
-          isActive: false,
-          title: 'Onder Constructie',
-          message: 'Deze website is momenteel onder constructie...',
-          footerText: 'Bedankt voor uw geduld!',
-          logoUrl: '',
-          expectedDate: null,
-          socialLinks: [],
-          progressPercentage: 0,
-          contactEmail: '',
-          newsletterEnabled: false
-        })
+  getUnderConstruction: async (): Promise<UnderConstructionResponse> => {
+    const data = await underConstructionClient.getActiveUnderConstruction()
+    if (!data) {
+      // No active under construction - return default data without creating in DB
+      return {
+        id: 0,
+        isActive: false,
+        title: 'Onder Constructie',
+        message: 'Deze website is momenteel onder constructie...',
+        footerText: 'Bedankt voor uw geduld!',
+        logoUrl: '',
+        expectedDate: null,
+        socialLinks: [],
+        progressPercentage: 0,
+        contactEmail: '',
+        newsletterEnabled: false,
+        createdAt: '',
+        updatedAt: '',
       }
-      console.error('Error fetching under construction:', error)
-      throw error
     }
-
-    return keysToCamel<UnderConstruction>(data)
+    return data
   },
 
-  createUnderConstruction: async (data: UnderConstructionFormData): Promise<UnderConstruction> => {
-    const dbData = keysToSnake(data)
-    const { data: item, error } = await supabase
-      .from('under_construction')
-      .insert([dbData])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating under construction:', error)
-      throw error
-    }
-
-    return keysToCamel<UnderConstruction>(item)
+  createUnderConstruction: async (data: UnderConstructionFormData): Promise<UnderConstructionResponse> => {
+    return await underConstructionClient.createUnderConstruction(data)
   },
 
-  updateUnderConstruction: async (id: number, data: UnderConstructionFormData): Promise<UnderConstruction> => {
-    const dbData = {
-      ...keysToSnake(data),
-      updated_at: new Date().toISOString()
-    }
-    const { data: item, error } = await supabase
-      .from('under_construction')
-      .update(dbData)
-      .eq('id', id)
-      .select()
-      .single()
+  updateUnderConstruction: async (id: number, data: UnderConstructionFormData): Promise<UnderConstructionResponse> => {
+    return await underConstructionClient.updateUnderConstruction(id, data)
+  },
 
-    if (error) {
-      console.error('Error updating under construction:', error)
-      throw error
-    }
+  // Additional methods for admin functionality
+  getUnderConstructionList: async (limit = 10, offset = 0): Promise<UnderConstructionResponse[]> => {
+    return await underConstructionClient.getUnderConstructionList(limit, offset)
+  },
 
-    return keysToCamel<UnderConstruction>(item)
+  getUnderConstructionById: async (id: number): Promise<UnderConstructionResponse | null> => {
+    return await underConstructionClient.getUnderConstructionById(id)
+  },
+
+  deleteUnderConstruction: async (id: number): Promise<void> => {
+    return await underConstructionClient.deleteUnderConstruction(id)
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { uploadToCloudinary } from '../../../../api/client/cloudinary'
+import { ImageUploadClient } from '../../../../api/client'
 import { supabase } from '../../../../api/client/supabase'
 import { cc } from '../../../../styles/shared'
 import { XMarkIcon } from '@heroicons/react/24/outline'
@@ -19,6 +19,12 @@ export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUpl
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [selectedAlbumIds, setSelectedAlbumIds] = useState<string[]>([]) // State for selected albums
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const client = new ImageUploadClient({
+    authToken: localStorage.getItem('jwtToken') || '',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl',
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+  })
 
   if (!open) return null
 
@@ -50,46 +56,48 @@ export function PhotoUploadModal({ open, onClose, onComplete, albums }: PhotoUpl
       setIsUploading(true)
       setError(null)
 
+      const fileArray = Array.from(files)
       const uploadedPhotoIds: string[] = []
 
-      // Upload all files and save photo data
-      for (const file of Array.from(files)) {
-        try {
-          const result = await uploadToCloudinary(file)
-          const thumbnailUrl = result.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/')
+      // Upload all files using the API client
+      const result = await client.uploadBatchImages(fileArray, {
+        onProgress: (percent) => {
+          console.log(`Upload progress: ${percent}%`)
+        }
+      })
 
-          // Insert photo and get the inserted ID
+      // The API handles Cloudinary upload and stores in uploaded_images table
+      // Frontend still needs to create photos records for the app
+      if (result.data && result.data.length > 0) {
+        for (const [index, imageData] of result.data.entries()) {
+          const file = fileArray[index]
+          const thumbnailUrl = imageData.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/')
+
+          // Insert photo record in the photos table
           const { data: insertedPhotos, error: insertPhotoError } = await supabase
             .from('photos')
             .insert([{
-              url: result.secure_url,
+              url: imageData.secure_url,
               thumbnail_url: thumbnailUrl,
               title: file.name.split('.')[0],
               alt_text: file.name.split('.')[0],
               visible: true,
-              // year: selectedYear // Remove year
             }])
-            .select('id') // Select the ID of the inserted photo
+            .select('id')
 
           if (insertPhotoError) throw insertPhotoError
           if (insertedPhotos && insertedPhotos.length > 0) {
             uploadedPhotoIds.push(insertedPhotos[0].id)
           }
-
-        } catch (err) {
-          console.error(`Error uploading ${file.name}:`, err)
-          throw err // Re-throw to be caught by outer catch
         }
       }
 
       // If photos were uploaded and albums selected, create relations
       if (uploadedPhotoIds.length > 0 && selectedAlbumIds.length > 0) {
-        // Call service function to add photos to albums
         await addPhotosToAlbums(uploadedPhotoIds, selectedAlbumIds)
-        // console.log('TODO: Link photos', uploadedPhotoIds, 'to albums', selectedAlbumIds)
       }
 
-      onComplete() // Dit triggert nu een refresh
+      onComplete()
     } catch (err) {
       console.error('Upload error:', err)
       setError(err instanceof Error ? err.message : 'Upload mislukt')

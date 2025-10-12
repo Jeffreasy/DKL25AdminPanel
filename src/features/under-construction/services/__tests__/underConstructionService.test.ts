@@ -1,18 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { underConstructionService } from '../underConstructionService'
-import { supabase } from '../../../../api/client/supabase'
+import { underConstructionClient } from '../../../../api/client/underConstructionClient'
 
-// Mock Supabase
-vi.mock('../../../../api/client/supabase', () => ({
-  supabase: {
-    from: vi.fn(),
+// Mock the API client
+vi.mock('../../../../api/client/underConstructionClient', () => ({
+  underConstructionClient: {
+    getActiveUnderConstruction: vi.fn(),
+    createUnderConstruction: vi.fn(),
+    updateUnderConstruction: vi.fn(),
+    getUnderConstructionList: vi.fn(),
+    getUnderConstructionById: vi.fn(),
+    deleteUnderConstruction: vi.fn(),
   },
-}))
-
-// Mock case converter
-vi.mock('../../../../utils/caseConverter', () => ({
-  keysToCamel: vi.fn((data) => data),
-  keysToSnake: vi.fn((data) => data),
 }))
 
 describe('underConstructionService', () => {
@@ -24,84 +23,70 @@ describe('underConstructionService', () => {
     it('fetches under construction data successfully', async () => {
       const mockData = {
         id: 1,
-        is_active: false,
+        isActive: false,
         title: 'Under Construction',
         message: 'Site is under construction',
-        footer_text: 'Thank you',
-        logo_url: 'logo.png',
-        expected_date: '2024-12-31',
-        social_links: [],
-        progress_percentage: 50,
-        contact_email: 'contact@example.com',
-        newsletter_enabled: true,
+        footerText: 'Thank you',
+        logoUrl: 'logo.png',
+        expectedDate: '2024-12-31',
+        socialLinks: [],
+        progressPercentage: 50,
+        contactEmail: 'contact@example.com',
+        newsletterEnabled: true,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       }
 
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockLimit = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: mockData, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        limit: mockLimit,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.getActiveUnderConstruction).mockResolvedValue(mockData)
 
       const result = await underConstructionService.getUnderConstruction()
 
-      expect(supabase.from).toHaveBeenCalledWith('under_construction')
-      expect(mockSelect).toHaveBeenCalledWith('*')
-      expect(mockLimit).toHaveBeenCalledWith(1)
-      expect(mockSingle).toHaveBeenCalled()
+      expect(underConstructionClient.getActiveUnderConstruction).toHaveBeenCalled()
       expect(result).toEqual(mockData)
     })
 
-    it('creates default data when no rows exist', async () => {
-      const mockError = { code: 'PGRST116', message: 'No rows' }
+    it('creates default data when no active under construction exists', async () => {
       const mockDefaultData = {
         id: 1,
         isActive: false,
         title: 'Onder Constructie',
         message: 'Deze website is momenteel onder constructie...',
+        footerText: 'Bedankt voor uw geduld!',
+        logoUrl: '',
+        expectedDate: null,
+        socialLinks: [],
+        progressPercentage: 0,
+        contactEmail: '',
+        newsletterEnabled: false,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       }
 
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockLimit = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValueOnce({ data: null, error: mockError })
-
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect2 = vi.fn().mockReturnThis()
-      const mockSingle2 = vi.fn().mockResolvedValue({ data: mockDefaultData, error: null })
-
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce({
-          select: mockSelect,
-          limit: mockLimit,
-          single: mockSingle,
-        } as any)
-        .mockReturnValueOnce({
-          insert: mockInsert,
-          select: mockSelect2,
-          single: mockSingle2,
-        } as any)
+      vi.mocked(underConstructionClient.getActiveUnderConstruction).mockResolvedValue(null)
+      vi.mocked(underConstructionClient.createUnderConstruction).mockResolvedValue(mockDefaultData)
 
       const result = await underConstructionService.getUnderConstruction()
 
-      expect(mockInsert).toHaveBeenCalled()
+      expect(underConstructionClient.getActiveUnderConstruction).toHaveBeenCalled()
+      expect(underConstructionClient.createUnderConstruction).toHaveBeenCalledWith({
+        is_active: false,
+        title: 'Onder Constructie',
+        message: 'Deze website is momenteel onder constructie...',
+        footer_text: 'Bedankt voor uw geduld!',
+        logo_url: '',
+        expected_date: null,
+        social_links: [],
+        progress_percentage: 0,
+        contact_email: '',
+        newsletter_enabled: false,
+      })
       expect(result).toEqual(mockDefaultData)
     })
 
     it('throws error on fetch failure', async () => {
-      const mockError = { code: 'ERROR', message: 'Database error' }
+      const mockError = new Error('API Error')
 
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockLimit = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        limit: mockLimit,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.getActiveUnderConstruction).mockRejectedValue(mockError)
 
       await expect(underConstructionService.getUnderConstruction()).rejects.toEqual(mockError)
     })
@@ -110,6 +95,20 @@ describe('underConstructionService', () => {
   describe('createUnderConstruction', () => {
     it('creates under construction data successfully', async () => {
       const formData = {
+        is_active: true,
+        title: 'New Site',
+        message: 'Coming soon',
+        footer_text: 'Stay tuned',
+        logo_url: 'logo.png',
+        expected_date: '2024-12-31',
+        social_links: [],
+        progress_percentage: 25,
+        contact_email: 'info@example.com',
+        newsletter_enabled: true,
+      }
+
+      const mockCreatedData = {
+        id: 1,
         isActive: true,
         title: 'New Site',
         message: 'Coming soon',
@@ -120,57 +119,35 @@ describe('underConstructionService', () => {
         progressPercentage: 25,
         contactEmail: 'info@example.com',
         newsletterEnabled: true,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       }
 
-      const mockCreatedData = {
-        id: 1,
-        ...formData,
-      }
-
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: mockCreatedData, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.createUnderConstruction).mockResolvedValue(mockCreatedData)
 
       const result = await underConstructionService.createUnderConstruction(formData)
 
-      expect(supabase.from).toHaveBeenCalledWith('under_construction')
-      expect(mockInsert).toHaveBeenCalledWith([formData])
-      expect(mockSelect).toHaveBeenCalled()
-      expect(mockSingle).toHaveBeenCalled()
+      expect(underConstructionClient.createUnderConstruction).toHaveBeenCalledWith(formData)
       expect(result).toEqual(mockCreatedData)
     })
 
     it('throws error on create failure', async () => {
       const formData = {
-        isActive: false,
+        is_active: false,
         title: 'Test',
         message: 'Test message',
-        footerText: 'Footer',
-        logoUrl: '',
-        expectedDate: null,
-        socialLinks: [],
-        progressPercentage: 0,
-        contactEmail: '',
-        newsletterEnabled: false,
+        footer_text: 'Footer',
+        logo_url: '',
+        expected_date: null,
+        social_links: [],
+        progress_percentage: 0,
+        contact_email: '',
+        newsletter_enabled: false,
       }
 
       const mockError = new Error('Create failed')
 
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.createUnderConstruction).mockRejectedValue(mockError)
 
       await expect(underConstructionService.createUnderConstruction(formData)).rejects.toEqual(mockError)
     })
@@ -179,6 +156,20 @@ describe('underConstructionService', () => {
   describe('updateUnderConstruction', () => {
     it('updates under construction data successfully', async () => {
       const updateData = {
+        is_active: true,
+        title: 'Updated Title',
+        message: 'Updated message',
+        footer_text: 'Updated footer',
+        logo_url: 'new-logo.png',
+        expected_date: '2025-01-01',
+        social_links: [{ platform: 'twitter', url: 'https://twitter.com' }],
+        progress_percentage: 75,
+        contact_email: 'new@example.com',
+        newsletter_enabled: true,
+      }
+
+      const mockUpdatedData = {
+        id: 1,
         isActive: true,
         title: 'Updated Title',
         message: 'Updated message',
@@ -189,108 +180,37 @@ describe('underConstructionService', () => {
         progressPercentage: 75,
         contactEmail: 'new@example.com',
         newsletterEnabled: true,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       }
 
-      const mockUpdatedData = {
-        id: 1,
-        ...updateData,
-        updated_at: expect.any(String),
-      }
-
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: mockUpdatedData, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.updateUnderConstruction).mockResolvedValue(mockUpdatedData)
 
       const result = await underConstructionService.updateUnderConstruction(1, updateData)
 
-      expect(supabase.from).toHaveBeenCalledWith('under_construction')
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ...updateData,
-          updated_at: expect.any(String),
-        })
-      )
-      expect(mockEq).toHaveBeenCalledWith('id', 1)
-      expect(mockSelect).toHaveBeenCalled()
-      expect(mockSingle).toHaveBeenCalled()
+      expect(underConstructionClient.updateUnderConstruction).toHaveBeenCalledWith(1, updateData)
       expect(result).toEqual(mockUpdatedData)
     })
 
     it('throws error on update failure', async () => {
       const updateData = {
-        isActive: false,
+        is_active: false,
         title: 'Test',
         message: 'Test',
-        footerText: 'Test',
-        logoUrl: '',
-        expectedDate: null,
-        socialLinks: [],
-        progressPercentage: 0,
-        contactEmail: '',
-        newsletterEnabled: false,
+        footer_text: 'Test',
+        logo_url: '',
+        expected_date: null,
+        social_links: [],
+        progress_percentage: 0,
+        contact_email: '',
+        newsletter_enabled: false,
       }
 
       const mockError = new Error('Update failed')
 
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
+      vi.mocked(underConstructionClient.updateUnderConstruction).mockRejectedValue(mockError)
 
       await expect(underConstructionService.updateUnderConstruction(1, updateData)).rejects.toEqual(mockError)
-    })
-
-    it('includes updated_at timestamp', async () => {
-      const updateData = {
-        isActive: true,
-        title: 'Test',
-        message: 'Test',
-        footerText: 'Test',
-        logoUrl: '',
-        expectedDate: null,
-        socialLinks: [],
-        progressPercentage: 50,
-        contactEmail: '',
-        newsletterEnabled: false,
-      }
-
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ 
-        data: { id: 1, ...updateData, updated_at: new Date().toISOString() }, 
-        error: null 
-      })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
-
-      await underConstructionService.updateUnderConstruction(1, updateData)
-
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updated_at: expect.any(String),
-        })
-      )
     })
   })
 })

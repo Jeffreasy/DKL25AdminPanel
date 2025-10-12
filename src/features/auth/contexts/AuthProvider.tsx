@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authManager } from '../../../api/client/auth'
+import { supabase } from '../../../api/client/supabase'
 import { AuthContext, User } from './AuthContext'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('jwtToken', data.token);
         // CRITICAL: Update authManager with the new token
         authManager.setToken(data.token);
-        
+
         // Sla refresh token op indien beschikbaar
         if (data.refresh_token) {
           localStorage.setItem('refreshToken', data.refresh_token);
@@ -77,6 +78,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Fallback: user ID might be directly in response
           localStorage.setItem('userId', data.id);
         }
+
+        // Try to sign into Supabase with the JWT token
+        try {
+          const { error: supabaseError } = await supabase.auth.signInWithIdToken({
+            provider: 'custom',
+            token: data.token
+          });
+          if (supabaseError) {
+            console.warn('Supabase sign in failed:', supabaseError);
+          } else {
+            console.log('Supabase sign in successful');
+          }
+        } catch (error) {
+          console.warn('Supabase authentication failed:', error);
+        }
+
         // Haal gebruikersinfo op inclusief permissies
         await loadUserProfile();
         return { success: true };
@@ -175,6 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');
