@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../../../api/client/supabase'
+import { fetchAlbumById } from '../../services/albumService'
 import type { Photo } from '../../../photos/types'
 import { Z_INDEX } from '../../../../config/zIndex'
 import { cc } from '../../../../styles/shared'
@@ -20,16 +20,13 @@ export function CoverPhotoSelector({ albumId, currentCoverPhotoId, onSelect }: C
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
-        .from('album_photos')
-        .select('photo:photos(*)')
-        .eq('album_id', albumId)
-        .order('order_number', { ascending: true })
-
-      if (error) throw error
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const photosData = data?.map(item => item.photo as any).filter(p => p && typeof p === 'object') || []
-      setPhotos(photosData as Photo[])
+      const album = await fetchAlbumById(albumId)
+      if (album && album.photos) {
+        const photosData = album.photos.map(ap => ap.photo).filter(p => p && typeof p === 'object')
+        setPhotos(photosData as Photo[])
+      } else {
+        setPhotos([])
+      }
     } catch (err) {
       console.error('Error loading album photos:', err)
       setError('Kon foto\'s niet laden')

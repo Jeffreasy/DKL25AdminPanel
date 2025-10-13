@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { AlbumForm } from '../forms/AlbumForm'
 import { PhotoSelector } from '../forms/PhotoSelector'
 import type { AlbumWithDetails } from '../../types'
-import { supabase } from '../../../../api/client/supabase'
+import { updateAlbum, addPhotosToAlbum } from '../../services/albumService'
 import { FolderIcon } from '@heroicons/react/24/outline'
 import { CoverPhotoSelector } from '../forms/CoverPhotoSelector'
 import { cc } from '../../../../styles/shared'
@@ -40,13 +40,7 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
 
   const handleCoverPhotoSelect = async (photoId: string) => {
     try {
-      const { error } = await supabase
-        .from('albums')
-        .update({ cover_photo_id: photoId })
-        .eq('id', album.id)
-
-      if (error) throw error
-      
+      await updateAlbum(album.id, { cover_photo_id: photoId })
       setShowCoverSelector(false)
       onUpdate()
     } catch (err) {
@@ -69,39 +63,15 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
 
   const handleAddPhotos = async (selectedPhotoIds: string[]) => {
     try {
-      // Haal huidige order numbers op
-      const { data: currentPhotos, error: orderError } = await supabase
-        .from('album_photos')
-        .select('order_number')
-        .eq('album_id', album.id)
-        .order('order_number', { ascending: false })
-        .limit(1)
-
-      if (orderError) throw orderError
-
-      let nextOrderNumber = (currentPhotos?.[0]?.order_number || 0) + 1
-
-      // Voeg nieuwe foto's toe
-      const { error: insertError } = await supabase
-        .from('album_photos')
-        .insert(
-          selectedPhotoIds.map(photoId => ({
-            album_id: album.id,
-            photo_id: photoId,
-            order_number: nextOrderNumber++
-          }))
-        )
-
-      if (insertError) throw insertError
+      await addPhotosToAlbum(album.id, selectedPhotoIds)
 
       // Stel automatisch cover foto in als er nog geen is
       if (!album.cover_photo_id && selectedPhotoIds.length > 0) {
-        const { error: coverError } = await supabase
-          .from('albums')
-          .update({ cover_photo_id: selectedPhotoIds[0] })
-          .eq('id', album.id)
-
-        if (coverError) console.error('Error setting cover photo:', coverError)
+        try {
+          await updateAlbum(album.id, { cover_photo_id: selectedPhotoIds[0] })
+        } catch (coverError) {
+          console.error('Error setting cover photo:', coverError)
+        }
       }
 
       setShowPhotos(false)

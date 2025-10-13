@@ -7,7 +7,7 @@ import { GalleryPreviewModal } from '../features/albums/components/preview/Galle
 import { ErrorBoundary } from '../features/albums/components/ErrorBoundary'
 import { usePageTitle } from '../hooks/usePageTitle'
 import type { AlbumWithDetails } from '../features/albums/types'
-import { supabase } from '../api/client/supabase'
+import { fetchAlbumById } from '../features/albums/services/albumService'
 import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
 import { usePermissions } from '../hooks/usePermissions'
@@ -31,31 +31,20 @@ export function AlbumManagementPage() {
   const handleAlbumSelect = useCallback(async (albumId: string | null) => {
     if (!albumId) {
       setSelectedAlbum(null)
-      searchParams.delete('openAlbum')
-      setSearchParams(searchParams, { replace: true })
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('openAlbum')
+      setSearchParams(newSearchParams, { replace: true })
       return
     }
     try {
-      const { data, error } = await supabase
-        .from('albums')
-        .select(`
-          *,
-          cover_photo:photos!cover_photo_id(*),
-          photos:album_photos(
-            order_number, 
-            photo:photos(*)
-          )
-        `)
-        .eq('id', albumId)
-        .single()
-
-      if (error) throw error
+      const data = await fetchAlbumById(albumId)
       setSelectedAlbum(data)
     } catch (err) {
       console.error('Error loading album:', err)
       setSelectedAlbum(null)
-      searchParams.delete('openAlbum')
-      setSearchParams(searchParams, { replace: true })
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('openAlbum')
+      setSearchParams(newSearchParams, { replace: true })
     }
   }, [searchParams, setSearchParams])
 
@@ -65,7 +54,7 @@ export function AlbumManagementPage() {
       console.log("Opening album from query param:", albumIdToOpen)
       handleAlbumSelect(albumIdToOpen)
     }
-  }, [searchParams, handleAlbumSelect, selectedAlbum])
+  }, [searchParams, selectedAlbum, handleAlbumSelect])
 
   if (!canReadAlbums) {
     return (

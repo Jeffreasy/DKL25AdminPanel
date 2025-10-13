@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy
 } from '@dnd-kit/sortable'
-import { supabase } from '../../../../api/client/supabase'
+import { fetchAlbumById, updatePhotoOrder } from '../../services/albumService'
 import type { AlbumWithDetails } from '../../types'
 import type { Photo } from '../../../photos/types'
 import { SortablePhoto } from './SortablePhoto'
@@ -43,15 +43,13 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove, removingPhot
     setLoading(true)
     setError(null)
     try {
-      const { data, error: fetchError } = await supabase
-        .from('album_photos')
-        .select('photo:photos(*)')
-        .eq('album_id', album.id)
-        .order('order_number', { ascending: true })
-
-      if (fetchError) throw fetchError
-      const photosData = data?.map(item => item.photo as unknown as Photo).filter(p => p && typeof p === 'object') || []
-      setPhotos(photosData as Photo[])
+      const albumData = await fetchAlbumById(album.id)
+      if (albumData && albumData.photos) {
+        const photosData = albumData.photos.map(ap => ap.photo).filter(p => p && typeof p === 'object')
+        setPhotos(photosData as Photo[])
+      } else {
+        setPhotos([])
+      }
     } catch (err) {
       console.error('Error fetching photos for ordering:', err)
       setError('Kon foto\'s niet laden')
@@ -75,18 +73,12 @@ export function PhotoOrderer({ album, onOrderChange, onPhotoRemove, removingPhot
 
       setError(null)
       try {
-        const updates = newOrderedPhotos.map((photo, index) => ({
-          album_id: album.id,
+        const photoOrders = newOrderedPhotos.map((photo, index) => ({
           photo_id: photo.id,
           order_number: index + 1,
         }))
 
-        const { error: updateError } = await supabase
-          .from('album_photos')
-          .upsert(updates, { onConflict: 'album_id, photo_id' })
-
-        if (updateError) throw updateError
-
+        await updatePhotoOrder(album.id, photoOrders)
         await onOrderChange()
 
       } catch (err) {

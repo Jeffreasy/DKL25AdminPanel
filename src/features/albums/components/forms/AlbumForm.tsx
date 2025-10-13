@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../../../../api/client/supabase'
+import { createAlbum, updateAlbum } from '../../services/albumService'
 import type { AlbumWithDetails } from '../../types'
 import { useAuth } from '../../../auth/hooks/useAuth'
 import { useForm } from '../../../../hooks/useForm'
@@ -46,28 +46,21 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
       setSubmitError(null)
 
       try {
-        const upsertData = {
+        const updateData = {
           title: values.title,
-          description: values.description || null,
+          description: values.description || undefined,
           visible: values.visible,
-          order_number: Number(values.order_number) || 1,
-          user_id: user.id,
-          updated_at: new Date().toISOString()
+          order_number: Number(values.order_number) || 1
         }
 
         if (album?.id) {
-          const { error: updateError } = await supabase
-            .from('albums')
-            .update(upsertData)
-            .eq('id', album.id)
-
-          if (updateError) throw updateError
+          await updateAlbum(album.id, updateData)
         } else {
-          const { error: insertError } = await supabase
-            .from('albums')
-            .insert([{ ...upsertData, user_id: user.id }])
-
-          if (insertError) throw insertError
+          await createAlbum({
+            title: values.title,
+            description: values.description || undefined,
+            visible: values.visible
+          })
         }
 
         onComplete()

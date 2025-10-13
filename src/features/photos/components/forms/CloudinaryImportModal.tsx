@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import { supabase } from '../../../../api/client/supabase';
+import { photoApiClient } from '../../../../api/client';
 import { Z_INDEX } from '../../../../config/zIndex';
-import type { Photo } from '../../types';
 import { cc } from '../../../../styles/shared';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
@@ -85,63 +84,45 @@ export function CloudinaryImportModal({ open, onClose, onComplete, targetYear }:
             setIsProcessing(true);
             setError(null);
             let skippedCount = 0;
-            // Use const as photosToInsert is reassigned by pushing, not by creating a new array reference
-            const photosToInsert: Partial<Photo>[] = [];
 
             try {
-              const { data: existingPhotos, error: fetchError } = await supabase
-                .from('photos')
-                .select('url');
-
-              if (fetchError) {
-                throw new Error('Kon bestaande foto URLs niet ophalen: ' + fetchError.message);
-              }
-
-              const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
-
+              // For each asset, create a photo via the REST API
               for (const asset of data.assets) {
-                if (existingUrls.has(asset.secure_url)) {
-                  skippedCount++;
-                  continue;
-                }
+                try {
+                  const photoData = {
+                    url: asset.secure_url,
+                    thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'),
+                    title: asset.original_filename || asset.public_id,
+                    alt_text: asset.original_filename || asset.public_id,
+                    visible: true,
+                    year: parseInt(targetYear) || new Date().getFullYear(),
+                    description: "",
+                  };
 
-                photosToInsert.push({
-                  url: asset.secure_url,
-                  thumbnail_url: asset.secure_url.replace('/upload/', '/upload/c_thumb,w_200,g_face/'),
-                  title: asset.original_filename || asset.public_id,
-                  alt_text: asset.original_filename || asset.public_id,
-                  visible: true,
-                  year: targetYear || String(new Date().getFullYear()),
-                  description: "",
-                });
-              }
-
-              if (photosToInsert.length > 0) {
-                  // DEBUG: Log the exact data being sent to Supabase
-                  console.log("[CloudinaryImportModal] Data to insert:", JSON.stringify(photosToInsert, null, 2));
-
-                  const { error: insertError } = await supabase
-                    .from('photos')
-                    .insert(photosToInsert);
-
-                  if (insertError) {
-                    // Log the full error object for more details
-                    console.error('[CloudinaryImportModal] Supabase insert error object:', insertError);
-                    throw insertError;
+                  const response = await photoApiClient.createPhoto(photoData);
+                  if (!response.success) {
+                    console.warn(`Failed to import photo ${asset.public_id}:`, response.error);
+                    skippedCount++;
                   }
+                } catch (photoError) {
+                  console.warn(`Error importing photo ${asset.public_id}:`, photoError);
+                  skippedCount++;
+                }
               }
+
+              const importedCount = data.assets.length - skippedCount;
 
               // Success path: Only runs if try block succeeded
               setIsProcessing(false);
-              if (photosToInsert.length > 0) {
+              if (importedCount > 0) {
                   toast.success(
-                    `${photosToInsert.length} foto${photosToInsert.length !== 1 ? 's' : ''} succesvol geïmporteerd.` +
-                    (skippedCount > 0 ? ` ${skippedCount} reeds bestaande overgeslagen.` : '')
+                    `${importedCount} foto${importedCount !== 1 ? 's' : ''} succesvol geïmporteerd.` +
+                    (skippedCount > 0 ? ` ${skippedCount} mislukt.` : '')
                   );
               } else if (skippedCount > 0) {
-                  toast(`${skippedCount} foto${skippedCount !== 1 ? '' : 's'} overgeslagen (reeds aanwezig).`);
+                  toast(`${skippedCount} foto${skippedCount !== 1 ? '' : 's'} mislukt.`);
               } else {
-                  toast("Geen nieuwe foto's geselecteerd voor import.");
+                  toast("Geen foto's geselecteerd voor import.");
               }
 
               onComplete();

@@ -7,8 +7,7 @@ import { AlbumDetailInfo } from './AlbumDetailInfo'
 import { AlbumDetailActions } from './AlbumDetailActions'
 import { AlbumDetailPhotos } from './AlbumDetailPhotos'
 import type { AlbumWithDetails } from '../../types'
-import type { Photo } from '../../../photos/types'
-import { supabase } from '../../../../api/client/supabase'
+import { updateAlbum, addPhotosToAlbum, removePhotoFromAlbum, fetchAlbumById } from '../../services/albumService'
 import { Z_INDEX } from '../../../../config/zIndex'
 import { toast } from 'react-hot-toast'
 
@@ -34,15 +33,11 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
   const handleUpdate = useCallback(async () => {
     try {
       await onSave()
-      // Refresh photos in modal after save if necessary
-      const { data, error: fetchError } = await supabase
-        .from('album_photos')
-        .select('photo:photos(*)')
-        .eq('album_id', album.id)
-        .order('order_number', { ascending: true })
-      if (fetchError) throw fetchError
-      const photosData = data?.map(item => item.photo as unknown as Photo).filter(p => p && typeof p === 'object') || []
-      setPhotos(photosData as Photo[])
+      // Refresh album data to get updated photos
+      const updatedAlbum = await fetchAlbumById(album.id)
+      if (updatedAlbum && updatedAlbum.photos) {
+        setPhotos(updatedAlbum.photos.map(ap => ap.photo))
+      }
     } catch {
       handleError('Kon gegevens niet bijwerken')
     }
@@ -57,12 +52,7 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
     try {
       setLoading(true)
       setError(null)
-      const { error } = await supabase
-        .from('albums')
-        .update({ visible: newVisible })
-        .eq('id', album.id)
-
-      if (error) throw error
+      await updateAlbum(album.id, { visible: newVisible })
       handleUpdate()
     } catch (err) {
       console.error('Error toggling visibility:', err)
@@ -84,15 +74,7 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
       setLoading(true)
       setError(null)
 
-      const { error } = await supabase
-        .from('album_photos')
-        .delete()
-        .match({
-          album_id: album.id,
-          photo_id: photoId
-        })
-
-      if (error) throw error
+      await removePhotoFromAlbum(album.id, photoId)
 
       handleUpdate() // Call full update to refresh data source
     } catch (err) {
@@ -111,39 +93,17 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
       setLoading(true)
       setError(null)
 
-      const { data: currentPhotos, error: orderError } = await supabase
-        .from('album_photos')
-        .select('order_number')
-        .eq('album_id', album.id)
-        .order('order_number', { ascending: false })
-        .limit(1)
+      await addPhotosToAlbum(album.id, selectedPhotoIds)
 
-      if (orderError) throw orderError
-
-      let nextOrderNumber = (currentPhotos?.[0]?.order_number || 0) + 1
-
-      const { error: insertError } = await supabase
-        .from('album_photos')
-        .insert(
-          selectedPhotoIds.map(photoId => ({
-            album_id: album.id,
-            photo_id: photoId,
-            order_number: nextOrderNumber++
-          }))
-        )
-
-      if (insertError) throw insertError
-  
       // Stel automatisch cover foto in als er nog geen is
       if (!album.cover_photo_id && selectedPhotoIds.length > 0) {
-        const { error: coverError } = await supabase
-          .from('albums')
-          .update({ cover_photo_id: selectedPhotoIds[0] })
-          .eq('id', album.id)
-  
-        if (coverError) console.error('Error setting cover photo:', coverError)
+        try {
+          await updateAlbum(album.id, { cover_photo_id: selectedPhotoIds[0] })
+        } catch (coverError) {
+          console.error('Error setting cover photo:', coverError)
+        }
       }
-  
+
       handleUpdate() // Call full update to refresh data source
     } catch (err) {
       console.error('Error adding photos:', err)
@@ -163,13 +123,8 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
     try {
       setLoading(true);
       setError(null);
-      const { error } = await supabase
-        .from('albums')
-        .update({ cover_photo_id: photoId })
-        .eq('id', album.id);
-  
-      if (error) throw error;
-  
+      await updateAlbum(album.id, { cover_photo_id: photoId });
+
       toast.success('Cover foto bijgewerkt');
       handleUpdate(); // Refresh data
     } catch (err) {

@@ -1,10 +1,29 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../../../api/client/supabase'
 import { Dialog } from '@headlessui/react'
 import type { Photo } from '../../../photos/types'
 import { Z_INDEX } from '../../../../config/zIndex'
 import { cc } from '../../../../styles/shared'
 import { LoadingGrid } from '../../../../components/ui'
+
+// API Base URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com'
+
+// Helper function for auth headers with JWT
+const getAuthHeaders = () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+
+  // Get JWT token from localStorage
+  const token = localStorage.getItem('jwtToken')
+  if (!token) {
+    console.error('[PhotoSelector] No auth token found.')
+    throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in.')
+  }
+
+  headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 interface PhotoSelectorProps {
   albumId: string  // We keep this for future use
@@ -19,19 +38,31 @@ export function PhotoSelector({ existingPhotoIds, onComplete, onCancel }: PhotoS
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Laad beschikbare foto's
+  // Laad beschikbare foto's via API
   useEffect(() => {
     const loadPhotos = async () => {
       try {
         setLoading(true)
-        const { data, error } = await supabase
-          .from('photos')
-          .select('*')
-          .not('id', 'in', `(${existingPhotoIds.join(',')})`)
-          .order('created_at', { ascending: false })
+        const headers = getAuthHeaders()
 
-        if (error) throw error
-        setAvailablePhotos(data || [])
+        // Use admin photos endpoint to get all photos
+        const response = await fetch(`${API_BASE}/api/photos/admin`, { headers })
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Geen toegang tot foto\'s. Vereiste permissie: photo:read')
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+
+        // Filter out photos that are already in the album
+        const availablePhotos = (data || []).filter((photo: Photo) =>
+          !existingPhotoIds.includes(photo.id)
+        )
+
+        setAvailablePhotos(availablePhotos)
       } catch (err) {
         console.error('Error loading photos:', err)
         setError('Er ging iets mis bij het laden van de foto\'s')

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { uploadToCloudinary } from '../../../../api/client/cloudinary'
-import { supabase } from '../../../../api/client/supabase'
+import { photoApiClient } from '../../../../api/client'
 import type { CloudinaryUploadResponse } from '../../../../api/types/cloudinary'
 import { cc } from '../../../../styles/shared'
 
@@ -16,35 +16,22 @@ interface BulkUploadButtonProps {
 const savePhotoToAPI = async (params: {
   url: string
   alt_text: string
-  order_number: number
   year: string
   thumbnail_url?: string
 }): Promise<void> => {
-  const { error } = await supabase
-    .from('photos')
-    .insert([{
-      url: params.url,
-      alt_text: params.alt_text,
-      thumbnail_url: params.thumbnail_url || params.url,
-      order_number: params.order_number,
-      visible: true,
-      year: params.year
-    }])
+  const response = await photoApiClient.createPhoto({
+    url: params.url,
+    alt_text: params.alt_text,
+    thumbnail_url: params.thumbnail_url || params.url,
+    visible: true,
+    year: parseInt(params.year) || new Date().getFullYear()
+  })
 
-  if (error) throw error
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to save photo')
+  }
 }
 
-const getLastOrderNumber = async (): Promise<number> => {
-  const { data, error } = await supabase
-    .from('photos')
-    .select('order_number')
-    .order('order_number', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error) return 0
-  return (data?.order_number || 0) + 1
-}
 
 export function BulkUploadButton({ onUploadComplete, targetYear, className = '', maxFiles = 20, maxFileSize = 5242880 }: BulkUploadButtonProps) {
   const [uploading, setUploading] = useState(false)
@@ -71,11 +58,10 @@ export function BulkUploadButton({ onUploadComplete, targetYear, className = '',
       }
 
       try {
-        const startOrderNumber = await getLastOrderNumber()
-
+        // Upload files in batches of 3 to avoid overwhelming the API
         for (let i = 0; i < acceptedFiles.length; i += 3) {
           const batch = acceptedFiles.slice(i, i + 3)
-          await Promise.all(batch.map(async (file, index) => {
+          await Promise.all(batch.map(async (file) => {
             try {
               const result: CloudinaryUploadResponse = await uploadToCloudinary(
                 file,
@@ -91,7 +77,6 @@ export function BulkUploadButton({ onUploadComplete, targetYear, className = '',
                 url: result.secure_url,
                 thumbnail_url: result.secure_url,
                 alt_text: file.name.split('.')[0],
-                order_number: startOrderNumber + i + index,
                 year: targetYear
               })
             } catch (err) {

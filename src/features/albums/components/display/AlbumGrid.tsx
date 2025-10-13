@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AlbumCard } from './AlbumCard'
 import type { AlbumWithDetails } from '../../types'
-import { supabase } from '../../../../api/client/supabase'
+import { fetchAllAlbums, updateAlbum } from '../../services/albumService'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove } from '@dnd-kit/sortable'
-import { isAdmin } from '../../../../api/client/supabase'
+import { usePermissions } from '../../../../hooks/usePermissions'
 import debounce from 'lodash/debounce'
 import { LoadingGrid, EmptyState } from '../../../../components/ui'
 import { FolderIcon } from '@heroicons/react/24/outline'
@@ -16,6 +16,7 @@ interface AlbumGridProps {
 }
 
 export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
+  const { hasPermission } = usePermissions()
   const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +27,6 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
-  const ALBUMS_PER_PAGE = 12
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -45,60 +45,31 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
         setHasMore(true)
       }
 
-      // Eerst checken of gebruiker admin is (alleen bij eerste load)
-      if (!loadMore || !isAdminUser) {
-        const adminCheck = await isAdmin()
-        setIsAdminUser(adminCheck)
-      }
+      // Check admin permission
+      const adminCheck = hasPermission('album', 'read')
+      setIsAdminUser(adminCheck)
 
-      const from = loadMore ? albums.length : 0
-      const to = from + ALBUMS_PER_PAGE - 1
-
-      const { data, error } = await supabase
-        .from('albums')
-        .select(`
-          *,
-          photos_count:album_photos(count)
-        `, { count: 'exact' })
-        .order('order_number', { ascending: true })
-        .range(from, to)
-
-      if (error) throw error
+      // For now, load all albums since API might not support pagination the same way
+      const data = await fetchAllAlbums()
 
       // Als admin, toon alle albums, anders alleen zichtbare
-      const visibleAlbums = isAdminUser
-        ? data || []
-        : (data || []).filter(album => album.visible)
+      const visibleAlbums = adminCheck
+        ? data
+        : data.filter(album => album.visible)
 
-      // Check if there are more albums
-      setHasMore(visibleAlbums.length === ALBUMS_PER_PAGE)
-
-      // Load cover photos separately
-      const coverPhotoIds = visibleAlbums.map(album => album.cover_photo_id).filter(Boolean)
-      let coverPhotoMap = new Map()
-      if (coverPhotoIds.length > 0) {
-        const { data: coverPhotos, error: coverError } = await supabase
-          .from('photos')
-          .select('*')
-          .in('id', coverPhotoIds)
-
-        if (coverError) console.error('Error loading cover photos:', coverError)
-        else {
-          coverPhotoMap = new Map(coverPhotos?.map(photo => [photo.id, photo]) || [])
-        }
-      }
-
-      // Transform de data om aan het type te voldoen
-      const transformedData = visibleAlbums.map(album => ({
+      // Calculate photo counts for each album if not provided by API
+      const albumsWithPhotoCounts = visibleAlbums.map(album => ({
         ...album,
-        cover_photo: album.cover_photo_id ? coverPhotoMap.get(album.cover_photo_id) || null : null,
-        photos_count: album.photos_count || [{ count: 0 }]
-      })) as AlbumWithDetails[]
+        photos_count: album.photos_count || (album.photos ? [{ count: album.photos.length }] : [{ count: 0 }])
+      }))
+
+      // For now, disable pagination since we're loading all
+      setHasMore(false)
 
       if (loadMore) {
-        setAlbums(prev => [...prev, ...transformedData])
+        setAlbums(prev => [...prev, ...albumsWithPhotoCounts])
       } else {
-        setAlbums(transformedData)
+        setAlbums(albumsWithPhotoCounts)
       }
     } catch (err) {
       console.error('Error loading albums:', err)
@@ -107,7 +78,7 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [albums.length, isAdminUser])
+  }, [hasPermission])
 
   const loadMore = () => {
     if (!loadingMore && hasMore) {
@@ -128,14 +99,6 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
     }
   }, [searchQuery])
 
-  // Debug logs toevoegen
-  console.log('Current state:', {
-    albums,
-    loading,
-    error,
-    searchQuery,
-    showHidden
-  })
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
@@ -154,11 +117,8 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
         order_number: index + 1
       }))
 
-      const { error } = await supabase
-        .from('albums')
-        .upsert(updates)
-
-      if (error) throw error
+      // Update each album individually since the API might not support bulk updates
+      await Promise.all(updates.map(update => updateAlbum(update.id, { order_number: update.order_number })))
     } catch (err) {
       console.error('Error updating order:', err)
       loadAlbums() // Reload original order on error
@@ -188,7 +148,6 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
     return true
   })
 
-  console.log('Filtered albums:', filteredAlbums)
 
   if (loading) {
     return <LoadingGrid variant="albums" count={6} aspectRatio="custom" />
