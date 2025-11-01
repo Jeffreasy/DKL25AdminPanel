@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, memo, useCallback, useMemo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { AlbumForm } from '../forms/AlbumForm'
 import { PhotoSelector } from '../forms/PhotoSelector'
-import type { AlbumWithDetails } from '../../types'
-import { updateAlbum, addPhotosToAlbum } from '../../services/albumService'
-import { FolderIcon } from '@heroicons/react/24/outline'
 import { CoverPhotoSelector } from '../forms/CoverPhotoSelector'
+import { useAlbumMutations } from '../../hooks'
+import type { AlbumWithDetails } from '../../types'
+import { FolderIcon } from '@heroicons/react/24/outline'
 import { cc } from '../../../../styles/shared'
 import clsx from 'clsx'
 
@@ -19,10 +19,12 @@ interface AlbumCardProps {
 
 const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E`
 
-export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardProps) {
+const AlbumCardComponent = ({ album, onUpdate, isSelected, onSelect }: AlbumCardProps) => {
   const [showEdit, setShowEdit] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [showCoverSelector, setShowCoverSelector] = useState(false)
+
+  const { updateCoverPhoto, addPhotos } = useAlbumMutations()
 
   const {
     attributes,
@@ -32,23 +34,22 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     transition,
   } = useSortable({ id: album.id })
 
-  const style = {
+  const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  }), [transform, transition])
 
-
-  const handleCoverPhotoSelect = async (photoId: string) => {
+  const handleCoverPhotoSelect = useCallback(async (photoId: string) => {
     try {
-      await updateAlbum(album.id, { cover_photo_id: photoId })
+      await updateCoverPhoto(album.id, photoId)
       setShowCoverSelector(false)
       onUpdate()
     } catch (err) {
       console.error('Error updating cover photo:', err)
     }
-  }
+  }, [album.id, updateCoverPhoto, onUpdate])
 
-  const getCoverPhotoUrl = () => {
+  const getCoverPhotoUrl = useCallback(() => {
     if (album.cover_photo) {
       return album.cover_photo.thumbnail_url || album.cover_photo.url
     }
@@ -59,16 +60,16 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     }
     
     return PLACEHOLDER_SVG
-  }
+  }, [album.cover_photo, album.photos])
 
-  const handleAddPhotos = async (selectedPhotoIds: string[]) => {
+  const handleAddPhotos = useCallback(async (selectedPhotoIds: string[]) => {
     try {
-      await addPhotosToAlbum(album.id, selectedPhotoIds)
+      await addPhotos(album.id, selectedPhotoIds)
 
-      // Stel automatisch cover foto in als er nog geen is
+      // Set cover photo automatically if none exists
       if (!album.cover_photo_id && selectedPhotoIds.length > 0) {
         try {
-          await updateAlbum(album.id, { cover_photo_id: selectedPhotoIds[0] })
+          await updateCoverPhoto(album.id, selectedPhotoIds[0])
         } catch (coverError) {
           console.error('Error setting cover photo:', coverError)
         }
@@ -79,9 +80,14 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
     } catch (err) {
       console.error('Error adding photos:', err)
     }
-  }
+  }, [album.id, album.cover_photo_id, addPhotos, updateCoverPhoto, onUpdate])
 
-  const photoCount = album.photos_count?.[0]?.count || 0
+  const photoCount = useMemo(() =>
+    album.photos_count?.[0]?.count || 0,
+    [album.photos_count]
+  )
+
+  const coverPhotoUrl = getCoverPhotoUrl()
 
   return (
     <>
@@ -99,9 +105,9 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
         onClick={() => onSelect?.(album.id)}
       >
         <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700">
-          {getCoverPhotoUrl() !== PLACEHOLDER_SVG ? (
+          {coverPhotoUrl !== PLACEHOLDER_SVG ? (
             <img
-              src={getCoverPhotoUrl()}
+              src={coverPhotoUrl}
               alt={album.title}
               className="w-full h-full object-cover"
               loading="lazy"
@@ -181,4 +187,6 @@ export function AlbumCard({ album, onUpdate, isSelected, onSelect }: AlbumCardPr
       )}
     </>
   )
-} 
+}
+
+export const AlbumCard = memo(AlbumCardComponent)

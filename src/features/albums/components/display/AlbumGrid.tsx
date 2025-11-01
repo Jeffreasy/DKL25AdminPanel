@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { AlbumCard } from './AlbumCard'
+import { useAlbumData, useAlbumMutations } from '../../hooks'
 import type { AlbumWithDetails } from '../../types'
-import { fetchAllAlbums, updateAlbum } from '../../services/albumService'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove } from '@dnd-kit/sortable'
 import { usePermissions } from '../../../../hooks/usePermissions'
@@ -17,16 +17,19 @@ interface AlbumGridProps {
 
 export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
   const { hasPermission } = usePermissions()
-  const [albums, setAlbums] = useState<AlbumWithDetails[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { albums: allAlbums, loading, error, refresh } = useAlbumData({ autoLoad: true })
+  const { update } = useAlbumMutations()
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [showHidden, setShowHidden] = useState(true)
-  const [isAdminUser, setIsAdminUser] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [localAlbums, setLocalAlbums] = useState<AlbumWithDetails[]>([])
 
+  const isAdminUser = useMemo(() => hasPermission('album', 'read'), [hasPermission])
+
+  // Sync local albums with fetched albums
+  useEffect(() => {
+    setLocalAlbums(allAlbums)
+  }, [allAlbums])
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -36,117 +39,50 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
     []
   )
 
-  const loadAlbums = useCallback(async (loadMore = false) => {
-    try {
-      if (loadMore) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
-        setHasMore(true)
-      }
 
-      // Check admin permission
-      const adminCheck = hasPermission('album', 'read')
-      setIsAdminUser(adminCheck)
-
-      // For now, load all albums since API might not support pagination the same way
-      const data = await fetchAllAlbums()
-
-      // Als admin, toon alle albums, anders alleen zichtbare
-      const visibleAlbums = adminCheck
-        ? data
-        : data.filter(album => album.visible)
-
-      // Calculate photo counts for each album if not provided by API
-      const albumsWithPhotoCounts = visibleAlbums.map(album => ({
-        ...album,
-        photos_count: album.photos_count || (album.photos ? [{ count: album.photos.length }] : [{ count: 0 }])
-      }))
-
-      // For now, disable pagination since we're loading all
-      setHasMore(false)
-
-      if (loadMore) {
-        setAlbums(prev => [...prev, ...albumsWithPhotoCounts])
-      } else {
-        setAlbums(albumsWithPhotoCounts)
-      }
-    } catch (err) {
-      console.error('Error loading albums:', err)
-      setError('Er ging iets mis bij het ophalen van de albums')
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }, [hasPermission])
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadAlbums(true)
-    }
-  }
-
-  useEffect(() => {
-    loadAlbums()
-  }, [refreshKey, loadAlbums])
-
-  // Reset pagination when search changes
-  useEffect(() => {
-    if (searchQuery) {
-      setHasMore(false) // Disable load more during search
-    } else {
-      setHasMore(true) // Re-enable when search is cleared
-    }
-  }, [searchQuery])
-
-
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = albums.findIndex(album => album.id === active.id)
-    const newIndex = albums.findIndex(album => album.id === over.id)
+    const oldIndex = localAlbums.findIndex(album => album.id === active.id)
+    const newIndex = localAlbums.findIndex(album => album.id === over.id)
 
-    const newOrder = arrayMove(albums, oldIndex, newIndex)
-    setAlbums(newOrder)
+    const newOrder = arrayMove(localAlbums, oldIndex, newIndex)
+    setLocalAlbums(newOrder)
 
     // Update order numbers in database
     try {
-      const updates = newOrder.map((album, index) => ({
-        id: album.id,
-        order_number: index + 1
-      }))
-
-      // Update each album individually since the API might not support bulk updates
-      await Promise.all(updates.map(update => updateAlbum(update.id, { order_number: update.order_number })))
+      await Promise.all(
+        newOrder.map((album, index) =>
+          update(album.id, { order_number: index + 1 })
+        )
+      )
     } catch (err) {
       console.error('Error updating order:', err)
-      loadAlbums() // Reload original order on error
+      setLocalAlbums(allAlbums) // Revert on error
     }
-  }
+  }, [localAlbums, allAlbums, update])
 
-  const handleUpdate = () => {
-    setRefreshKey(prev => prev + 1)
-  }
+  const filteredAlbums = useMemo(() => {
+    return localAlbums.filter(album => {
+      // Admin sees all albums
+      if (isAdminUser) return true
 
-  const filteredAlbums = albums.filter(album => {
-    // Als admin, toon altijd alle albums
-    if (isAdminUser) return true
-
-    // Anders, filter op zichtbaarheid
-    if (!showHidden && !album.visible) return false
-    
-    // Filter op zoekterm
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase()
-      return (
-        album.title?.toLowerCase().includes(searchLower) ||
-        album.description?.toLowerCase().includes(searchLower)
-      )
-    }
-    
-    return true
-  })
+      // Filter by visibility
+      if (!showHidden && !album.visible) return false
+      
+      // Filter by search query
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase()
+        return (
+          album.title?.toLowerCase().includes(searchLower) ||
+          album.description?.toLowerCase().includes(searchLower)
+        )
+      }
+      
+      return true
+    })
+  }, [localAlbums, isAdminUser, showHidden, searchQuery])
 
 
   if (loading) {
@@ -161,7 +97,7 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
     )
   }
 
-  if (albums.length === 0) {
+  if (allAlbums.length === 0) {
     return (
       <EmptyState
         icon={<FolderIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />}
@@ -208,7 +144,7 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
               <AlbumCard
                 key={album.id}
                 album={album}
-                onUpdate={handleUpdate}
+                onUpdate={refresh}
                 isSelected={album.id === selectedAlbumId}
                 onSelect={() => onAlbumSelect?.(album.id)}
               />
@@ -222,29 +158,6 @@ export function AlbumGrid({ onAlbumSelect, selectedAlbumId }: AlbumGridProps) {
           title="Geen albums gevonden"
           description={searchQuery ? `Geen resultaten voor "${searchQuery}"` : undefined}
         />
-      )}
-
-      {/* Load More Button - only show when not searching */}
-      {hasMore && !loading && albums.length > 0 && !searchQuery && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className={`${cc.button.base({ color: 'primary', size: 'lg' })} flex items-center gap-2`}
-          >
-            {loadingMore ? (
-              <>
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Laden...
-              </>
-            ) : (
-              'Meer laden'
-            )}
-          </button>
-        </div>
       )}
     </div>
   )

@@ -1,15 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal, Text } from '@mantine/core'
-import { permissionService } from '../services/permissionService'
+import { rbacClient, type Permission } from '../../../api/client'
 import { PermissionForm } from './PermissionForm'
 import { useFilters, applyFilters } from '../../../hooks/useFilters'
-import type { PermissionWithId, CreatePermissionRequest } from '../types'
+import type { CreatePermissionRequest } from '../types'
 import { cc } from '../../../styles/shared'
 
 export function PermissionList() {
   const queryClient = useQueryClient()
-  const [selectedPermission, setSelectedPermission] = useState<PermissionWithId | null>(null)
+  const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Use filters hook
@@ -22,7 +22,7 @@ export function PermissionList() {
 
   const { data: permissions = { groups: [], total: 0 }, isLoading, error } = useQuery({
     queryKey: ['permissions'],
-    queryFn: () => permissionService.getPermissions(),
+    queryFn: () => rbacClient.getPermissions(),
     retry: 1,
     staleTime: 5 * 60 * 1000,
   })
@@ -38,7 +38,7 @@ export function PermissionList() {
           const matchesSearch =
             permission.resource.toLowerCase().includes(searchTerm) ||
             permission.action.toLowerCase().includes(searchTerm) ||
-            permission.description.toLowerCase().includes(searchTerm)
+            permission.description?.toLowerCase().includes(searchTerm)
           if (!matchesSearch) return false
         }
 
@@ -54,7 +54,7 @@ export function PermissionList() {
   }, [permissions.groups, filters.filters])
 
   const createMutation = useMutation({
-    mutationFn: permissionService.createPermission,
+    mutationFn: (data: CreatePermissionRequest) => rbacClient.createPermission(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['permissions'] })
       setIsModalOpen(false)
@@ -62,7 +62,7 @@ export function PermissionList() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<PermissionWithId> }) => permissionService.updatePermission(id, data),
+    mutationFn: ({ data }: { data: Partial<Permission> }) => rbacClient.createPermission(data as CreatePermissionRequest),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['permissions'] })
       setIsModalOpen(false)
@@ -71,7 +71,7 @@ export function PermissionList() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: permissionService.deletePermission,
+    mutationFn: (id: string) => rbacClient.deletePermission(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['permissions'] })
   })
 
@@ -80,7 +80,7 @@ export function PermissionList() {
     setIsModalOpen(true)
   }
 
-  const handleEdit = (permission: PermissionWithId) => {
+  const handleEdit = (permission: Permission) => {
     setSelectedPermission(permission)
     setIsModalOpen(true)
   }
@@ -91,9 +91,9 @@ export function PermissionList() {
     }
   }
 
-  const handleSubmit = async (values: CreatePermissionRequest | Partial<PermissionWithId>) => {
+  const handleSubmit = async (values: CreatePermissionRequest | Partial<Permission>) => {
     if (selectedPermission) {
-      await updateMutation.mutateAsync({ id: selectedPermission.id, data: values as Partial<PermissionWithId> })
+      await updateMutation.mutateAsync({ data: values as Partial<Permission> })
     } else {
       await createMutation.mutateAsync(values as CreatePermissionRequest)
     }

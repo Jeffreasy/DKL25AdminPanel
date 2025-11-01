@@ -5,8 +5,8 @@ export interface Permission {
 
 export interface PermissionWithId extends Permission {
   id: string
-  description: string
-  is_system_permission: boolean
+  description?: string
+  is_system_permission?: boolean
   created_at: string
   updated_at: string
 }
@@ -15,6 +15,7 @@ export interface Role {
   id: string
   name: string
   description?: string
+  is_system_role?: boolean
   permissions?: PermissionWithId[]
   created_at: string
   updated_at: string

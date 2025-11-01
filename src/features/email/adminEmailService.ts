@@ -1,5 +1,5 @@
 import { supabase } from '../../api/client/supabase'
-import type { AutoResponse, Email } from './types'
+import type { AutoResponse, Email, PaginatedEmailResponse, EmailFetchResponse } from './types'
 import type { Aanmelding } from '../aanmeldingen/types'
 
 interface SendEmailParams {
@@ -42,32 +42,28 @@ const getAuthHeaders = () => {
   return headers;
 };
 
-// Helper functie om te mappen van backend model naar frontend model
+/**
+ * Helper functie om backend MailResponse te mappen naar frontend Email interface
+ * Backend stuurt snake_case, wij gebruiken ook snake_case volgens PART 3 docs
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapIncomingEmailToEmail(incomingEmail: any): Email {
-  // Backend stuurt gedecodeerde/gesanitized body in 'html' veld
-  const decodedContent = incomingEmail.html || ''; 
-
   return {
-    // Voeg defaults toe voor robuustheid
-    id: incomingEmail.id || incomingEmail.ID || '', 
-    sender: incomingEmail.sender || '', 
-    subject: incomingEmail.subject || incomingEmail.Subject || '(Geen onderwerp)', 
-    // Sla gedecodeerde content op in beide velden, laat Detail renderen
-    body: decodedContent, 
-    html: decodedContent, 
-    account: incomingEmail.account_type || incomingEmail.AccountType || 'info',
-    message_id: incomingEmail.message_id || incomingEmail.MessageID || '',
-    created_at: incomingEmail.received_at || incomingEmail.ReceivedAt || new Date().toISOString(),
-    read: typeof incomingEmail.read === 'boolean' ? incomingEmail.read : false, 
-    metadata: { // Voeg defaults toe
-      'return-path': incomingEmail.sender || '',
-      'delivered-to': incomingEmail.to || incomingEmail.To || '',
-      'content-type': incomingEmail.content_type || incomingEmail.ContentType || '',
-      'reply-to': incomingEmail.sender || ''
-    },
-    created_at_system: incomingEmail.created_at || incomingEmail.CreatedAt || new Date().toISOString(),
-  };
+    id: incomingEmail.id || '',
+    message_id: incomingEmail.message_id || '',
+    sender: incomingEmail.sender || '',
+    to: incomingEmail.to || '',
+    subject: incomingEmail.subject || '(Geen onderwerp)',
+    html: incomingEmail.html || '',
+    content_type: incomingEmail.content_type || 'text/plain',
+    received_at: incomingEmail.received_at || new Date().toISOString(),
+    uid: incomingEmail.uid || '',
+    account_type: (incomingEmail.account_type || 'info') as 'info' | 'inschrijving',
+    read: typeof incomingEmail.read === 'boolean' ? incomingEmail.read : false,
+    processed_at: incomingEmail.processed_at || null,
+    created_at: incomingEmail.created_at || new Date().toISOString(),
+    updated_at: incomingEmail.updated_at || new Date().toISOString()
+  }
 }
 
 interface EmailResponse {
@@ -172,11 +168,6 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
   }
 }
 
-interface FetchResponse {
-  message: string;
-  fetched_count: number;
-  saved_count: number;
-}
 
 interface SendAdminMailPayload {
   to: string; // Comma-separated if multiple
@@ -339,157 +330,226 @@ export const adminEmailService = {
     return template.replace(/\{(\w+)\}/g, (match, key) => variables[key] || match)
   },
 
-  // Haal emails op voor een specifiek account met paginering
-  async getEmailsByAccount(account: 'info' | 'inschrijving', limit: number = 50, offset: number = 0): Promise<{ emails: Email[], totalCount: number }> { // Updated return type
-    console.log(`[getEmailsByAccount] Fetching for ${account}, limit=${limit}, offset=${offset}`);
+  /**
+   * Haal alle emails op met paginering (niet gefilterd op account)
+   * GET /api/mail?limit=:limit&offset=:offset
+   * Komt overeen met PART 3 "Lijst Emails Ophalen (Paginated)"
+   */
+  async getAllEmails(
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<PaginatedEmailResponse> {
+    console.log(`[getAllEmails] Fetching emails, limit=${limit}, offset=${offset}`)
     try {
-      // Backend endpoint met pagination parameters
-      const url = `${API_BASE_URL}/api/mail/account/${account}?limit=${limit}&offset=${offset}`;
+      const url = `${API_BASE_URL}/api/mail?limit=${limit}&offset=${offset}`
+      const headers = getAuthHeaders()
+      const response = await fetch(url, { headers })
       
-      const headers = getAuthHeaders();
-      const response = await fetch(url, { headers });
-      console.log(`[getEmailsByAccount] Response status: ${response.status}`);
+      console.log(`[getAllEmails] Response status: ${response.status}`)
 
       if (!response.ok) {
-        throw new Error(`Error fetching emails: ${response.statusText}`);
+        throw new Error(`Error fetching emails: ${response.statusText}`)
       }
       
-      // Backend now returns an object { emails: [], totalCount: number }
-      const data = await response.json(); 
-      console.log('[getEmailsByAccount] Raw data received:', data);
+      const data = await response.json()
+      console.log('[getAllEmails] Raw data received:', data)
       
-      // Basic validation of the expected structure
+      // Valideer response structuur
       if (!data || typeof data !== 'object' || !Array.isArray(data.emails) || typeof data.totalCount !== 'number') {
-          console.error("[getEmailsByAccount] API response is not in the expected format { emails: [], totalCount: number }:", data);
-          throw new Error("Onverwacht formaat ontvangen van de email API.");
+        console.error('[getAllEmails] Unexpected API response format:', data)
+        throw new Error('Onverwacht formaat ontvangen van de email API')
       }
 
-      // Map the emails array
-      const emailsArray = data.emails.map(mapIncomingEmailToEmail);
-      console.log('[getEmailsByAccount] Mapped emailsArray:', emailsArray);
+      // Map emails naar frontend interface
+      const emails = data.emails.map(mapIncomingEmailToEmail)
+      console.log('[getAllEmails] Mapped emails:', emails)
 
-      // Return the structured data
       return {
-        emails: emailsArray,
-        totalCount: data.totalCount 
-      };
+        emails,
+        totalCount: data.totalCount
+      }
     } catch (error) {
-      console.error('[getEmailsByAccount] Failed to fetch emails:', error);
-      throw error;
+      console.error('[getAllEmails] Failed to fetch emails:', error)
+      throw error
     }
   },
 
+  /**
+   * Haal emails op voor specifiek account met paginering
+   * GET /api/mail/account/:type?limit=:limit&offset=:offset
+   * Komt overeen met PART 3 "Filter Op Account Type"
+   */
+  async getEmailsByAccount(
+    account: 'info' | 'inschrijving',
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<PaginatedEmailResponse> {
+    console.log(`[getEmailsByAccount] Fetching for ${account}, limit=${limit}, offset=${offset}`)
+    try {
+      const url = `${API_BASE_URL}/api/mail/account/${account}?limit=${limit}&offset=${offset}`
+      const headers = getAuthHeaders()
+      const response = await fetch(url, { headers })
+      
+      console.log(`[getEmailsByAccount] Response status: ${response.status}`)
+
+      if (!response.ok) {
+        throw new Error(`Error fetching emails: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      console.log('[getEmailsByAccount] Raw data received:', data)
+      
+      // Valideer response structuur
+      if (!data || typeof data !== 'object' || !Array.isArray(data.emails) || typeof data.totalCount !== 'number') {
+        console.error('[getEmailsByAccount] Unexpected API response format:', data)
+        throw new Error('Onverwacht formaat ontvangen van de email API')
+      }
+
+      // Map emails naar frontend interface
+      const emails = data.emails.map(mapIncomingEmailToEmail)
+      console.log('[getEmailsByAccount] Mapped emails:', emails)
+
+      return {
+        emails,
+        totalCount: data.totalCount
+      }
+    } catch (error) {
+      console.error('[getEmailsByAccount] Failed to fetch emails:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Haal specifieke email op
+   * GET /api/mail/:id
+   * Komt overeen met PART 3 "Specifieke Email Ophalen"
+   */
   async getEmailDetails(id: string): Promise<Email | null> {
     try {
-      const headers = getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, {
-        headers
-      });
+      const headers = getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, { headers })
       
       if (!response.ok) {
-         if (response.status === 404) return null; // Handle not found gracefully
-        throw new Error(`Error fetching email details: ${response.statusText}`);
+        if (response.status === 404) return null
+        throw new Error(`Error fetching email details: ${response.statusText}`)
       }
       
-      const data = await response.json();
-      return mapIncomingEmailToEmail(data);
+      const data = await response.json()
+      return mapIncomingEmailToEmail(data)
     } catch (error) {
-      console.error('Failed to fetch email details:', error);
-      throw error;
+      console.error('Failed to fetch email details:', error)
+      throw error
     }
   },
 
-  async markAsRead(id: string, read: boolean) {
+  /**
+   * Markeer email als verwerkt/gelezen
+   * PUT /api/mail/:id/processed
+   * Komt overeen met PART 3 "Markeer Als Verwerkt"
+   * Let op: Backend endpoint accepteert geen body parameters
+   */
+  async markAsRead(id: string): Promise<{ success: boolean }> {
     try {
-      const headers = getAuthHeaders();
+      const headers = getAuthHeaders()
       const response = await fetch(`${API_BASE_URL}/api/mail/${id}/processed`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify({ processed: read })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error marking email as read: ${response.statusText}`);
-      }
-      // Return success status
-       return { success: true };
-    } catch (error) {
-      console.error('Failed to mark email as read:', error);
-      throw error;
-    }
-  },
-
-  async getUnreadCount() {
-    try {
-      const headers = getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/mail/unprocessed`, {
         headers
-      });
+      })
       
       if (!response.ok) {
-        throw new Error(`Error fetching unread emails: ${response.statusText}`);
+        throw new Error(`Error marking email as read: ${response.statusText}`)
       }
       
-      const data = await response.json();
-      return Array.isArray(data) ? data.length : 0;
+      return { success: true }
     } catch (error) {
-      console.error('Failed to get unread count:', error);
-      throw error;
+      console.error('Failed to mark email as read:', error)
+      throw error
     }
   },
 
-  // Verwijder een email
+  /**
+   * Haal aantal onverwerkte emails op
+   * GET /api/mail/unprocessed
+   * Komt overeen met PART 3 "Onverwerkte Emails Ophalen"
+   */
+  async getUnreadCount(): Promise<number> {
+    try {
+      const headers = getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/mail/unprocessed`, { headers })
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching unread emails: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      return Array.isArray(data) ? data.length : 0
+    } catch (error) {
+      console.error('Failed to get unread count:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Verwijder een email
+   * DELETE /api/mail/:id
+   * Komt overeen met PART 3 "Email Verwijderen"
+   */
   async deleteEmail(id: string): Promise<{ success: boolean }> {
     try {
-      const headers = getAuthHeaders();
+      const headers = getAuthHeaders()
       const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, {
         method: 'DELETE',
         headers
-      });
+      })
 
       if (!response.ok) {
-        // Probeer error message te parsen indien mogelijk
-         const errorText = await response.text().catch(() => 'Failed to get error details');
-         let errorMessage = `Error deleting email: ${response.statusText}`;
-         try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.error || errorJson.message || errorMessage;
-         } catch { /* Ignore parsing error */ }
-        throw new Error(errorMessage);
+        const errorText = await response.text().catch(() => 'Failed to get error details')
+        let errorMessage = `Error deleting email: ${response.statusText}`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorMessage)
       }
 
-      // Geen body verwacht bij succesvolle DELETE
-      return { success: true };
+      return { success: true }
     } catch (error) {
-      console.error('Failed to delete email:', error);
-      throw error; // Re-throw voor de UI laag
+      console.error('Failed to delete email:', error)
+      throw error
     }
   },
 
-  // Trigger het ophalen van nieuwe emails
-  async fetchNewEmails(): Promise<FetchResponse> {
+  /**
+   * Trigger manueel ophalen van nieuwe emails van mailserver
+   * POST /api/mail/fetch
+   * Komt overeen met PART 3 "Nieuwe Emails Ophalen (Manual Fetch)"
+   */
+  async fetchNewEmails(): Promise<EmailFetchResponse> {
     try {
-      const headers = getAuthHeaders();
+      const headers = getAuthHeaders()
       const response = await fetch(`${API_BASE_URL}/api/mail/fetch`, {
         method: 'POST',
         headers
-      });
+      })
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Failed to get error details');
-        let errorMessage = `Error fetching new emails: ${response.statusText}`;
+        const errorText = await response.text().catch(() => 'Failed to get error details')
+        let errorMessage = `Error fetching new emails: ${response.statusText}`
         try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorJson.message || errorMessage;
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
         } catch { /* Ignore parsing error */ }
-        throw new Error(errorMessage);
+        throw new Error(errorMessage)
       }
 
-      const data: FetchResponse = await response.json();
-      return data;
+      const data = await response.json()
+      return {
+        message: data.message || 'Emails opgehaald',
+        fetchTime: data.fetchTime || new Date().toISOString()
+      }
     } catch (error) {
-      console.error('Failed to trigger email fetch:', error);
-      throw error; // Re-throw voor de UI laag
+      console.error('Failed to trigger email fetch:', error)
+      throw error
     }
   },
 
@@ -584,5 +644,73 @@ export const adminEmailService = {
       console.error('Failed in fetchAanmeldingenEmails:', error);
       return []; // Return empty array on failure
     }
+  },
+
+  /**
+   * Reprocess alle bestaande emails met verbeterde decoder
+   * POST /api/admin/mail/reprocess
+   * 
+   * Dit endpoint reprocessed alle emails in de database met de nieuwe
+   * email decoder die:
+   * - Quoted-printable encoding correct decodeert (=92, =85, etc.)
+   * - Multipart MIME emails correct parseert
+   * - Charset conversie uitvoert (Windows-1252, ISO-8859-1, etc.)
+   * - MIME boundaries verwijdert
+   * 
+   * Gebruik dit na backend updates om oude emails schoon te maken
+   */
+  async reprocessEmails(): Promise<{
+    success: boolean
+    message: string
+    processed: number
+    failed: number
+  }> {
+    try {
+      // Haal Supabase sessie op voor JWT auth
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[reprocessEmails] Error getting session:', sessionError)
+        throw new Error('Kon gebruikerssessie niet ophalen')
+      }
+      if (!session) {
+        console.error('[reprocessEmails] No active session found')
+        throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in')
+      }
+      const token = session.access_token
+
+      // Roep admin endpoint aan
+      const url = `${API_BASE_URL}/api/admin/mail/reprocess`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Failed to get error details')
+        let errorMessage = `Error reprocessing emails: ${response.statusText}`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      return {
+        success: result.success || true,
+        message: result.message || 'Emails succesvol gereprocessed',
+        processed: result.processed || 0,
+        failed: result.failed || 0
+      }
+    } catch (error) {
+      console.error('[reprocessEmails] Failed:', error)
+      throw error
+    }
   }
-} 
+}

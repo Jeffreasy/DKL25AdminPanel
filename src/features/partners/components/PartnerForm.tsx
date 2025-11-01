@@ -3,7 +3,7 @@ import { SmallText } from '../../../components/typography/typography'
 import type { Partner, CreatePartnerData } from '../types'
 import { createPartner, updatePartner } from '../services/partnerService'
 import { uploadPartnerLogo } from '../../../api/client/cloudinary'
-import { isAdmin } from '../../../api/client/supabase'
+import { usePermissions } from '../../../hooks/usePermissions'
 import { cc } from '../../../styles/shared'
 import { Modal, ModalActions } from '../../../components/ui'
 import { useImageUpload } from '../../../hooks/useImageUpload'
@@ -26,6 +26,7 @@ interface FormData {
 }
 
 export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps) {
+  const { hasPermission } = usePermissions()
   const [formData, setFormData] = useState<FormData>({
     name: partner?.name || '',
     description: partner?.description || '',
@@ -71,9 +72,8 @@ export function PartnerForm({ partner, onComplete, onCancel }: PartnerFormProps)
     if (isSubmitting) return
 
     try {
-      // Check of gebruiker admin is
-      const isUserAdmin = await isAdmin()
-      if (!isUserAdmin) {
+      // Check of gebruiker partner write permissions heeft
+      if (!hasPermission('partner', 'write')) {
         setError('Je hebt geen rechten om partners te beheren')
         return
       }

@@ -42,13 +42,29 @@ export interface PhotoUpdateData {
 
 class PhotoApiClient {
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<PhotoApiResponse> {
-    // For now, use the email service URL for photos since albums work on the main API
-    // but photos might be on the email service
-    const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL || 'https://dklemailservice.onrender.com';
-    const fullUrl = `${emailApiUrl}/api${endpoint}`;
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com';
+    const fullUrl = `${apiBase}${endpoint}`;
 
     try {
       const response = await authManager.makeAuthenticatedRequest(fullUrl, options);
+      
+      // Backend returns direct array for list endpoints, wrap it
+      if (Array.isArray(response)) {
+        return {
+          success: true,
+          data: response
+        };
+      }
+      
+      // Backend returns direct object for single items, wrap it
+      if (response && typeof response === 'object' && !('success' in response)) {
+        return {
+          success: true,
+          data: response
+        };
+      }
+      
+      // Already wrapped response
       return response as PhotoApiResponse;
     } catch (error) {
       console.error(`Photo API request failed for ${fullUrl}:`, error);
@@ -67,7 +83,7 @@ class PhotoApiClient {
     if (filters.offset) params.append('offset', filters.offset.toString());
 
     const queryString = params.toString();
-    const endpoint = `/photos${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/api/photos${queryString ? `?${queryString}` : ''}`;
 
     return this.makeRequest(endpoint);
   }
@@ -79,31 +95,31 @@ class PhotoApiClient {
     if (filters.offset) params.append('offset', filters.offset.toString());
 
     const queryString = params.toString();
-    const endpoint = `/photos/admin${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/api/photos/admin${queryString ? `?${queryString}` : ''}`;
 
     return this.makeRequest(endpoint);
   }
 
   async getPhoto(id: string): Promise<PhotoApiResponse> {
-    return this.makeRequest(`/photos/${id}`);
+    return this.makeRequest(`/api/photos/${id}`);
   }
 
   async createPhoto(data: PhotoCreateData): Promise<PhotoApiResponse> {
-    return this.makeRequest('/photos', {
+    return this.makeRequest('/api/photos', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async updatePhoto(id: string, data: PhotoUpdateData): Promise<PhotoApiResponse> {
-    return this.makeRequest(`/photos/${id}`, {
+    return this.makeRequest(`/api/photos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async deletePhoto(id: string): Promise<PhotoApiResponse> {
-    return this.makeRequest(`/photos/${id}`, {
+    return this.makeRequest(`/api/photos/${id}`, {
       method: 'DELETE',
     });
   }

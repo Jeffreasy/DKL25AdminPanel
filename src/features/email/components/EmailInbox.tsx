@@ -13,7 +13,7 @@ import {
 import { toast } from 'react-hot-toast'
 import type { Email } from '../types'
 import { adminEmailService } from '../adminEmailService'
-import { supabase } from '../../../api/client/supabase'
+import { useAuth } from '../../auth'
 import { EmailDialog } from './EmailDialog'
 import EmailItem from './EmailItem'
 import EmailDetail from './EmailDetail'
@@ -31,6 +31,7 @@ const EMAILS_PER_PAGE = 20;
 
 export default function EmailInbox({ account = 'info' }: Props) {
   usePageTitle('Email Inbox')
+  const { user } = useAuth()
 
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
@@ -45,8 +46,9 @@ export default function EmailInbox({ account = 'info' }: Props) {
   const [totalEmails, setTotalEmails] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEmailDialogOpen, setIsNewEmailDialogOpen] = useState(false);
-  const [loggedInUserEmail, setLoggedInUserEmail] = useState<string | null>(null);
   const [suggestionEmails, setSuggestionEmails] = useState<string[]>([]);
+  
+  const loggedInUserEmail = user?.email || 'info@dekoninklijkeloop.nl'
 
   const totalPages = Math.ceil(totalEmails / EMAILS_PER_PAGE);
 
@@ -87,8 +89,8 @@ export default function EmailInbox({ account = 'info' }: Props) {
         setSelectedEmail(email)
         
         if (!email.read) {
-          await adminEmailService.markAsRead(id, true)
-          setEmails(prev => 
+          await adminEmailService.markAsRead(id)
+          setEmails(prev =>
             prev.map(e => e.id === id ? { ...e, read: true } : e)
           )
         }
@@ -109,7 +111,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
     setIsFetchingNew(true);
     try {
       const result = await adminEmailService.fetchNewEmails();
-      toast.success(result.message || `Ophalen voltooid: ${result.saved_count} nieuwe emails opgeslagen.`);
+      toast.success(result.message || 'Nieuwe emails succesvol opgehaald');
       handleRefresh();
     } catch (err) {
       console.error('Error triggering email fetch:', err);
@@ -150,12 +152,6 @@ export default function EmailInbox({ account = 'info' }: Props) {
     
     const fetchInitialData = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            setLoggedInUserEmail(user?.email || null);
-        } catch (error) {
-            console.error("Error fetching user email:", error);
-        }
-        try {
             const emails = await adminEmailService.fetchAanmeldingenEmails();
             setSuggestionEmails(emails);
         } catch (error) {
@@ -183,7 +179,10 @@ export default function EmailInbox({ account = 'info' }: Props) {
       if (a.read !== b.read) {
         return a.read ? 1 : -1
       }
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      // Use received_at for more accurate sorting (when email was actually received)
+      const dateA = new Date(a.received_at || a.created_at).getTime()
+      const dateB = new Date(b.received_at || b.created_at).getTime()
+      return dateB - dateA
     })
   }, [emails])
 
@@ -378,9 +377,9 @@ export default function EmailInbox({ account = 'info' }: Props) {
                           <EmailItem
                              key={email.id}
                              email={email}
-                             isSelected={selectedEmailId === email.id} 
-                             onClick={() => handleEmailClick(email.id)} 
-                             formattedDate={formatDistanceToNow(new Date(email.created_at), { addSuffix: true, locale: nl })}
+                             isSelected={selectedEmailId === email.id}
+                             onClick={() => handleEmailClick(email.id)}
+                             formattedDate={formatDistanceToNow(new Date(email.received_at || email.created_at), { addSuffix: true, locale: nl })}
                           />
                        ))}
                     </div>

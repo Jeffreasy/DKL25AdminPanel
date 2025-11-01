@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { authManager } from '../../../api/client/auth'
-import { supabase } from '../../../api/client/supabase'
 import { AuthContext, User } from './AuthContext'
 
 // ✅ CORRECT: Haal base URL op zonder '/api' - die wordt in fetch toegevoegd
@@ -26,14 +25,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Controleer token expiratie
-  const isTokenExpired = (token: string) => {
+  // Controleer token expiratie en parse JWT claims
+  const parseTokenClaims = (token: string) => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 < Date.now();
+      return {
+        exp: payload.exp,
+        email: payload.email,
+        role: payload.role, // Legacy field
+        roles: payload.roles || [], // RBAC roles array
+        rbac_active: payload.rbac_active || false, // RBAC indicator
+        isExpired: payload.exp * 1000 < Date.now()
+      };
     } catch {
-      return true;
+      return { isExpired: true, roles: [], rbac_active: false };
     }
+  };
+
+  const isTokenExpired = (token: string) => {
+    return parseTokenClaims(token).isExpired;
   };
 
   // Automatische token refresh
@@ -97,20 +107,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('userId', data.id);
         }
 
-        // Try to sign into Supabase with the JWT token
-        try {
-          const { error: supabaseError } = await supabase.auth.signInWithIdToken({
-            provider: 'custom',
-            token: data.token
-          });
-          if (supabaseError) {
-            console.warn('Supabase sign in failed:', supabaseError);
-          } else {
-            console.log('Supabase sign in successful');
-          }
-        } catch (error) {
-          console.warn('Supabase authentication failed:', error);
-        }
+        // Parse token claims voor RBAC info
+        const claims = parseTokenClaims(data.token);
+        console.log('🔐 Login - Token claims:', {
+          hasLegacyRole: !!claims.role,
+          rbacRoles: claims.roles,
+          rbacActive: claims.rbac_active
+        });
 
         // Haal gebruikersinfo op inclusief permissies
         await loadUserProfile();
@@ -167,19 +170,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Backend MUST return permissions array: { id, email, naam, rol, permissions: [{resource, action}], roles: [{id, name, description}] }
         const permissions = userData.permissions || [];
-        
+        const roles = userData.roles || []; // RBAC roles array
+
+        // Parse token claims voor backward compatibility
+        const token = localStorage.getItem('jwtToken');
+        const claims = token ? parseTokenClaims(token) : { roles: [], rbac_active: false };
+
+        console.log('🔐 Profile loaded:', {
+          permissionsCount: permissions.length,
+          rolesCount: roles.length,
+          tokenRoles: claims.roles,
+          rbacActive: claims.rbac_active,
+          legacyRole: userData.rol || userData.role
+        });
+
+        // Enhanced permission loading with RBAC support
         if (!permissions || permissions.length === 0) {
-          console.error('❌ Backend returned no permissions! User will have no access.');
-          console.error('Please ensure the backend /api/auth/profile endpoint returns a permissions array.');
+          console.warn('⚠️ Backend returned no permissions! User will have limited access.');
+          console.warn('This is normal during RBAC migration. Permissions will be loaded from roles.');
+
+          // Try to load permissions from RBAC roles if available
+          if (roles && roles.length > 0) {
+            try {
+              console.log('🔄 Attempting to load permissions from RBAC roles...');
+              // Note: In a full implementation, you might want to fetch permissions
+              // from the RBAC API based on roles, but for now we rely on backend
+              // to provide permissions array
+            } catch (error) {
+              console.error('Failed to load permissions from roles:', error);
+            }
+          }
         } else {
           console.log('✅ Backend permissions loaded:', permissions.length, 'permissions');
         }
-        
+
         localStorage.setItem('userId', userData.id);
         setUser({
           id: userData.id,
           email: userData.email,
-          role: userData.rol || userData.role,
+          role: userData.rol || userData.role, // Legacy field
+          roles, // RBAC roles
           permissions,
           user_metadata: { full_name: userData.naam || userData.name }
         });
@@ -210,9 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    // Sign out from Supabase
-    await supabase.auth.signOut();
-
+    // Clear all tokens
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');

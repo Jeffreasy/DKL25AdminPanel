@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { SponsorFormData } from '../types'
 import { sponsorService } from '../services/sponsorService'
+import { sponsorClient } from '../../../api/client/sponsorClient'
 import { cc } from '../../../styles/shared'
-import { uploadPartnerLogo } from '../../../api/client/cloudinary'
 import { SmallText } from '../../../components/typography/typography'
 import { Modal, ModalActions } from '../../../components/ui'
 import { useImageUpload } from '../../../hooks/useImageUpload'
@@ -35,7 +35,10 @@ export function SponsorForm({ onComplete, onCancel, initialData }: Props) {
     setPreviewUrl
   } = useImageUpload({
     maxSizeMB: 2,
-    uploadFunction: uploadPartnerLogo
+    uploadFunction: async (file: File) => {
+      const result = await sponsorClient.uploadLogo(file);
+      return { secure_url: result.url };
+    }
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)

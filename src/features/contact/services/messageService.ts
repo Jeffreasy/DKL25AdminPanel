@@ -117,16 +117,35 @@ export async function getContactStats(): Promise<{ data: ContactStats | null, er
 
 // Helper functions
 function calculateAvgResponseTime(messages: ContactMessage[]): number {
-  const handledMessages = messages.filter(m => m.status === 'afgehandeld' && m.behandeld_op)
+  // Filter messages that are handled AND have valid behandeld_op date
+  const handledMessages = messages.filter(m => {
+    if (m.status !== 'afgehandeld' || !m.behandeld_op) return false
+    
+    // Extra validation: check if dates are valid
+    const createdDate = new Date(m.created_at)
+    const handledDate = new Date(m.behandeld_op)
+    
+    if (isNaN(createdDate.getTime()) || isNaN(handledDate.getTime())) return false
+    if (handledDate < createdDate) return false // Invalid: handled before created
+    
+    return true
+  })
+  
   if (handledMessages.length === 0) return 0
 
   const totalTime = handledMessages.reduce((sum, msg) => {
     const start = new Date(msg.created_at).getTime()
     const end = new Date(msg.behandeld_op!).getTime()
-    return sum + (end - start)
+    const diff = end - start
+    
+    // Sanity check: max 30 days (in milliseconds)
+    const maxTime = 30 * 24 * 60 * 60 * 1000
+    return sum + Math.min(diff, maxTime)
   }, 0)
 
-  return totalTime / handledMessages.length / (1000 * 60 * 60) // Convert to hours
+  // Convert to hours and round to 1 decimal
+  const avgHours = totalTime / handledMessages.length / (1000 * 60 * 60)
+  return Math.round(avgHours * 10) / 10
 }
 
 function calculateMessagesByPeriod(messages: ContactMessage[]) {

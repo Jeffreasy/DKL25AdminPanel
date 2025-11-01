@@ -1,8 +1,7 @@
-import { useState } from 'react'
-import { createAlbum, updateAlbum } from '../../services/albumService'
-import type { AlbumWithDetails } from '../../types'
 import { useAuth } from '../../../auth/hooks/useAuth'
 import { useForm } from '../../../../hooks/useForm'
+import { useAlbumMutations } from '../../hooks'
+import type { AlbumWithDetails } from '../../types'
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { cc } from '../../../../styles/shared'
 import { Modal, ModalActions } from '../../../../components/ui'
@@ -22,7 +21,7 @@ interface AlbumFormData {
 
 export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
   const { user } = useAuth()
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { create, update, creating, updating, error: mutationError } = useAlbumMutations()
 
   const form = useForm<AlbumFormData>({
     initialValues: {
@@ -43,34 +42,29 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
         throw new Error('Authenticatie vereist')
       }
 
-      setSubmitError(null)
+      const updateData = {
+        title: values.title,
+        description: values.description || undefined,
+        visible: values.visible,
+        order_number: Number(values.order_number) || 1
+      }
 
-      try {
-        const updateData = {
+      if (album?.id) {
+        await update(album.id, updateData)
+      } else {
+        await create({
           title: values.title,
           description: values.description || undefined,
-          visible: values.visible,
-          order_number: Number(values.order_number) || 1
-        }
-
-        if (album?.id) {
-          await updateAlbum(album.id, updateData)
-        } else {
-          await createAlbum({
-            title: values.title,
-            description: values.description || undefined,
-            visible: values.visible
-          })
-        }
-
-        onComplete()
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Opslaan mislukt'
-        setSubmitError(errorMessage)
-        throw err
+          visible: values.visible
+        })
       }
+
+      onComplete()
     }
   })
+
+  const isSubmitting = creating || updating || form.isSubmitting
+  const submitError = mutationError
 
   if (!user) {
     return <div>Authenticatie vereist.</div>
@@ -88,7 +82,7 @@ export function AlbumForm({ album, onComplete, onCancel }: AlbumFormProps) {
           onConfirm={form.handleSubmit}
           cancelText="Annuleren"
           confirmText={album ? 'Opslaan' : 'Toevoegen'}
-          isLoading={form.isSubmitting}
+          isLoading={isSubmitting}
         />
       }
     >

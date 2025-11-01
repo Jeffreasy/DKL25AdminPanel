@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com';
 
 class AuthManager {
   private token: string | null = null;
@@ -13,7 +13,7 @@ class AuthManager {
 
   async login(email: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +67,7 @@ class AuthManager {
     try {
       // Call backend logout endpoint if token exists
       if (this.token) {
-        await fetch(`${API_BASE}/api/auth/logout`, {
+        await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.token}`,
@@ -82,6 +82,42 @@ class AuthManager {
       localStorage.removeItem('jwtToken');
       if (this.refreshTimer) clearTimeout(this.refreshTimer);
       window.location.href = '/login';
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!this.token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE}/api/users/password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 401) {
+          throw new Error('Huidig wachtwoord is onjuist');
+        }
+        throw new Error(error.error || 'Wachtwoord wijzigen mislukt');
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Wachtwoord wijzigen mislukt'
+      };
     }
   }
 

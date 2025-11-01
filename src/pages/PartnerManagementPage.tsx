@@ -9,6 +9,7 @@ import { usePermissions } from '../hooks/usePermissions'
 export function PartnerManagementPage() {
   const { hasPermission } = usePermissions()
   const [showAddPartner, setShowAddPartner] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const { addToHistory } = useNavigationHistory()
 
   const canReadPartners = hasPermission('partner', 'read')
@@ -57,7 +58,7 @@ export function PartnerManagementPage() {
 
       {/* Content */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        <PartnersOverview />
+        <PartnersOverview key={refreshTrigger} />
       </div>
 
       {/* Modal for new partner */}
@@ -65,7 +66,7 @@ export function PartnerManagementPage() {
         <PartnerForm
           onComplete={() => {
             setShowAddPartner(false)
-            // TODO: Refresh list
+            setRefreshTrigger(prev => prev + 1) // Refresh partner list
           }}
           onCancel={() => setShowAddPartner(false)}
         />

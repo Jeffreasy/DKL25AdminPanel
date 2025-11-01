@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@mantine/core'
 import { userService } from '../features/users/services/userService'
 import { UserForm } from '../features/users/components/UserForm'
+import { UserRoleAssignmentModal } from '../features/users/components/UserRoleAssignmentModal'
+import { BulkRoleOperations } from '../features/users/components/BulkRoleOperations'
 import { usePermissions } from '../hooks/usePermissions'
 import { useAuth } from '../features/auth'
 import { useFilters, applyFilters } from '../hooks/useFilters'
@@ -15,6 +17,9 @@ export function UserManagementPage() {
   const { isLoading: authLoading } = useAuth()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [userForRoleManagement, setUserForRoleManagement] = useState<User | null>(null)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
   // Use filters hook
   const filters = useFilters<'search' | 'role' | 'status'>({
@@ -28,6 +33,7 @@ export function UserManagementPage() {
   const canReadUsers = hasPermission('user', 'read')
   const canWriteUsers = hasPermission('user', 'write')
   const canDeleteUsers = hasPermission('user', 'delete')
+  const canManageRoles = hasPermission('user', 'manage_roles') || hasPermission('admin', 'access')
 
   const queryClient = useQueryClient()
 
@@ -114,6 +120,11 @@ export function UserManagementPage() {
     if (confirm('Weet je zeker dat je deze gebruiker wilt verwijderen?')) {
       deleteMutation.mutate(id)
     }
+  }
+
+  const handleManageRoles = (user: User) => {
+    setUserForRoleManagement(user)
+    setIsRoleModalOpen(true)
   }
 
   const handleSubmit = async (values: CreateUserRequest | UpdateUserRequest) => {
@@ -293,17 +304,30 @@ export function UserManagementPage() {
               </div>
             </div>
             
-            {canWriteUsers && (
-              <button
-                onClick={handleAdd}
-                className={cc.button.base({ color: 'primary', className: `${cc.spacing.gap.sm} whitespace-nowrap` })}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Nieuwe Gebruiker
-              </button>
-            )}
+            <div className="flex gap-2">
+              {canManageRoles && (
+                <button
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className={cc.button.base({ color: 'secondary', className: `${cc.spacing.gap.sm} whitespace-nowrap` })}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  Bulk Rollen
+                </button>
+              )}
+              {canWriteUsers && (
+                <button
+                  onClick={handleAdd}
+                  className={cc.button.base({ color: 'primary', className: `${cc.spacing.gap.sm} whitespace-nowrap` })}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nieuwe Gebruiker
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Users Grid */}
@@ -389,6 +413,17 @@ export function UserManagementPage() {
                         Bewerken
                       </button>
                     )}
+                    {canManageRoles && (
+                      <button
+                        onClick={() => handleManageRoles(user)}
+                        className={cc.button.base({ color: 'primary', className: `flex-1 ${cc.spacing.gap.sm}` })}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Rollen
+                      </button>
+                    )}
                     {canDeleteUsers && (
                       <button
                         onClick={() => handleDelete(user.id)}
@@ -407,7 +442,7 @@ export function UserManagementPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       <Modal
         opened={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -420,6 +455,20 @@ export function UserManagementPage() {
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         />
       </Modal>
+
+      <UserRoleAssignmentModal
+        user={userForRoleManagement}
+        isOpen={isRoleModalOpen}
+        onClose={() => {
+          setIsRoleModalOpen(false)
+          setUserForRoleManagement(null)
+        }}
+      />
+
+      <BulkRoleOperations
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+      />
     </div>
   )
 }

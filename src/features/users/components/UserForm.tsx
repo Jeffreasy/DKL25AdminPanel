@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { roleService } from '../services/roleService'
+import { rbacClient } from '../../../api/client'
 import type { User, CreateUserRequest, UpdateUserRequest } from '../types'
 import { cc } from '../../../styles/shared'
 
@@ -23,7 +23,7 @@ export function UserForm({ initialValues, onSubmit, isSubmitting }: UserFormProp
   // Fetch available roles from backend
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => roleService.getRoles()
+    queryFn: () => rbacClient.getRoles()
   })
 
   // Fallback roles if backend doesn't return any

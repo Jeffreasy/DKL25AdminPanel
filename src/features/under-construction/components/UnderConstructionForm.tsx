@@ -41,12 +41,12 @@ export function UnderConstructionForm({ onSave }: Props) {
           is_active: data.isActive,
           title: data.title,
           message: data.message,
-          footer_text: data.footerText,
-          logo_url: data.logoUrl,
+          footer_text: data.footerText || '',
+          logo_url: data.logoUrl || '',
           expected_date: data.expectedDate ? new Date(data.expectedDate).toISOString().slice(0, 16) : null,
-          social_links: data.socialLinks,
-          progress_percentage: data.progressPercentage,
-          contact_email: data.contactEmail,
+          social_links: data.socialLinks || [],
+          progress_percentage: data.progressPercentage || 0,
+          contact_email: data.contactEmail || '',
           newsletter_enabled: data.newsletterEnabled,
         });
         setId(data.id);

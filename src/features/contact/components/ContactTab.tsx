@@ -2,7 +2,7 @@ import { MessageItem } from './MessageItem'
 import { useOutletContext } from 'react-router-dom'
 import type { DashboardContext } from '../../../types/dashboard'
 import { useState, useEffect } from 'react'
-import { supabase } from '../../../api/client/supabase'
+import { useAuth } from '../../auth'
 import { EmailDialog } from '../../email/components/EmailDialog'
 import { adminEmailService } from '../../email/adminEmailService'
 import { cc } from '../../../styles/shared'
@@ -10,15 +10,16 @@ import { usePermissions } from '../../../hooks/usePermissions'
 
 export function ContactTab() {
   const { contactStats, messages, handleUpdate } = useOutletContext<DashboardContext>()
+  const { user } = useAuth()
   const { hasPermission } = usePermissions()
   const [isNewEmailDialogOpen, setIsNewEmailDialogOpen] = useState(false)
-  const [loggedInUserEmail, setLoggedInUserEmail] = useState<string | null>(null)
   const [suggestionEmails, setSuggestionEmails] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'nieuw' | 'in_behandeling' | 'afgehandeld'>('all')
 
   const canReadContacts = hasPermission('contact', 'read')
   const canSendAdminEmail = hasPermission('admin_email', 'send')
+  const loggedInUserEmail = user?.email || 'info@dekoninklijkeloop.nl'
 
   // Filter messages
   const filteredMessages = messages.filter(message => {
@@ -34,9 +35,6 @@ export function ContactTab() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setLoggedInUserEmail(user?.email || null);
-      
       const emails = await adminEmailService.fetchAanmeldingenEmails();
       setSuggestionEmails(emails);
     };

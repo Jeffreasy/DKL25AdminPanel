@@ -3,8 +3,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import { PermissionList } from '../features/users/components/PermissionList'
 import { RoleList } from '../features/users/components/RoleList'
 import { useQuery } from '@tanstack/react-query'
-import { roleService } from '../features/users/services/roleService'
-import { permissionService } from '../features/users/services/permissionService'
+import { rbacClient, type Role, type Permission } from '../api/client'
 import { H1, SmallText } from '../components/typography/typography'
 import { cc } from '../styles/shared'
 import { useAuth } from '../features/auth'
@@ -19,14 +18,14 @@ export function AdminPermissionsPage() {
   // Fetch statistics - only enable when auth is loaded AND user has permission
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => roleService.getRoles(),
+    queryFn: () => rbacClient.getRoles(),
     enabled: !authLoading && canManagePermissions,
     retry: 1
   })
 
   const { data: permissions = { groups: [], total: 0 } } = useQuery({
     queryKey: ['permissions'],
-    queryFn: () => permissionService.getPermissions(),
+    queryFn: () => rbacClient.getPermissions(),
     enabled: !authLoading && canManagePermissions,
     retry: 1
   })
@@ -74,12 +73,15 @@ export function AdminPermissionsPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className={`${cc.grid.statsThree()} ${cc.spacing.gap.xl}`}>
+      <div className={`${cc.grid.statsFour()} ${cc.spacing.gap.xl}`}>
         <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm ${cc.spacing.container.md} border border-gray-200 dark:border-gray-700 ${cc.hover.card} ${cc.transition.shadow}`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Totaal Rollen</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{roles.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {roles.filter((r: Role) => r.is_system_role).length} systeem rollen
+              </p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3">
               <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,6 +96,9 @@ export function AdminPermissionsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Totaal Permissies</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{permissions.total}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {permissions.groups.length} resource groepen
+              </p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3">
               <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,13 +113,34 @@ export function AdminPermissionsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Systeem Permissies</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {permissions.groups.reduce((total, group) => total + group.permissions.filter(p => p.is_system_permission).length, 0)}
+                {permissions.groups.reduce((total: number, group: { resource: string; permissions: Permission[]; count: number }) =>
+                  total + group.permissions.filter((p: Permission) => p.is_system_permission).length, 0)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Beschermd tegen verwijdering
               </p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3">
               <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm ${cc.spacing.container.md} border border-gray-200 dark:border-gray-700 ${cc.hover.card} ${cc.transition.shadow}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Resource Types</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{permissions.groups.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Verschillende resources
+              </p>
+            </div>
+            <div className="bg-purple-100 dark:bg-purple-900/50 rounded-lg p-3">
+              <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
             </div>
           </div>
@@ -158,6 +184,29 @@ export function AdminPermissionsPage() {
 
         <div className={cc.spacing.container.md}>
           {activeTab === 'roles' ? <RoleList /> : <PermissionList />}
+        </div>
+
+        {/* RBAC Cache Management */}
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className={`${cc.spacing.container.md} ${cc.spacing.section.md}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">RBAC Cache Beheer</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Refresh permission cache na handmatige database wijzigingen
+                </p>
+              </div>
+              <button
+                onClick={() => rbacClient.refreshPermissionCache()}
+                className={cc.button.base({ color: 'secondary', className: cc.spacing.gap.sm })}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Cache Refresh
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

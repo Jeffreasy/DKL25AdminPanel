@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { ContactMessage, ContactStatus } from './../types'
 import { updateMessageStatus } from './../services/messageService'
 import { adminEmailService } from '../../email/adminEmailService'
-import { supabase } from '../../../api/client/supabase'
+import { useAuth } from '../../auth'
 import { cc } from '../../../styles/shared'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -14,17 +14,11 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
+  const { user } = useAuth()
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
-  const [senderEmail, setSenderEmail] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
-
-  useEffect(() => {
-    const fetchUserEmail = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setSenderEmail(user?.email || null);
-    };
-    fetchUserEmail();
-  }, []);
+  
+  const senderEmail = user?.email || 'info@dekoninklijkeloop.nl'
 
   const handleStatusUpdate = async (newStatus: ContactStatus) => {
     if (newStatus === message.status) return;

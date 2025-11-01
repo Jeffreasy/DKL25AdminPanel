@@ -76,10 +76,33 @@ export async function updatePhotoVisibility(photoId: string, visible: boolean): 
 }
 
 export async function fetchPhotoAlbums(photoId: string): Promise<string[]> {
-  // This would need a separate endpoint to get album relationships for a photo
-  // For now, return empty array - could be implemented with GET /api/photos/:id/albums
-  console.warn(`fetchPhotoAlbums not fully implemented for photo ${photoId}`)
-  return []
+  try {
+    // Use the album service to get albums containing this photo
+    const { fetchAllAlbums } = await import('../../albums/services/albumService')
+    const { albumClient } = await import('../../../api/client')
+    const allAlbums = await fetchAllAlbums()
+    
+    // Get album photos for each album to find which ones contain this photo
+    const albumsWithPhoto: string[] = []
+    
+    for (const album of allAlbums) {
+      try {
+        const photos = await albumClient.getAlbumPhotos(album.id)
+        
+        if (photos.some((photo: { id: string }) => photo.id === photoId)) {
+          albumsWithPhoto.push(album.id)
+        }
+      } catch (error) {
+        // Skip albums we can't access
+        console.warn(`Could not check album ${album.id}:`, error)
+      }
+    }
+    
+    return albumsWithPhoto
+  } catch (error) {
+    console.error('Error in fetchPhotoAlbums:', error)
+    return []
+  }
 }
 
 // fetchAllAlbums is now exported from albumService above (line 5)

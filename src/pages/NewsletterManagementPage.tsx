@@ -6,18 +6,41 @@ import { NewsletterEditor } from '../features/newsletter/components/NewsletterEd
 import type { Newsletter, CreateNewsletterData } from '../features/newsletter/types'
 import { createNewsletter, updateNewsletter } from '../features/newsletter/services/newsletterService'
 import { useNavigationHistory } from '../features/navigation'
+import { usePermissions } from '../hooks/usePermissions'
 import { cc } from '../styles/shared'
 import { toast } from 'react-hot-toast'
 
 export function NewsletterManagementPage() {
+  const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState<'newsletters' | 'history'>('newsletters')
   const [showForm, setShowForm] = useState(false)
   const [editingNewsletter, setEditingNewsletter] = useState<Newsletter | undefined>()
   const { addToHistory } = useNavigationHistory()
 
+  const canReadNewsletter = hasPermission('newsletter', 'read')
+  const canWriteNewsletter = hasPermission('newsletter', 'write')
+
   useEffect(() => {
     addToHistory('Nieuwsbrieven')
   }, [addToHistory])
+
+  if (!canReadNewsletter) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-red-100 dark:bg-red-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Geen Toegang</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Je hebt geen toestemming om nieuwsbrieven te beheren.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const handleCreate = () => {
     setEditingNewsletter(undefined)
@@ -63,7 +86,7 @@ export function NewsletterManagementPage() {
               Beheer en verzend nieuwsbrieven • E-mails worden verzonden vanaf nieuwsbrief@dekoninklijkeloop.nl
             </SmallText>
           </div>
-          {activeTab === 'newsletters' && (
+          {activeTab === 'newsletters' && canWriteNewsletter && (
             <button
               onClick={handleCreate}
               className={cc.button.base({ color: 'primary', className: `flex items-center ${cc.spacing.gap.sm}` })}

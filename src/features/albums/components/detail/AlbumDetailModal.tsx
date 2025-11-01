@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { PhotoSelector } from '../forms/PhotoSelector'
 import { AlbumForm } from '../forms/AlbumForm'
 import { CoverPhotoSelector } from '../forms/CoverPhotoSelector'
@@ -6,8 +6,8 @@ import { AlbumDetailHeader } from './AlbumDetailHeader'
 import { AlbumDetailInfo } from './AlbumDetailInfo'
 import { AlbumDetailActions } from './AlbumDetailActions'
 import { AlbumDetailPhotos } from './AlbumDetailPhotos'
+import { useAlbumData, useAlbumMutations } from '../../hooks'
 import type { AlbumWithDetails } from '../../types'
-import { updateAlbum, addPhotosToAlbum, removePhotoFromAlbum, fetchAlbumById } from '../../services/albumService'
 import { Z_INDEX } from '../../../../config/zIndex'
 import { toast } from 'react-hot-toast'
 
@@ -17,136 +17,123 @@ interface AlbumDetailModalProps {
   onSave: () => Promise<void>
 }
 
-export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalProps) {
+export function AlbumDetailModal({ album: initialAlbum, onClose, onSave }: AlbumDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isAddingPhotos, setIsAddingPhotos] = useState(false)
   const [showCoverSelector, setShowCoverSelector] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-  const [photos, setPhotos] = useState(album.photos?.map(ap => ap.photo) || [])
   const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
-  const handleError = useCallback((message: string) => {
-    setError(new Error(message))
-  }, [])
+  const { album, loading: loadingAlbum, loadAlbum } = useAlbumData({
+    albumId: initialAlbum.id,
+    autoLoad: true
+  })
+  
+  const {
+    toggleVisibility,
+    addPhotos,
+    removePhoto,
+    updateCoverPhoto,
+    updating
+  } = useAlbumMutations()
+
+  const currentAlbum = album || initialAlbum
+  const photos = currentAlbum.photos?.map(ap => ap.photo) || []
+  const isLoading = loadingAlbum || updating
+
+  // Reload album when initialAlbum changes
+  useEffect(() => {
+    if (initialAlbum.id && !album) {
+      loadAlbum(initialAlbum.id)
+    }
+  }, [initialAlbum.id, album, loadAlbum])
 
   const handleUpdate = useCallback(async () => {
     try {
       await onSave()
-      // Refresh album data to get updated photos
-      const updatedAlbum = await fetchAlbumById(album.id)
-      if (updatedAlbum && updatedAlbum.photos) {
-        setPhotos(updatedAlbum.photos.map(ap => ap.photo))
-      }
+      await loadAlbum(initialAlbum.id)
     } catch {
-      handleError('Kon gegevens niet bijwerken')
+      setError(new Error('Kon gegevens niet bijwerken'))
     }
-  }, [album.id, onSave, handleError])
+  }, [initialAlbum.id, onSave, loadAlbum])
 
-  const handleVisibilityToggle = async () => {
-    const newVisible = !album.visible
-
-    // Optimistic update - immediately update UI
-    album.visible = newVisible
-
+  const handleVisibilityToggle = useCallback(async () => {
     try {
-      setLoading(true)
       setError(null)
-      await updateAlbum(album.id, { visible: newVisible })
-      handleUpdate()
+      await toggleVisibility(currentAlbum)
+      await handleUpdate()
     } catch (err) {
       console.error('Error toggling visibility:', err)
-      // Revert optimistic update on error
-      album.visible = !newVisible
-      handleError('Er ging iets mis bij het wijzigen van de zichtbaarheid')
-    } finally {
-      setLoading(false)
+      setError(new Error('Er ging iets mis bij het wijzigen van de zichtbaarheid'))
     }
-  }
+  }, [currentAlbum, toggleVisibility, handleUpdate])
 
-  const handlePhotoRemove = async (photoId: string) => {
-    // Optimistic update - immediately remove from UI
-    const originalPhotos = [...photos]
-    setPhotos(prev => prev.filter(p => p.id !== photoId))
+  const handlePhotoRemove = useCallback(async (photoId: string) => {
     setRemovingPhotoId(photoId)
-
     try {
-      setLoading(true)
       setError(null)
-
-      await removePhotoFromAlbum(album.id, photoId)
-
-      handleUpdate() // Call full update to refresh data source
+      await removePhoto(currentAlbum.id, photoId)
+      await handleUpdate()
     } catch (err) {
       console.error('Error removing photo:', err)
-      // Revert optimistic update on error
-      setPhotos(originalPhotos)
-      handleError('Er ging iets mis bij het verwijderen van de foto')
+      setError(new Error('Er ging iets mis bij het verwijderen van de foto'))
     } finally {
-      setLoading(false)
       setRemovingPhotoId(null)
     }
-  }
+  }, [currentAlbum.id, removePhoto, handleUpdate])
 
   const handlePhotosAdd = useCallback(async (selectedPhotoIds: string[]) => {
     try {
-      setLoading(true)
       setError(null)
+      await addPhotos(currentAlbum.id, selectedPhotoIds)
 
-      await addPhotosToAlbum(album.id, selectedPhotoIds)
-
-      // Stel automatisch cover foto in als er nog geen is
-      if (!album.cover_photo_id && selectedPhotoIds.length > 0) {
+      // Set cover photo automatically if none exists
+      if (!currentAlbum.cover_photo_id && selectedPhotoIds.length > 0) {
         try {
-          await updateAlbum(album.id, { cover_photo_id: selectedPhotoIds[0] })
+          await updateCoverPhoto(currentAlbum.id, selectedPhotoIds[0])
         } catch (coverError) {
           console.error('Error setting cover photo:', coverError)
         }
       }
 
-      handleUpdate() // Call full update to refresh data source
+      await handleUpdate()
     } catch (err) {
       console.error('Error adding photos:', err)
-      handleError('Er ging iets mis bij het toevoegen van de foto\'s')
+      setError(new Error('Er ging iets mis bij het toevoegen van de foto\'s'))
     } finally {
-      setLoading(false)
       setIsAddingPhotos(false)
     }
-  }, [album.id, album.cover_photo_id, handleError, handleUpdate])
+  }, [currentAlbum.id, currentAlbum.cover_photo_id, addPhotos, updateCoverPhoto, handleUpdate])
 
-  // Handler for selecting cover photo
-  const handleCoverPhotoSelect = async (photoId: string | null) => {
+  const handleCoverPhotoSelect = useCallback(async (photoId: string | null) => {
     if (photoId === null) {
-      setShowCoverSelector(false);
-      return;
+      setShowCoverSelector(false)
+      return
     }
     try {
-      setLoading(true);
-      setError(null);
-      await updateAlbum(album.id, { cover_photo_id: photoId });
-
-      toast.success('Cover foto bijgewerkt');
-      handleUpdate(); // Refresh data
+      setError(null)
+      await updateCoverPhoto(currentAlbum.id, photoId)
+      toast.success('Cover foto bijgewerkt')
+      await handleUpdate()
     } catch (err) {
-      console.error('Error updating cover photo:', err);
-      setError(new Error(err instanceof Error ? err.message : 'Kon cover foto niet bijwerken'));
+      console.error('Error updating cover photo:', err)
+      setError(new Error(err instanceof Error ? err.message : 'Kon cover foto niet bijwerken'))
     } finally {
-      setLoading(false);
-      setShowCoverSelector(false);
+      setShowCoverSelector(false)
     }
-  };
+  }, [currentAlbum.id, updateCoverPhoto, handleUpdate])
 
   return (
     <div className={`fixed inset-0 bg-black/30 dark:bg-black/60 z-[${Z_INDEX.BASE_MODAL}]`}> 
       <div className={`fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[${Z_INDEX.BASE_MODAL}]`}>
         <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] sm:max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
           <AlbumDetailHeader
-            title={album.title}
-            visible={album.visible}
+            title={currentAlbum.title}
+            visible={currentAlbum.visible}
             onVisibilityToggle={handleVisibilityToggle}
             onEdit={() => setIsEditing(true)}
             onClose={onClose}
-            loading={loading}
+            loading={updating}
           />
 
           {/* Content: Adjusted padding */}
@@ -167,21 +154,21 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             )}
 
             <AlbumDetailInfo
-              album={album}
-              photosCount={photos?.length || 0}
+              album={currentAlbum}
+              photosCount={photos.length}
               onCoverPhotoSelect={() => setShowCoverSelector(true)}
             />
 
             <AlbumDetailActions
               onAddPhotos={() => setIsAddingPhotos(true)}
               onEditAlbum={() => setIsEditing(true)}
-              loading={loading}
+              loading={updating}
             />
 
             <AlbumDetailPhotos
-              album={album}
+              album={currentAlbum}
               photosCount={photos.length}
-              loading={loading}
+              loading={isLoading}
               onOrderChange={handleUpdate}
               onPhotoRemove={handlePhotoRemove}
               onAddPhotos={() => setIsAddingPhotos(true)}
@@ -189,10 +176,9 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             />
           </div>
 
-          {/* Edit Modal */} 
           {isEditing && (
             <AlbumForm
-              album={album}
+              album={currentAlbum}
               onComplete={() => {
                 setIsEditing(false)
                 handleUpdate()
@@ -201,21 +187,19 @@ export function AlbumDetailModal({ album, onClose, onSave }: AlbumDetailModalPro
             />
           )}
 
-          {/* Photo Selector */}
           {isAddingPhotos && (
             <PhotoSelector
-              albumId={album.id}
+              albumId={currentAlbum.id}
               existingPhotoIds={photos.map(p => p.id)}
               onComplete={handlePhotosAdd}
               onCancel={() => setIsAddingPhotos(false)}
             />
           )}
 
-          {/* Cover Photo Selector Modal */}
           {showCoverSelector && (
             <CoverPhotoSelector
-              albumId={album.id}
-              currentCoverPhotoId={album.cover_photo_id ?? null}
+              albumId={currentAlbum.id}
+              currentCoverPhotoId={currentAlbum.cover_photo_id ?? null}
               onSelect={handleCoverPhotoSelect}
             />
           )}

@@ -60,6 +60,27 @@ export function UserMenu() {
           <div className={`${cc.spacing.px.md} ${cc.spacing.py.sm} text-sm border-b border-gray-100 dark:border-gray-700`}>
             <div className="font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
             <div className="text-gray-500 dark:text-gray-400 text-xs truncate">{user.email}</div>
+            {/* RBAC Roles Display */}
+            {user.roles && user.roles.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {user.roles.map((role) => (
+                  <span
+                    key={role.id}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                  >
+                    {role.name}
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Legacy Role Display (fallback) */}
+            {(!user.roles || user.roles.length === 0) && user.role && (
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  {user.role}
+                </span>
+              </div>
+            )}
           </div>
           
           <Menu.Item>

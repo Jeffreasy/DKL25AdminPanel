@@ -13,7 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { cc } from '../../styles/shared'
 
 const SponsorForm = lazy(() => import('../../features/sponsors/components/SponsorForm').then(module => ({ default: module.SponsorForm })))
-const PhotoForm = lazy(() => import('../../features/photos/components/forms/PhotoForm').then(module => ({ default: module.PhotoForm })))
+const PhotoForm = lazy(() => import('../../features/photos/components/PhotoForm').then(module => ({ default: module.PhotoForm })))
 const AlbumForm = lazy(() => import('../../features/albums/components/forms/AlbumForm').then(module => ({ default: module.AlbumForm })))
 const PartnerForm = lazy(() => import('../../features/partners/components/PartnerForm').then(module => ({ default: module.PartnerForm })))
 

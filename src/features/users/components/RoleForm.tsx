@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { permissionService } from '../services/permissionService'
+import { rbacClient } from '../../../api/client'
 import type { Role, CreateRoleRequest, PermissionWithId } from '../types'
 import { cc } from '../../../styles/shared'
 
@@ -26,7 +26,7 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
 
   const { data: permissions = { groups: [], total: 0 }, isLoading: permissionsLoading, error: permissionsError } = useQuery({
     queryKey: ['permissions'],
-    queryFn: () => permissionService.getPermissions()
+    queryFn: () => rbacClient.getPermissions()
   })
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function RoleForm({ initialValues, onSubmit, onPermissionUpdate, isSubmit
         permissions: group.permissions.filter(p =>
           p.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.description.toLowerCase().includes(searchQuery.toLowerCase())
+          p.description?.toLowerCase().includes(searchQuery.toLowerCase())
         )
       }))
       .filter(group => group.permissions.length > 0)

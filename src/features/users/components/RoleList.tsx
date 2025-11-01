@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { Modal, Text } from '@mantine/core'
-import { roleService } from '../services/roleService'
-import { permissionService } from '../services/permissionService'
+import { rbacClient, type Role, type Permission } from '../../../api/client'
 import { RoleForm } from './RoleForm'
-import type { Role, CreateRoleRequest } from '../types'
+import type { CreateRoleRequest } from '../types'
 import { cc } from '../../../styles/shared'
 
 export function RoleList() {
@@ -17,13 +16,13 @@ export function RoleList() {
     queries: [
       {
         queryKey: ['roles'],
-        queryFn: () => roleService.getRoles(),
+        queryFn: () => rbacClient.getRoles(),
         retry: 1,
         staleTime: 5 * 60 * 1000,
       },
       {
         queryKey: ['permissions'],
-        queryFn: () => permissionService.getPermissions(),
+        queryFn: () => rbacClient.getPermissions(),
         retry: 1,
         staleTime: 5 * 60 * 1000,
       }
@@ -35,18 +34,18 @@ export function RoleList() {
   const isLoading = rolesQuery.isLoading || permissionsQuery.isLoading;
   const hasError = rolesQuery.error || permissionsQuery.error;
 
-  const enrichedRoles = roles.map(role => ({
+  const enrichedRoles = roles.map((role: Role) => ({
     ...role,
     permissions: role.permissions || []
   }));
 
-  const filteredRoles = enrichedRoles.filter(role =>
+  const filteredRoles = enrichedRoles.filter((role: Role) =>
     role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     role.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const createMutation = useMutation({
-    mutationFn: roleService.createRole,
+    mutationFn: (data: { name: string; description?: string }) => rbacClient.createRole(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       setIsModalOpen(false)
@@ -54,7 +53,8 @@ export function RoleList() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Role> }) => roleService.updateRole(id, data),
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string } }) =>
+      rbacClient.updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       setIsModalOpen(false)
@@ -63,13 +63,17 @@ export function RoleList() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: roleService.deleteRole,
+    mutationFn: (id: string) => rbacClient.deleteRole(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] })
   })
 
   const updatePermissionsMutation = useMutation({
-    mutationFn: ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) =>
-      roleService.assignPermissionsToRole(roleId, permissionIds),
+    mutationFn: async ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) => {
+      // For each permission, assign to role
+      for (const permissionId of permissionIds) {
+        await rbacClient.assignPermissionToRole(roleId, permissionId);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       setIsModalOpen(false)
@@ -184,7 +188,7 @@ export function RoleList() {
         </div>
       ) : (
         <div className={`${cc.grid.userCards()} ${cc.spacing.gap.xl}`}>
-          {filteredRoles.map(role => (
+          {filteredRoles.map((role: Role) => (
             <div
               key={role.id}
               className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${cc.hover.card} ${cc.transition.shadow} overflow-hidden group`}
@@ -218,7 +222,7 @@ export function RoleList() {
                   </div>
                   {role.permissions && role.permissions.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {role.permissions.slice(0, 4).map(permission => (
+                      {role.permissions.slice(0, 4).map((permission: Permission) => (
                         <span
                           key={permission.id}
                           className={cc.badge({ color: 'blue' })}

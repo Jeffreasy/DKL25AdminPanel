@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from "../features/auth"
-import { supabase } from '../api/client/supabase'
+import { authManager } from '../api/client/auth'
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -20,7 +20,6 @@ import {
   strengthColors,
   strengthMessages
 } from '../utils/validation'
-import DOMPurify from 'dompurify'
 import { cc } from '../styles/shared'
 import { ConfirmDialog, LoadingGrid } from '../components/ui'
 
@@ -73,7 +72,6 @@ export function ProfilePage() {
   const [isLocked, setIsLocked] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [networkError, setNetworkError] = useState(false)
-  const [sessionExpired, setSessionExpired] = useState(false)
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(30)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
@@ -135,30 +133,6 @@ export function ProfilePage() {
     }
   }, [])
 
-  // Session check - alleen periodiek, niet bij mount
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error || !session) {
-        setSessionExpired(true)
-        // Geef gebruiker tijd om te zien wat er gebeurt
-        setTimeout(() => {
-          navigate('/login', { state: { from: 'profile', reason: 'session_expired' } })
-        }, 3000)
-      }
-    }
-
-      checkSession()
-      // Daarna elke 5 minuten
-      const interval = setInterval(checkSession, 5 * 60 * 1000)
-      return () => clearInterval(interval)
-    }, 5 * 60 * 1000)
-
-    return () => clearTimeout(timeoutId)
-  }, [navigate])
-
   const getErrorRecovery = (error: string) => {
     switch (error) {
       case 'network_error':
@@ -172,14 +146,10 @@ export function ProfilePage() {
     }
   }
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const onSubmit = async (_data: ProfileFormData) => {
     try {
       if (networkError) {
         setError('network_error')
-        return
-      }
-      if (sessionExpired) {
-        setError('session_expired')
         return
       }
       if (isLocked) {
@@ -188,42 +158,36 @@ export function ProfilePage() {
       }
 
       setResetAttempts(prev => prev + 1)
+      setError(null)
+      setSuccess(null)
       
-      const sanitizedData = {
-        ...data,
-        email: DOMPurify.sanitize(data.email),
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
+      // Implement password change with backend API
+      if (_data.newPassword && _data.newPassword.trim() !== '') {
+        const result = await authManager.changePassword(_data.currentPassword, _data.newPassword)
+        
+        if (result.success) {
+          setSuccess('Wachtwoord succesvol gewijzigd!')
+          setResetAttempts(0)
+          reset({ currentPassword: '', newPassword: '', confirmPassword: '', email: user?.email || '' })
+        } else {
+          if (result.error === 'Huidig wachtwoord is onjuist') {
+            setError('Huidig wachtwoord is onjuist')
+          } else {
+            setError(result.error || 'Er ging iets mis bij het wijzigen van je wachtwoord')
+          }
+        }
+      } else {
+        // No password change, just show success
+        setSuccess('Profiel gecontroleerd - geen wijzigingen')
+        setResetAttempts(0)
+        reset({ currentPassword: '', newPassword: '', confirmPassword: '', email: user?.email || '' })
       }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: sanitizedData.email,
-        password: sanitizedData.currentPassword
-      })
-
-      if (signInError) {
-        setError('Huidig wachtwoord is onjuist')
-        return
-      }
-
-      if (sanitizedData.newPassword) {
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: sanitizedData.newPassword
-        })
-        if (updateError) throw updateError
-      }
-
-      setSuccess('Profiel succesvol bijgewerkt')
-      setResetAttempts(0)
-      reset({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       console.error('Profile update error:', err)
-      if (errorMessage.includes('network')) {
+      if (errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
         setError('network_error')
-      } else if (errorMessage.includes('session')) {
-        setError('session_expired')
-      } else if (errorMessage.includes('password')) {
+      } else if (errorMessage.includes('wachtwoord') || errorMessage.includes('password')) {
         setError('invalid_password')
       } else {
         setError('Er ging iets mis bij het bijwerken van je profiel')
@@ -333,15 +297,10 @@ export function ProfilePage() {
               </div>
             )}
             {networkError && (
-               <div className="mt-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 p-4 border border-yellow-200 dark:border-yellow-800/50">
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Netwerkfout</p>
-              </div>
-            )}
-             {sessionExpired && (
-               <div className="mt-4 rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800/50">
-                 <p className="text-sm font-medium text-red-800 dark:text-red-200">Sessie verlopen</p>
-               </div>
-            )}
+              <div className="mt-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 p-4 border border-yellow-200 dark:border-yellow-800/50">
+               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Netwerkfout</p>
+             </div>
+           )}
 
             <div className={`mt-6 ${cc.grid.formSix()}`}>
               <div className="sm:col-span-4">

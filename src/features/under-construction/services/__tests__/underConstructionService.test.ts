@@ -45,42 +45,30 @@ describe('underConstructionService', () => {
       expect(result).toEqual(mockData)
     })
 
-    it('creates default data when no active under construction exists', async () => {
-      const mockDefaultData = {
-        id: 1,
+    it('returns default data when no active under construction exists', async () => {
+      const expectedDefaultData = {
+        id: 0,
         isActive: false,
         title: 'Onder Constructie',
         message: 'Deze website is momenteel onder constructie...',
         footerText: 'Bedankt voor uw geduld!',
-        logoUrl: '',
+        logoUrl: null,
         expectedDate: null,
         socialLinks: [],
         progressPercentage: 0,
-        contactEmail: '',
+        contactEmail: null,
         newsletterEnabled: false,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
+        createdAt: '',
+        updatedAt: '',
       }
 
       vi.mocked(underConstructionClient.getActiveUnderConstruction).mockResolvedValue(null)
-      vi.mocked(underConstructionClient.createUnderConstruction).mockResolvedValue(mockDefaultData)
 
       const result = await underConstructionService.getUnderConstruction()
 
       expect(underConstructionClient.getActiveUnderConstruction).toHaveBeenCalled()
-      expect(underConstructionClient.createUnderConstruction).toHaveBeenCalledWith({
-        is_active: false,
-        title: 'Onder Constructie',
-        message: 'Deze website is momenteel onder constructie...',
-        footer_text: 'Bedankt voor uw geduld!',
-        logo_url: '',
-        expected_date: null,
-        social_links: [],
-        progress_percentage: 0,
-        contact_email: '',
-        newsletter_enabled: false,
-      })
-      expect(result).toEqual(mockDefaultData)
+      expect(underConstructionClient.createUnderConstruction).not.toHaveBeenCalled()
+      expect(result).toEqual(expectedDefaultData)
     })
 
     it('throws error on fetch failure', async () => {

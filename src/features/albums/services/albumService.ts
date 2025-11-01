@@ -1,6 +1,6 @@
 import type { Album, AlbumWithDetails } from '../types'
 import type { Photo } from '../../photos/types'
-import { authManager } from '../../../api/client'
+import { albumClient } from '../../../api/client'
 
 /**
  * Interface for public gallery data structure
@@ -30,9 +30,22 @@ interface CacheEntry<T> {
   timestamp: number
 }
 
+/**
+ * Custom error class for album-related errors
+ */
+export class AlbumServiceError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public statusCode?: number
+  ) {
+    super(message)
+    this.name = 'AlbumServiceError'
+  }
+}
+
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cache = new Map<string, CacheEntry<any>>()
+const cache = new Map<string, CacheEntry<unknown>>()
 
 function getCachedData<T>(key: string): T | null {
   const entry = cache.get(key)
@@ -59,63 +72,90 @@ export function clearAlbumCache(): void {
 }
 
 /**
+ * Handle API errors consistently
+ */
+function handleApiError(err: unknown, defaultMessage: string): never {
+  if (err instanceof Error) {
+    if (err.message.includes('Authentication expired')) {
+      throw new AlbumServiceError('Authenticatie verlopen', 'AUTH_EXPIRED', 401)
+    }
+    if (err.message.includes('404')) {
+      throw new AlbumServiceError('Niet gevonden', 'NOT_FOUND', 404)
+    }
+    throw new AlbumServiceError(err.message, 'API_ERROR')
+  }
+  throw new AlbumServiceError(defaultMessage, 'UNKNOWN_ERROR')
+}
+
+/**
+ * Normalize album data to ensure photos_count is present
+ */
+function normalizeAlbum(album: AlbumWithDetails): Album {
+  return {
+    ...album,
+    photos_count: album.photos_count || [{ count: album.photos?.length || 0 }]
+  } as Album
+}
+
+/**
  * Fetch all albums with their details (admin endpoint)
  */
 export async function fetchAllAlbums(): Promise<AlbumWithDetails[]> {
   try {
-    const data = await authManager.makeAuthenticatedRequest('/api/albums/admin') as AlbumWithDetails[]
-    const albums = data || []
+    const albums = await albumClient.getAlbumsAdmin() as AlbumWithDetails[]
 
-    // Albums don't include photos in list view, so we need to fetch photo counts separately
-    // Make individual calls to get photo count for each album
+    // Fetch photo counts for all albums in parallel
     const albumsWithCounts = await Promise.all(
       albums.map(async (album: AlbumWithDetails) => {
         try {
-          // Try to get album details which should include photos
-          const detailData = await authManager.makeAuthenticatedRequest(`/api/albums/${album.id}`) as { photos?: unknown[] }
-          const photoCount = Array.isArray(detailData.photos) ? detailData.photos.length : 0
-          return {
+          // Get photos for this album
+          const photos = await albumClient.getAlbumPhotos(album.id)
+          return normalizeAlbum({
             ...album,
-            photos_count: [{ count: photoCount }]
-          }
+            photos_count: [{ count: photos.length }]
+          })
         } catch (error) {
           console.warn(`Failed to get photo count for album ${album.id}:`, error)
-        }
-
-        // Fallback: assume 0 photos if detail call fails
-        return {
-          ...album,
-          photos_count: [{ count: 0 }]
+          return normalizeAlbum(album)
         }
       })
     )
 
     return albumsWithCounts
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon albums niet ophalen')
+    handleApiError(err, 'Kon albums niet ophalen')
   }
 }
 
 /**
- * Fetch a single album by ID with all details
+ * Fetch a single album by ID with all details including photos
  */
 export async function fetchAlbumById(albumId: string): Promise<AlbumWithDetails | null> {
   try {
-    const data = await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}`) as AlbumWithDetails
-    return data
+    // Fetch album and its photos in parallel
+    const [album, photos] = await Promise.all([
+      albumClient.getAlbum(albumId),
+      albumClient.getAlbumPhotos(albumId)
+    ])
+    
+    // Transform photos to AlbumPhoto format
+    const albumPhotos = photos.map((photo, index) => ({
+      album_id: albumId,
+      photo_id: photo.id,
+      order_number: index + 1,
+      photo
+    }))
+    
+    return {
+      ...album,
+      photos: albumPhotos,
+      photos_count: [{ count: photos.length }]
+    } as AlbumWithDetails
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    if (error.message.includes('404')) {
+    if (err instanceof Error && err.message.includes('404')) {
       return null
     }
-    throw new Error('Kon album details niet ophalen')
+    handleApiError(err, 'Kon album details niet ophalen')
   }
 }
 
@@ -127,35 +167,56 @@ export async function fetchAlbumById(albumId: string): Promise<AlbumWithDetails 
 export async function fetchPublicGalleryData(useCache = true): Promise<PublicAlbumPreview[]> {
   const cacheKey = 'public_gallery_data'
 
-  // Check cache first
   if (useCache) {
     const cached = getCachedData<PublicAlbumPreview[]>(cacheKey)
     if (cached) {
-      console.log('📦 Using cached gallery data')
       return cached
     }
   }
 
   try {
-    // Use public albums endpoint - may need to be updated when backend implements photo data
-    const data = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/albums`).then(r => r.json())
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'
+    
+    // Fetch visible albums
+    const response = await fetch(`${API_BASE}/api/albums`)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
 
-    // Transform to expected format - this may need adjustment based on actual API response
-    const transformedData = (data as AlbumApiResponse[] || []).map((album: AlbumApiResponse) => ({
-      id: album.id,
-      title: album.title,
-      description: album.description,
-      photos: album.photos || [] // Assuming photos are included in response
-    }))
+    const albums = await response.json() as AlbumApiResponse[]
+    
+    // Fetch photos for each album in parallel
+    const albumsWithPhotos = await Promise.all(
+      (albums || []).map(async (album) => {
+        try {
+          const photosResponse = await fetch(`${API_BASE}/api/albums/${album.id}/photos`)
+          if (photosResponse.ok) {
+            const photos = await photosResponse.json()
+            return {
+              id: album.id,
+              title: album.title,
+              description: album.description,
+              photos: photos || []
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch photos for album ${album.id}:`, error)
+        }
+        
+        // Fallback to empty photos array
+        return {
+          id: album.id,
+          title: album.title,
+          description: album.description,
+          photos: []
+        }
+      })
+    )
 
-    // Cache the result
-    setCachedData(cacheKey, transformedData)
-    console.log('💾 Cached gallery data')
-
-    return transformedData
+    setCachedData(cacheKey, albumsWithPhotos)
+    return albumsWithPhotos
   } catch (err) {
-    console.error('Error fetching public gallery data:', err)
-    throw new Error('Kon publieke galerij gegevens niet ophalen')
+    handleApiError(err, 'Kon publieke galerij gegevens niet ophalen')
   }
 }
 
@@ -168,20 +229,13 @@ export async function createAlbum(albumData: {
   visible?: boolean
 }): Promise<Album> {
   try {
-    const data = await authManager.makeAuthenticatedRequest('/api/albums', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...albumData,
-        visible: albumData.visible ?? true
-      })
-    }) as Album
-    return data
+    const album = await albumClient.createAlbum({
+      ...albumData,
+      visible: albumData.visible ?? true
+    })
+    return normalizeAlbum(album as AlbumWithDetails)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon album niet aanmaken')
+    handleApiError(err, 'Kon album niet aanmaken')
   }
 }
 
@@ -193,17 +247,10 @@ export async function updateAlbum(
   updates: Partial<Omit<Album, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<Album> {
   try {
-    const data = await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    }) as Album
-    return data
+    const album = await albumClient.updateAlbum(albumId, updates)
+    return normalizeAlbum(album as AlbumWithDetails)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon album niet bijwerken')
+    handleApiError(err, 'Kon album niet bijwerken')
   }
 }
 
@@ -212,15 +259,9 @@ export async function updateAlbum(
  */
 export async function deleteAlbum(albumId: string): Promise<void> {
   try {
-    await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}`, {
-      method: 'DELETE'
-    })
+    await albumClient.deleteAlbum(albumId)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon album niet verwijderen')
+    handleApiError(err, 'Kon album niet verwijderen')
   }
 }
 
@@ -232,16 +273,9 @@ export async function addPhotosToAlbum(
   photoIds: string[]
 ): Promise<void> {
   try {
-    await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}/photos`, {
-      method: 'POST',
-      body: JSON.stringify({ photo_ids: photoIds })
-    })
+    await albumClient.addPhotosToAlbum(albumId, photoIds)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon foto\'s niet toevoegen aan album')
+    handleApiError(err, 'Kon foto\'s niet toevoegen aan album')
   }
 }
 
@@ -253,15 +287,9 @@ export async function removePhotoFromAlbum(
   photoId: string
 ): Promise<void> {
   try {
-    await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}/photos/${photoId}`, {
-      method: 'DELETE'
-    })
+    await albumClient.removePhotoFromAlbum(albumId, photoId)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon foto niet verwijderen uit album')
+    handleApiError(err, 'Kon foto niet verwijderen uit album')
   }
 }
 
@@ -273,15 +301,8 @@ export async function updatePhotoOrder(
   photoOrders: { photo_id: string; order_number: number }[]
 ): Promise<void> {
   try {
-    await authManager.makeAuthenticatedRequest(`/api/albums/${albumId}/photos/reorder`, {
-      method: 'PUT',
-      body: JSON.stringify({ photo_orders: photoOrders })
-    })
+    await albumClient.reorderAlbumPhotos(albumId, photoOrders)
   } catch (err) {
-    const error = err as Error
-    if (error.message.includes('Authentication expired')) {
-      throw error
-    }
-    throw new Error('Kon foto volgorde niet bijwerken')
+    handleApiError(err, 'Kon foto volgorde niet bijwerken')
   }
 }
