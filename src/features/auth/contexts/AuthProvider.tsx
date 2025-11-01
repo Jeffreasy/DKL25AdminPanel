@@ -3,6 +3,24 @@ import { authManager } from '../../../api/client/auth'
 import { supabase } from '../../../api/client/supabase'
 import { AuthContext, User } from './AuthContext'
 
+// ✅ CORRECT: Haal base URL op zonder '/api' - die wordt in fetch toegevoegd
+const getBaseURL = (): string => {
+  const baseURL = import.meta.env.VITE_API_BASE_URL;
+  console.log('🔍 DEBUG: VITE_API_BASE_URL =', baseURL);
+  console.log('🔍 DEBUG: All env vars =', import.meta.env);
+  
+  if (!baseURL) {
+    console.warn('⚠️ VITE_API_BASE_URL not set, using fallback');
+    return 'https://dklemailservice.onrender.com';
+  }
+  
+  console.log('✅ Using API Base URL:', baseURL);
+  return baseURL;
+};
+
+const API_BASE_URL = getBaseURL();
+console.log('🎯 Final API_BASE_URL =', API_BASE_URL);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -27,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/auth/refresh`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken })
@@ -53,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setError(null)
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, wachtwoord: password })
@@ -140,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
       });
 
