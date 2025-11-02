@@ -25,7 +25,11 @@ export interface User {
   id: string
   email: string
   naam: string
-  rol: string
+  // DEPRECATED: Legacy field - will be removed in future version
+  // Use roles array instead
+  rol?: string
+  // RBAC roles - primary source
+  roles?: Array<{ id: string; name: string; description?: string }>
   permissions?: Permission[]
   is_actief: boolean
   newsletter_subscribed: boolean
@@ -36,7 +40,9 @@ export interface User {
 export interface CreateUserRequest {
   email: string
   naam: string
-  rol: string
+  // DEPRECATED: Use role_ids array for RBAC
+  rol?: string
+  role_ids?: string[]
   password: string
   is_actief: boolean
   newsletter_subscribed: boolean
@@ -45,7 +51,9 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   email?: string
   naam?: string
+  // DEPRECATED: Use role_ids array for RBAC
   rol?: string
+  role_ids?: string[]
   password?: string
   is_actief?: boolean
   newsletter_subscribed?: boolean

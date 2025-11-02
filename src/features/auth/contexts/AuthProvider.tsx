@@ -168,11 +168,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const userData = await response.json();
         
-        // Backend MUST return permissions array: { id, email, naam, rol, permissions: [{resource, action}], roles: [{id, name, description}] }
+        // Backend returns: { id, email, naam, permissions: [{resource, action}], roles: [{id, name, description}] }
+        // Note: 'rol' field is DEPRECATED and removed from responses as per V1.49
         const permissions = userData.permissions || [];
-        const roles = userData.roles || []; // RBAC roles array
+        const roles = userData.roles || []; // RBAC roles array - PRIMARY source
 
-        // Parse token claims voor backward compatibility
+        // Parse token claims voor backward compatibility check
         const token = localStorage.getItem('jwtToken');
         const claims = token ? parseTokenClaims(token) : { roles: [], rbac_active: false };
 
@@ -180,8 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           permissionsCount: permissions.length,
           rolesCount: roles.length,
           tokenRoles: claims.roles,
-          rbacActive: claims.rbac_active,
-          legacyRole: userData.rol || userData.role
+          rbacActive: claims.rbac_active
         });
 
         // Enhanced permission loading with RBAC support
@@ -193,9 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (roles && roles.length > 0) {
             try {
               console.log('🔄 Attempting to load permissions from RBAC roles...');
-              // Note: In a full implementation, you might want to fetch permissions
-              // from the RBAC API based on roles, but for now we rely on backend
-              // to provide permissions array
+              // Note: Backend should provide permissions array directly
+              // If not, roles are available for display purposes
             } catch (error) {
               console.error('Failed to load permissions from roles:', error);
             }
@@ -204,12 +203,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('✅ Backend permissions loaded:', permissions.length, 'permissions');
         }
 
+        // Legacy role field: use first role name for backward compatibility (DEPRECATED)
+        const legacyRole = roles.length > 0 ? roles[0].name : undefined;
+
         localStorage.setItem('userId', userData.id);
         setUser({
           id: userData.id,
           email: userData.email,
-          role: userData.rol || userData.role, // Legacy field
-          roles, // RBAC roles
+          role: legacyRole, // DEPRECATED - only for backward compatibility
+          roles, // RBAC roles - PRIMARY source
           permissions,
           user_metadata: { full_name: userData.naam || userData.name }
         });

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Modal } from '@mantine/core'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { rbacClient, type Role, type UserRole } from '../../../api/client'
 import type { User } from '../types'
 import { cc } from '../../../styles/shared'
+import { getErrorMessage, getErrorCode } from '../../../utils/apiErrorHandler'
+import toast from 'react-hot-toast'
 
 interface UserRoleAssignmentModalProps {
   user: User | null
@@ -23,38 +25,77 @@ export function UserRoleAssignmentModal({ user, isOpen, onClose }: UserRoleAssig
   })
 
   // Fetch user's current roles
-  const { data: userRoles = [], isLoading: userRolesLoading } = useQuery({
+  const {
+    data: userRoles = [],
+    isLoading: userRolesLoading,
+    error: userRolesError
+  } = useQuery({
     queryKey: ['userRoles', user?.id],
     queryFn: () => user ? rbacClient.getUserRoles(user.id) : Promise.resolve([]),
-    enabled: isOpen && !!user
+    enabled: isOpen && !!user,
+    retry: 1
   })
 
-  // Initialize selected roles when user roles are loaded
+  // Log error details for debugging
   useEffect(() => {
-    if (userRoles.length > 0) {
-      setSelectedRoleIds(userRoles.map((ur: UserRole) => ur.role_id))
-    } else {
+    if (userRolesError) {
+      const message = getErrorMessage(userRolesError)
+      const code = getErrorCode(userRolesError)
+      console.error('❌ Failed to load user roles:', {
+        userId: user?.id,
+        message,
+        code,
+        error: userRolesError
+      })
+    }
+  }, [userRolesError, user?.id])
+
+  // Stable user role IDs string for comparison
+  const userRoleIdsString = useMemo(
+    () => userRoles.map((ur: UserRole) => ur.role_id).sort().join(','),
+    [userRoles]
+  )
+
+  // Initialize selected roles only when modal opens or user roles change
+  useEffect(() => {
+    if (isOpen && userRoleIdsString) {
+      setSelectedRoleIds(userRoleIdsString.split(',').filter(Boolean))
+    } else if (isOpen && userRoles.length === 0) {
       setSelectedRoleIds([])
     }
-  }, [userRoles])
+  }, [isOpen, userRoleIdsString])
 
   // Mutation for assigning role
   const assignMutation = useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) => 
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
       rbacClient.assignRoleToUser(userId, roleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles', user?.id] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('Rol succesvol toegewezen')
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error)
+      const code = getErrorCode(error)
+      console.error('❌ Assign role failed:', { message, code, error })
+      toast.error(`Rol toewijzen mislukt: ${message}`)
     }
   })
 
   // Mutation for removing role
   const removeMutation = useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) => 
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
       rbacClient.removeRoleFromUser(userId, roleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles', user?.id] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('Rol succesvol verwijderd')
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error)
+      const code = getErrorCode(error)
+      console.error('❌ Remove role failed:', { message, code, error })
+      toast.error(`Rol verwijderen mislukt: ${message}`)
     }
   })
 
@@ -105,11 +146,58 @@ export function UserRoleAssignmentModal({ user, isOpen, onClose }: UserRoleAssig
           </div>
         </div>
 
+        {/* Error State */}
+        {userRolesError && (
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <h4 className="font-semibold text-red-900 dark:text-red-200 mb-1">
+                  Backend Error (500)
+                </h4>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                  {getErrorMessage(userRolesError)}
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-mono mb-2">
+                  Error code: {getErrorCode(userRolesError) || 'HTTP_500'}
+                </p>
+                <details className="text-xs text-red-600 dark:text-red-400">
+                  <summary className="cursor-pointer hover:text-red-700 dark:hover:text-red-300 mb-1">
+                    Technische details (voor developers)
+                  </summary>
+                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/50 rounded border border-red-200 dark:border-red-800">
+                    <p className="mb-1">
+                      <strong>Endpoint:</strong> GET /api/users/{user?.id}/roles
+                    </p>
+                    <p className="mb-1">
+                      <strong>User ID:</strong> {user?.id}
+                    </p>
+                    <p>
+                      <strong>Mogelijke oorzaken:</strong>
+                    </p>
+                    <ul className="list-disc list-inside ml-2 mt-1 space-y-1">
+                      <li>Backend RBAC endpoints zijn niet correct geïmplementeerd</li>
+                      <li>Database user_roles table bestaat niet of heeft verkeerde schema</li>
+                      <li>Permission checks in backend falen</li>
+                      <li>Backend V1.49 updates zijn niet compleet</li>
+                    </ul>
+                    <p className="mt-2 text-xs">
+                      Check backend logs voor exacte error details
+                    </p>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
-        ) : (
+        ) : !userRolesError && (
           <>
             {/* Roles List */}
             <div className={cc.spacing.section.md}>

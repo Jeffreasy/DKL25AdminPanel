@@ -4,8 +4,11 @@ import type { Permission } from '../../users/types'
 export interface User {
   id: string
   email: string | undefined
-  role: string // Legacy field - deprecated
-  roles?: Array<{ id: string; name: string; description?: string }> // RBAC roles
+  // DEPRECATED: Legacy field - will be removed in future version
+  // Use roles array instead
+  role?: string
+  // RBAC roles - primary source
+  roles: Array<{ id: string; name: string; description?: string }>
   permissions?: Permission[]
   metadata?: Record<string, unknown>
   user_metadata?: {
