@@ -87,7 +87,7 @@ export function useAvailablePhotos(options: UseAvailablePhotosOptions = {}): Use
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('jwtToken')
+      const token = localStorage.getItem('auth_token')
       if (!token) {
         throw new Error('Geen actieve gebruikerssessie gevonden')
       }

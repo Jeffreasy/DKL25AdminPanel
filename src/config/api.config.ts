@@ -7,6 +7,8 @@ interface APIConfig {
   baseURL: string;
   wsURL: string;
   emailURL: string;
+  emailApiKey: string;
+  supabaseURL: string;
   timeout: number;
   environment: 'development' | 'production';
 }
@@ -48,6 +50,25 @@ const getEmailURL = (): string => {
 };
 
 /**
+ * Haal Email API Key uit environment variabelen
+ */
+const getEmailApiKey = (): string => {
+  return import.meta.env.VITE_EMAIL_API_KEY || '';
+};
+
+/**
+ * Haal Supabase API URL uit environment variabelen
+ */
+const getSupabaseURL = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Fallback naar standaard Supabase URL
+  return '';
+};
+
+/**
  * Bepaal huidige environment
  */
 const getEnvironment = (): 'development' | 'production' => {
@@ -70,6 +91,8 @@ export const apiConfig: APIConfig = {
   baseURL: getAPIBaseURL(),
   wsURL: getWSURL(),
   emailURL: getEmailURL(),
+  emailApiKey: getEmailApiKey(),
+  supabaseURL: getSupabaseURL(),
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
   environment: getEnvironment(),
 };
@@ -88,6 +111,8 @@ if (isDevelopment()) {
   console.log('Base URL:', apiConfig.baseURL);
   console.log('WebSocket URL:', apiConfig.wsURL);
   console.log('Email URL:', apiConfig.emailURL);
+  console.log('Email API Key:', apiConfig.emailApiKey ? '***' + apiConfig.emailApiKey.slice(-4) : 'Not set');
+  console.log('Supabase URL:', apiConfig.supabaseURL);
   console.log('Timeout:', apiConfig.timeout + 'ms');
   console.log('Environment:', apiConfig.environment);
   console.groupEnd();
@@ -108,6 +133,14 @@ export const cloudinaryConfig = {
 export const appConfig = {
   appURL: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
   debug: import.meta.env.VITE_DEBUG === 'true',
+};
+
+/**
+ * Email configuratie
+ */
+export const emailConfig = {
+  defaultFromAddress: 'info@dekoninklijkeloop.nl',
+  defaultFromName: 'DKL25 Team',
 };
 
 export default apiConfig;

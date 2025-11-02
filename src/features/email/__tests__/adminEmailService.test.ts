@@ -1,15 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { adminEmailService } from '../adminEmailService'
-import { supabase } from '../../../api/client/supabase'
 
-// Mock Supabase
-vi.mock('../../../api/client/supabase', () => ({
-  supabase: {
-    from: vi.fn(),
-    auth: {
-      getSession: vi.fn(),
-    },
+// Mock fetch
+global.fetch = vi.fn()
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+}
+global.localStorage = localStorageMock as any
+
+// Mock config
+vi.mock('../../../config/api.config', () => ({
+  apiConfig: {
+    emailURL: 'https://test-email-api.com',
+    emailApiKey: 'test-api-key'
   },
+  emailConfig: {
+    defaultFromAddress: 'test@example.com'
+  }
 }))
 
 describe('adminEmailService', () => {
@@ -17,443 +29,262 @@ describe('adminEmailService', () => {
     vi.clearAllMocks()
   })
 
-  describe('getAutoResponses', () => {
-    it('fetches auto responses successfully', async () => {
-      const mockResponses = [
-        { 
-          id: '1', 
-          name: 'Welcome', 
-          trigger_event: 'registration',
-          subject: 'Welcome!',
-          body: 'Welcome to our service',
-          template_variables: {},
-          is_active: true,
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01',
-        },
-        { 
-          id: '2', 
-          name: 'Confirmation', 
-          trigger_event: 'contact',
-          subject: 'Confirmed',
-          body: 'Your message was received',
-          template_variables: {},
-          is_active: true,
-          created_at: '2024-01-02',
-          updated_at: '2024-01-02',
-        },
-      ]
-
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockOrder = vi.fn().mockResolvedValue({ data: mockResponses, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        order: mockOrder,
-      } as any)
-
-      const result = await adminEmailService.getAutoResponses()
-
-      expect(supabase.from).toHaveBeenCalledWith('email_autoresponse')
-      expect(mockSelect).toHaveBeenCalledWith('*')
-      expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false })
-      expect(result).toEqual(mockResponses)
-      expect(result).toHaveLength(2)
-    })
-
-    it('throws error on fetch failure', async () => {
-      const mockError = new Error('Database error')
-
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        order: mockOrder,
-      } as any)
-
-      await expect(adminEmailService.getAutoResponses()).rejects.toThrow('Database error')
-    })
-
-    it('returns empty array when no responses', async () => {
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        order: mockOrder,
-      } as any)
-
-      const result = await adminEmailService.getAutoResponses()
-
-      expect(result).toEqual([])
-    })
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
-  describe('createAutoResponse', () => {
-    it('creates auto response successfully', async () => {
-      const newResponse = {
-        name: 'Test Response',
-        trigger_event: 'registration' as const,
+  describe('sendEmail', () => {
+    it('should send email with JWT token when available', async () => {
+      // Mock JWT token in localStorage
+      vi.mocked(localStorageMock.getItem).mockReturnValue('mock-jwt-token')
+
+      // Mock successful fetch response
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'email-123' })
+      } as Response)
+
+      // Mock logEmailEvent
+      const logSpy = vi.spyOn(adminEmailService, 'logEmailEvent').mockResolvedValue(undefined)
+
+      const result = await adminEmailService.sendEmail({
+        to: 'recipient@example.com',
         subject: 'Test Subject',
-        body: 'Test body with {name}',
-        template_variables: { name: 'User' },
-        is_active: true,
-      }
+        body: '<p>Test body</p>'
+      })
 
-      const createdResponse = {
-        id: '1',
-        ...newResponse,
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
-      }
-
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: createdResponse, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
-
-      const result = await adminEmailService.createAutoResponse(newResponse)
-
-      expect(supabase.from).toHaveBeenCalledWith('email_autoresponse')
-      expect(mockInsert).toHaveBeenCalledWith(newResponse)
-      expect(mockSelect).toHaveBeenCalled()
-      expect(mockSingle).toHaveBeenCalled()
-      expect(result).toEqual(createdResponse)
-      expect(result.id).toBe('1')
+      expect(result).toEqual({ success: true, id: 'email-123' })
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test-email-api.com/api/mail/send',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-jwt-token'
+          })
+        })
+      )
+      expect(logSpy).toHaveBeenCalled()
     })
 
-    it('throws error on create failure', async () => {
-      const newResponse = {
-        name: 'Test',
-        trigger_event: 'contact' as const,
+    it('should send email via API key when no JWT token', async () => {
+      // Mock no JWT token
+      vi.mocked(localStorageMock.getItem).mockReturnValue(null)
+
+      // Mock successful fetch response
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ messageId: 'msg-456' })
+      } as Response)
+
+      const logSpy = vi.spyOn(adminEmailService, 'logEmailEvent').mockResolvedValue(undefined)
+
+      const result = await adminEmailService.sendEmail({
+        to: 'recipient@example.com',
+        subject: 'Test Subject',
+        body: '<p>Test body</p>'
+      })
+
+      expect(result).toEqual({ success: true, id: 'msg-456' })
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test-email-api.com/api/mail/send',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer test-api-key'
+          })
+        })
+      )
+      expect(logSpy).toHaveBeenCalled()
+    })
+
+    it('should use default from address when not provided', async () => {
+      vi.mocked(localStorageMock.getItem).mockReturnValue(null)
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'email-789' })
+      } as Response)
+
+      const logSpy = vi.spyOn(adminEmailService, 'logEmailEvent').mockResolvedValue(undefined)
+
+      await adminEmailService.sendEmail({
+        to: 'recipient@example.com',
         subject: 'Test',
-        body: 'Test',
-        template_variables: {},
-        is_active: true,
-      }
+        body: 'Test'
+      })
 
-      const mockError = new Error('Create failed')
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining('"from":"test@example.com"')
+        })
+      )
+      expect(logSpy).toHaveBeenCalled()
+    })
 
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: mockError })
+    it('should throw error when fetch fails', async () => {
+      vi.mocked(localStorageMock.getItem).mockReturnValue(null)
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: false,
+        statusText: 'Internal Server Error',
+        text: async () => JSON.stringify({ error: 'Server error' })
+      } as Response)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
-
-      await expect(adminEmailService.createAutoResponse(newResponse)).rejects.toThrow('Create failed')
+      await expect(
+        adminEmailService.sendEmail({
+          to: 'recipient@example.com',
+          subject: 'Test',
+          body: 'Test'
+        })
+      ).rejects.toThrow('Server error')
     })
   })
 
-  describe('updateAutoResponse', () => {
-    it('updates auto response successfully', async () => {
-      const updates = { 
-        subject: 'Updated Subject',
-        is_active: false,
+  describe('getAllEmails', () => {
+    it('should fetch and map emails correctly', async () => {
+      const mockResponse = {
+        emails: [
+          {
+            id: '1',
+            message_id: 'msg-1',
+            sender: 'sender@example.com',
+            to: 'recipient@example.com',
+            subject: 'Test Email',
+            html: '<p>Test content</p>',
+            content_type: 'text/html',
+            received_at: '2024-01-01T12:00:00Z',
+            uid: 'uid-1',
+            account_type: 'info',
+            read: false,
+            processed_at: null,
+            created_at: '2024-01-01T12:00:00Z',
+            updated_at: '2024-01-01T12:00:00Z'
+          }
+        ],
+        totalCount: 1
       }
 
-      const updatedResponse = {
-        id: '1',
-        name: 'Test',
-        trigger_event: 'registration' as const,
-        body: 'Body',
-        template_variables: {},
-        created_at: '2024-01-01',
-        updated_at: '2024-01-02',
-        ...updates,
-      }
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse
+      } as Response)
 
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: updatedResponse, error: null })
+      const result = await adminEmailService.getAllEmails(10, 0)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
-
-      const result = await adminEmailService.updateAutoResponse('1', updates)
-
-      expect(supabase.from).toHaveBeenCalledWith('email_autoresponse')
-      expect(mockUpdate).toHaveBeenCalledWith(updates)
-      expect(mockEq).toHaveBeenCalledWith('id', '1')
-      expect(result.subject).toBe('Updated Subject')
-      expect(result.is_active).toBe(false)
+      expect(result.emails).toHaveLength(1)
+      expect(result.totalCount).toBe(1)
+      expect(result.emails[0].subject).toBe('Test Email')
     })
 
-    it('throws error on update failure', async () => {
-      const mockError = new Error('Update failed')
+    it('should handle invalid response format', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ invalid: 'format' })
+      } as Response)
 
-      const mockUpdate = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        update: mockUpdate,
-        eq: mockEq,
-        select: mockSelect,
-        single: mockSingle,
-      } as any)
-
-      await expect(adminEmailService.updateAutoResponse('1', {})).rejects.toThrow('Update failed')
+      await expect(adminEmailService.getAllEmails()).rejects.toThrow(
+        'Onverwacht formaat ontvangen van de email API'
+      )
     })
   })
 
-  describe('deleteAutoResponse', () => {
-    it('deletes auto response successfully', async () => {
-      const mockDelete = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockResolvedValue({ error: null })
+  describe('markAsRead', () => {
+    it('should mark email as read', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({})
+      } as Response)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        delete: mockDelete,
-        eq: mockEq,
-      } as any)
+      const result = await adminEmailService.markAsRead('email-1')
 
-      await adminEmailService.deleteAutoResponse('1')
-
-      expect(supabase.from).toHaveBeenCalledWith('email_autoresponse')
-      expect(mockDelete).toHaveBeenCalled()
-      expect(mockEq).toHaveBeenCalledWith('id', '1')
-    })
-
-    it('throws error on delete failure', async () => {
-      const mockError = new Error('Delete failed')
-
-      const mockDelete = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockResolvedValue({ error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        delete: mockDelete,
-        eq: mockEq,
-      } as any)
-
-      await expect(adminEmailService.deleteAutoResponse('1')).rejects.toThrow('Delete failed')
+      expect(result).toEqual({ success: true })
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test-email-api.com/api/mail/email-1/processed',
+        expect.objectContaining({
+          method: 'PUT'
+        })
+      )
     })
   })
 
-  describe('fetchAanmeldingenEmails', () => {
-    it('fetches unique emails successfully', async () => {
-      const mockData = [
-        { email: 'user1@example.com' },
-        { email: 'user2@example.com' },
-        { email: 'user1@example.com' }, // Duplicate
-        { email: 'user3@example.com' },
-      ]
+  describe('deleteEmail', () => {
+    it('should delete email successfully', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({})
+      } as Response)
 
-      const mockSelect = vi.fn().mockResolvedValue({ data: mockData, error: null })
+      const result = await adminEmailService.deleteEmail('email-1')
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-      } as any)
+      expect(result).toEqual({ success: true })
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test-email-api.com/api/mail/email-1',
+        expect.objectContaining({
+          method: 'DELETE'
+        })
+      )
+    })
+  })
 
-      const result = await adminEmailService.fetchAanmeldingenEmails()
+  describe('getUnreadCount', () => {
+    it('should return count of unread emails', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => [{ id: '1' }, { id: '2' }, { id: '3' }]
+      } as Response)
 
-      expect(supabase.from).toHaveBeenCalledWith('aanmeldingen')
-      expect(mockSelect).toHaveBeenCalledWith('email')
-      expect(result).toHaveLength(3)
-      expect(result).toContain('user1@example.com')
-      expect(result).toContain('user2@example.com')
-      expect(result).toContain('user3@example.com')
+      const count = await adminEmailService.getUnreadCount()
+
+      expect(count).toBe(3)
     })
 
-    it('filters out empty and whitespace emails', async () => {
-      const mockData = [
-        { email: 'user1@example.com' },
-        { email: '' },
-        { email: '   ' },
-        { email: 'user2@example.com' },
-        { email: null },
-      ]
+    it('should return 0 for non-array response', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ count: 5 })
+      } as Response)
 
-      const mockSelect = vi.fn().mockResolvedValue({ data: mockData, error: null })
+      const count = await adminEmailService.getUnreadCount()
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-      } as any)
-
-      const result = await adminEmailService.fetchAanmeldingenEmails()
-
-      expect(result).toHaveLength(2)
-      expect(result).toEqual(['user1@example.com', 'user2@example.com'])
+      expect(count).toBe(0)
     })
+  })
 
-    it('returns empty array on error', async () => {
-      const mockError = new Error('Database error')
+  describe('fetchNewEmails', () => {
+    it('should trigger email fetch', async () => {
+      const mockResponse = {
+        message: 'Fetched 5 new emails',
+        fetchTime: '2024-01-01T12:00:00Z'
+      }
 
-      const mockSelect = vi.fn().mockResolvedValue({ data: null, error: mockError })
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse
+      } as Response)
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-      } as any)
+      const result = await adminEmailService.fetchNewEmails()
 
-      const result = await adminEmailService.fetchAanmeldingenEmails()
-
-      expect(result).toEqual([])
-    })
-
-    it('handles null data gracefully', async () => {
-      const mockSelect = vi.fn().mockResolvedValue({ data: null, error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-      } as any)
-
-      const result = await adminEmailService.fetchAanmeldingenEmails()
-
-      expect(result).toEqual([])
+      expect(result.message).toBe('Fetched 5 new emails')
+      expect(result.fetchTime).toBe('2024-01-01T12:00:00Z')
     })
   })
 
   describe('replaceTemplateVariables', () => {
-    it('replaces single variable', () => {
-      const template = 'Hello {name}!'
-      const variables = { name: 'John' }
-
-      const result = adminEmailService.replaceTemplateVariables(template, variables)
-
-      expect(result).toBe('Hello John!')
-    })
-
-    it('replaces multiple variables', () => {
-      const template = 'Hello {name}, your order {orderId} is ready!'
+    it('should replace template variables correctly', () => {
+      const template = 'Hello {name}, your order {orderId} is ready'
       const variables = { name: 'John', orderId: '12345' }
 
       const result = adminEmailService.replaceTemplateVariables(template, variables)
 
-      expect(result).toBe('Hello John, your order 12345 is ready!')
+      expect(result).toBe('Hello John, your order 12345 is ready')
     })
 
-    it('keeps unmatched variables unchanged', () => {
-      const template = 'Hello {name}, {unknown} variable'
+    it('should keep unmatched placeholders', () => {
+      const template = 'Hello {name}, your {missing} variable'
       const variables = { name: 'John' }
 
       const result = adminEmailService.replaceTemplateVariables(template, variables)
 
-      expect(result).toBe('Hello John, {unknown} variable')
-    })
-
-    it('handles empty template', () => {
-      const result = adminEmailService.replaceTemplateVariables('', {})
-
-      expect(result).toBe('')
-    })
-
-    it('handles template with no variables', () => {
-      const template = 'Hello world!'
-      const result = adminEmailService.replaceTemplateVariables(template, {})
-
-      expect(result).toBe('Hello world!')
-    })
-  })
-
-  describe('logEmailEvent', () => {
-    it('logs email event successfully', async () => {
-      const mockInsert = vi.fn().mockResolvedValue({ error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-      } as any)
-
-      await adminEmailService.logEmailEvent({
-        event_type: 'sent',
-        from_email: 'admin@example.com',
-        to_email: 'user@example.com',
-        subject: 'Test',
-        email_id: 'email-123',
-      })
-
-      expect(supabase.from).toHaveBeenCalledWith('email_events')
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event_type: 'sent',
-          from_email: 'admin@example.com',
-          to_email: 'user@example.com',
-          subject: 'Test',
-          email_id: 'email-123',
-          timestamp: expect.any(String),
-          metadata: {},
-        })
-      )
-    })
-
-    it('handles logging errors gracefully', async () => {
-      const mockError = new Error('Insert failed')
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-      } as any)
-
-      // Should not throw, just log error
-      await expect(
-        adminEmailService.logEmailEvent({
-          event_type: 'sent',
-          from_email: 'admin@example.com',
-          to_email: 'user@example.com',
-          subject: 'Test',
-          email_id: 'email-123',
-        })
-      ).resolves.toBeUndefined()
-    })
-
-    it('handles table not exists error', async () => {
-      const mockError = { code: '42P01', message: 'Table does not exist' }
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: mockError })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-      } as any)
-
-      // Should not throw
-      await expect(
-        adminEmailService.logEmailEvent({
-          event_type: 'sent',
-          from_email: 'admin@example.com',
-          to_email: 'user@example.com',
-          subject: 'Test',
-          email_id: 'email-123',
-        })
-      ).resolves.toBeUndefined()
-    })
-
-    it('uses provided timestamp', async () => {
-      const customTimestamp = '2024-01-01T12:00:00Z'
-
-      const mockInsert = vi.fn().mockResolvedValue({ error: null })
-
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: mockInsert,
-      } as any)
-
-      await adminEmailService.logEmailEvent({
-        event_type: 'sent',
-        from_email: 'admin@example.com',
-        to_email: 'user@example.com',
-        subject: 'Test',
-        email_id: 'email-123',
-        timestamp: customTimestamp,
-      })
-
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          timestamp: customTimestamp,
-        })
-      )
+      expect(result).toBe('Hello John, your {missing} variable')
     })
   })
 })

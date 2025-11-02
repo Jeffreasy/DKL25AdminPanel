@@ -2,9 +2,13 @@ import type { Email } from '../types'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { cc } from '../../../styles/shared'
+import DOMPurify from 'dompurify'
+import { ArrowUturnLeftIcon, ArrowUturnRightIcon } from '@heroicons/react/24/outline'
 
 interface EmailDetailProps {
   email: Email
+  onReply?: (email: Email) => void
+  onForward?: (email: Email) => void
 }
 
 /**
@@ -16,7 +20,19 @@ interface EmailDetailProps {
  * - Shows converted charsets (Windows-1252, ISO-8859-1, etc.)
  * - Renders clean HTML without MIME boundaries
  */
-export default function EmailDetail({ email }: EmailDetailProps) {
+export default function EmailDetail({ email, onReply, onForward }: EmailDetailProps) {
+  // Sanitize HTML content to prevent XSS attacks
+  const sanitizedHtml = DOMPurify.sanitize(email.html || '', {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span'
+    ],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style', 'target', 'rel'],
+    ALLOW_DATA_ATTR: false,
+    ADD_ATTR: ['target', 'rel']
+  })
+
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg h-full flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
       {/* Header Section */}
@@ -48,6 +64,32 @@ export default function EmailDetail({ email }: EmailDetailProps) {
             </p>
           )}
         </div>
+        
+        {/* Reply/Forward Actions */}
+        {(onReply || onForward) && (
+          <div className={`flex ${cc.spacing.gap.sm} mt-3`}>
+            {onReply && (
+              <button
+                onClick={() => onReply(email)}
+                className={cc.button.base({ color: 'secondary', size: 'sm' })}
+                title="Beantwoorden"
+              >
+                <ArrowUturnLeftIcon className="h-4 w-4 mr-1" />
+                Beantwoorden
+              </button>
+            )}
+            {onForward && (
+              <button
+                onClick={() => onForward(email)}
+                className={cc.button.base({ color: 'secondary', size: 'sm' })}
+                title="Doorsturen"
+              >
+                <ArrowUturnRightIcon className="h-4 w-4 mr-1" />
+                Doorsturen
+              </button>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Body Section - Optimized for decoded content */}
@@ -64,7 +106,9 @@ export default function EmailDetail({ email }: EmailDetailProps) {
             leading-relaxed
             break-words
           "
-          dangerouslySetInnerHTML={{ __html: email.html || '<p class="text-gray-500 dark:text-gray-400 italic">Geen inhoud beschikbaar</p>' }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizedHtml || '<p class="text-gray-500 dark:text-gray-400 italic">Geen inhoud beschikbaar</p>'
+          }}
         />
       </div>
     </div>

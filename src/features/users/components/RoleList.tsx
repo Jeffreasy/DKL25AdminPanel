@@ -69,9 +69,24 @@ export function RoleList() {
 
   const updatePermissionsMutation = useMutation({
     mutationFn: async ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) => {
-      // For each permission, assign to role
-      for (const permissionId of permissionIds) {
-        await rbacClient.assignPermissionToRole(roleId, permissionId);
+      // Get current role to see existing permissions
+      const currentRole = roles.find((r: Role) => r.id === roleId)
+      const currentPermissionIds = currentRole?.permissions?.map(p => p.id) || []
+      
+      // Find permissions to add (new selections)
+      const toAdd = permissionIds.filter(id => !currentPermissionIds.includes(id))
+      
+      // Find permissions to remove (deselected)
+      const toRemove = currentPermissionIds.filter(id => !permissionIds.includes(id))
+      
+      // Remove deselected permissions
+      for (const permissionId of toRemove) {
+        await rbacClient.removePermissionFromRole(roleId, permissionId)
+      }
+      
+      // Add new permissions
+      for (const permissionId of toAdd) {
+        await rbacClient.assignPermissionToRole(roleId, permissionId)
       }
     },
     onSuccess: () => {
@@ -101,7 +116,19 @@ export function RoleList() {
     if (selectedRole) {
       await updateMutation.mutateAsync({ id: selectedRole.id, data: values })
     } else {
-      await createMutation.mutateAsync(values)
+      // Create role first (backend doesn't accept permission_ids in create)
+      const createdRole = await createMutation.mutateAsync({
+        name: values.name,
+        description: values.description
+      })
+      
+      // Then assign permissions if any were selected
+      if (values.permission_ids && values.permission_ids.length > 0 && createdRole?.id) {
+        await updatePermissionsMutation.mutateAsync({
+          roleId: createdRole.id,
+          permissionIds: values.permission_ids
+        })
+      }
     }
   }
 

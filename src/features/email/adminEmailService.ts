@@ -1,12 +1,23 @@
-import { supabase } from '../../api/client/supabase'
+import { apiConfig, emailConfig } from '../../config/api.config'
 import type { AutoResponse, Email, PaginatedEmailResponse, EmailFetchResponse } from './types'
 import type { Aanmelding } from '../aanmeldingen/types'
+
+// Helper to get JWT token from localStorage
+const getAuthToken = (): string | null => {
+  try {
+    // Match AuthProvider's token storage key
+    const token = localStorage.getItem('jwtToken')
+    return token
+  } catch {
+    return null
+  }
+}
 
 interface SendEmailParams {
   to: string | string[]
   subject: string
   body?: string
-  from: string
+  from?: string
   replyTo?: string
   template?: string
   template_variables?: Record<string, string>
@@ -21,22 +32,21 @@ interface EmailEventData {
   timestamp?: string
 }
 
-// API configuratie
-const API_BASE_URL = import.meta.env.VITE_EMAIL_API_URL || 'https://dklemailservice.onrender.com';
-const API_KEY = import.meta.env.VITE_EMAIL_API_KEY || '';
-
 // Helper functie voor het toevoegen van de auth header
-const getAuthHeaders = () => {
-  // Basis headers
+const getAuthHeaders = (useJWT: boolean = false) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
   
-  // Voeg Authorization header toe als API_KEY niet leeg is
-  if (API_KEY && API_KEY.trim() !== '') {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
+  if (useJWT) {
+    const token = getAuthToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+  } else if (apiConfig.emailApiKey && apiConfig.emailApiKey.trim() !== '') {
+    headers['Authorization'] = `Bearer ${apiConfig.emailApiKey}`;
   } else {
-    console.warn('API key is leeg. Zorg ervoor dat VITE_EMAIL_API_KEY is ingesteld in de .env file.');
+    console.warn('Email API key is niet ingesteld. Zorg ervoor dat VITE_EMAIL_API_KEY is ingesteld in de .env file.');
   }
   
   return headers;
@@ -72,11 +82,11 @@ interface EmailResponse {
   error?: string
 }
 
-// Functie voor het versturen van bevestigingse-mails (behouden voor compatibiliteit)
-async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
+// Functie voor het versturen van bevestigingse-mails (gebruikt unified send functie)
+export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<void> {
+  console.log('Starting email send process for:', aanmelding.email)
+
   try {
-    console.log(`Attempting to send email via ${url}`)
-    
     const payload = {
       to: aanmelding.email,
       naam: aanmelding.naam,
@@ -86,25 +96,15 @@ async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
       bijzonderheden: aanmelding.bijzonderheden || ''
     }
     
-    console.log('Request payload:', payload)
-    
-    const headers = getAuthHeaders();
-    const response = await fetch(`${url}/api/email/send-confirmation`, {
+    const headers = getAuthHeaders()
+    const response = await fetch(`${apiConfig.emailURL}/api/email/send-confirmation`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)
     })
 
-    console.log(`Raw response from ${url}:`, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    })
-
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Response error text:', errorText)
-      
       let errorData: { message?: string }
       try {
         errorData = JSON.parse(errorText)
@@ -113,168 +113,135 @@ async function sendEmail(url: string, aanmelding: Aanmelding): Promise<void> {
       }
       
       throw new Error(
-        errorData.message || 
+        errorData.message ||
         `Server responded with ${response.status}: ${response.statusText}`
       )
     }
 
     const data = await response.json() as EmailResponse
-    console.log('Parsed response data:', data)
-    
     if (!data.success) {
       throw new Error(data.message || 'Email service returned failure status')
     }
 
   } catch (error) {
-    console.error(`Failed to send email via ${url}:`, error)
+    console.error('Failed to send confirmation email:', error)
     throw error
   }
 }
 
-// Behouden voor compatibiliteit
-export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<void> {
-  console.log('Starting email send process for:', aanmelding.email)
-
-  let lastError: Error | null = null
-
-  // Probeer eerst development
-  try {
-    const DEV_API_URL = import.meta.env.VITE_DEV_API_URL || 'http://localhost:5173'
-    console.log('Attempting development server...')
-    await sendEmail(DEV_API_URL, aanmelding)
-    console.log('Successfully sent via development server')
-    return
-  } catch (error) {
-    console.warn('Development server failed:', error)
-    lastError = error as Error
-  }
-    
-  // Probeer productie als fallback
-  try {
-    const PROD_API_URL = import.meta.env.VITE_APP_URL
-    console.log('Attempting production server...')
-    await sendEmail(PROD_API_URL, aanmelding)
-    console.log('Successfully sent via production server')
-    return
-  } catch (error) {
-    console.error('Production server also failed:', error)
-    
-    // Combineer de errors voor een betere error message
-    throw new Error(
-      'Kon geen verbinding maken met de email service. ' +
-      `Development error: ${lastError?.message}. ` +
-      `Production error: ${(error as Error).message}`
-    )
-  }
-}
-
-
-interface SendAdminMailPayload {
-  to: string; // Comma-separated if multiple
-  subject: string;
-  body: string; // Assumed to be HTML
-  from?: string; // Add optional from field
-}
-
 export const adminEmailService = {
-  // N8N email functie - VERWIJDERD
-  // async sendViaN8N(params: SendEmailParams) { ... }
-
-  // Admin email versturen (nu via custom backend API)
-  async sendAdminEmail(params: SendEmailParams): Promise<{ success: boolean; id?: string }> {
+  /**
+   * Unified email send functie
+   * Gebruikt Go backend email API
+   */
+  async sendEmail(params: SendEmailParams): Promise<{ success: boolean; id?: string }> {
     try {
-      // Aanroep naar de custom backend API
-      const url = `${API_BASE_URL}/api/mail/send`; // Aanname: endpoint bestaat
-      const headers = getAuthHeaders();
+      // Check for JWT token
+      const token = getAuthToken()
+      const useAuthEndpoint = !!token
+      
+      // Use Go backend URL
+      const url = `${apiConfig.emailURL}/api/mail/send`
+      const headers = getAuthHeaders(useAuthEndpoint)
       
       const payload = {
-          from: params.from,
-          to: Array.isArray(params.to) ? params.to.join(',') : params.to,
-          subject: params.subject,
-        html: params.body || '', // Gebruik html ipv body? Of beide?
-          replyTo: params.replyTo,
-        template: params.template, // Ondersteunt backend templates?
-        templateVariables: params.template_variables // Ondersteunt backend dit?
-      };
+        from: params.from || emailConfig.defaultFromAddress,
+        to: Array.isArray(params.to) ? params.to.join(',') : params.to,
+        subject: params.subject,
+        body: params.body || '',
+        html: params.body || '',
+        replyTo: params.replyTo,
+        template: params.template,
+        templateVariables: params.template_variables
+      }
 
       const response = await fetch(url, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)
-      });
+      })
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Failed to get error details');
-        let errorMessage = `Error sending email via backend: ${response.statusText}`;
+        const errorText = await response.text().catch(() => 'Failed to get error details')
+        let errorMessage = `Error sending email: ${response.statusText}`
         try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorJson.message || errorMessage;
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
         } catch { /* Ignore parsing error */ }
-        throw new Error(errorMessage);
+        throw new Error(errorMessage)
       }
 
-      const result = await response.json(); // Wat retourneert de backend?
-      const emailId = result?.id || result?.messageId || undefined; // Probeer een ID te vinden voor logging
+      const result = await response.json()
+      const emailId = result?.id || result?.messageId || undefined
 
-      // Log het event als het versturen succesvol leek
+      // Log het event
       await this.logEmailEvent({
         event_type: 'sent',
-        from_email: params.from,
+        from_email: params.from || emailConfig.defaultFromAddress,
         to_email: Array.isArray(params.to) ? params.to.join(', ') : params.to,
         subject: params.subject,
-        email_id: emailId || 'unknown' // Gebruik ID van backend response indien beschikbaar
-      });
+        email_id: emailId || 'unknown'
+      })
 
-      return { success: true, id: emailId };
+      return { success: true, id: emailId }
 
     } catch (error) {
-      console.error('Failed to send admin email:', error);
-      // Loggen dat het versturen mislukt is?
-      // await this.logEmailEvent({ event_type: 'send_failed', ... });
-      throw error; // Re-throw voor de UI
+      console.error('Failed to send email:', error)
+      throw error
     }
   },
 
-  // Autoresponse functies (blijven werken via aangepaste sendAdminEmail)
+  /**
+   * Get autoresponse templates from Go backend
+   * GET /api/mail/autoresponse?trigger=:event&active=true
+   */
   async sendAutoResponse(triggerEvent: string, variables: Record<string, string>) {
-    const { data: autoResponse } = await supabase
-      .from('email_autoresponse')
-      .select('*')
-      .eq('trigger_event', triggerEvent)
-      .eq('is_active', true)
-      .single()
+    try {
+      const headers = getAuthHeaders(true)
+      const response = await fetch(
+        `${apiConfig.emailURL}/api/mail/autoresponse?trigger=${triggerEvent}&active=true`,
+        { headers }
+      )
 
-    if (!autoResponse) return
+      if (!response.ok) {
+        console.error('Failed to fetch autoresponse template')
+        return
+      }
 
-    // Roep de aangepaste sendAdminEmail aan
-    return this.sendAdminEmail({
-      to: variables.email,
-      from: 'no-reply@dekoninklijkeloop.nl', // Moet dit configureerbaar zijn?
-      subject: autoResponse.subject,
-      template: autoResponse.name, // Backend moet dit ondersteunen
-      template_variables: variables // Backend moet dit ondersteunen
-    })
+      const autoResponse = await response.json() as AutoResponse
+      if (!autoResponse) return
+
+      return this.sendEmail({
+        to: variables.email,
+        from: emailConfig.defaultFromAddress,
+        subject: autoResponse.subject,
+        template: autoResponse.name,
+        template_variables: variables
+      })
+    } catch (error) {
+      console.error('Error in sendAutoResponse:', error)
+    }
   },
 
-  // Database logging
+  /**
+   * Log email events to Go backend
+   * POST /api/mail/events
+   */
   async logEmailEvent(event: EmailEventData) {
     try {
-      const { error } = await supabase
-        .from('email_events')
-        .insert({
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/events`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
           ...event,
           timestamp: event.timestamp || new Date().toISOString(),
           metadata: {}
         })
-      
-      if (error) {
-        // Log de error maar laat de applicatie doordraaien
-        console.error('Failed to log email event:', error)
-        
-        // Als de tabel niet bestaat, probeer deze aan te maken
-        if (error.code === '42P01') {
-          console.log('Email events table does not exist, application will continue')
-        }
+      })
+
+      if (!response.ok) {
+        console.error('Failed to log email event:', await response.text())
       }
     } catch (error) {
       // Vang alle errors op maar laat de applicatie doordraaien
@@ -286,43 +253,80 @@ export const adminEmailService = {
   // async verifyEmailAddress(email: string) { ... }
   // async checkEmailVerification(email: string): Promise<boolean> { ... }
 
-  // Autoresponse management
-  async getAutoResponses() {
-    const { data, error } = await supabase
-      .from('email_autoresponse')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return data as AutoResponse[]
+  /**
+   * Autoresponse management via Go backend
+   */
+  async getAutoResponses(): Promise<AutoResponse[]> {
+    try {
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/autoresponse`, { headers })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch autoresponses')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching autoresponses:', error)
+      throw error
+    }
   },
 
-  async createAutoResponse(autoResponse: Omit<AutoResponse, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('email_autoresponse')
-      .insert(autoResponse)
-      .select()
-      .single()
-    if (error) throw error
-    return data as AutoResponse
+  async createAutoResponse(autoResponse: Omit<AutoResponse, 'id' | 'created_at' | 'updated_at'>): Promise<AutoResponse> {
+    try {
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/autoresponse`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(autoResponse)
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to create autoresponse')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error creating autoresponse:', error)
+      throw error
+    }
   },
 
-  async updateAutoResponse(id: string, updates: Partial<AutoResponse>) {
-    const { data, error } = await supabase
-      .from('email_autoresponse')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data as AutoResponse
+  async updateAutoResponse(id: string, updates: Partial<AutoResponse>): Promise<AutoResponse> {
+    try {
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/autoresponse/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(updates)
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update autoresponse')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error updating autoresponse:', error)
+      throw error
+    }
   },
 
-  async deleteAutoResponse(id: string) {
-    const { error } = await supabase
-      .from('email_autoresponse')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
+  async deleteAutoResponse(id: string): Promise<void> {
+    try {
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/autoresponse/${id}`, {
+        method: 'DELETE',
+        headers
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete autoresponse')
+      }
+    } catch (error) {
+      console.error('Error deleting autoresponse:', error)
+      throw error
+    }
   },
 
   // Helper functie
@@ -341,7 +345,7 @@ export const adminEmailService = {
   ): Promise<PaginatedEmailResponse> {
     console.log(`[getAllEmails] Fetching emails, limit=${limit}, offset=${offset}`)
     try {
-      const url = `${API_BASE_URL}/api/mail?limit=${limit}&offset=${offset}`
+      const url = `${apiConfig.emailURL}/api/mail?limit=${limit}&offset=${offset}`
       const headers = getAuthHeaders()
       const response = await fetch(url, { headers })
       
@@ -386,7 +390,7 @@ export const adminEmailService = {
   ): Promise<PaginatedEmailResponse> {
     console.log(`[getEmailsByAccount] Fetching for ${account}, limit=${limit}, offset=${offset}`)
     try {
-      const url = `${API_BASE_URL}/api/mail/account/${account}?limit=${limit}&offset=${offset}`
+      const url = `${apiConfig.emailURL}/api/mail/account/${account}?limit=${limit}&offset=${offset}`
       const headers = getAuthHeaders()
       const response = await fetch(url, { headers })
       
@@ -427,7 +431,7 @@ export const adminEmailService = {
   async getEmailDetails(id: string): Promise<Email | null> {
     try {
       const headers = getAuthHeaders()
-      const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, { headers })
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}`, { headers })
       
       if (!response.ok) {
         if (response.status === 404) return null
@@ -451,7 +455,7 @@ export const adminEmailService = {
   async markAsRead(id: string): Promise<{ success: boolean }> {
     try {
       const headers = getAuthHeaders()
-      const response = await fetch(`${API_BASE_URL}/api/mail/${id}/processed`, {
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}/processed`, {
         method: 'PUT',
         headers
       })
@@ -475,7 +479,7 @@ export const adminEmailService = {
   async getUnreadCount(): Promise<number> {
     try {
       const headers = getAuthHeaders()
-      const response = await fetch(`${API_BASE_URL}/api/mail/unprocessed`, { headers })
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/unprocessed`, { headers })
       
       if (!response.ok) {
         throw new Error(`Error fetching unread emails: ${response.statusText}`)
@@ -497,7 +501,7 @@ export const adminEmailService = {
   async deleteEmail(id: string): Promise<{ success: boolean }> {
     try {
       const headers = getAuthHeaders()
-      const response = await fetch(`${API_BASE_URL}/api/mail/${id}`, {
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}`, {
         method: 'DELETE',
         headers
       })
@@ -527,7 +531,7 @@ export const adminEmailService = {
   async fetchNewEmails(): Promise<EmailFetchResponse> {
     try {
       const headers = getAuthHeaders()
-      const response = await fetch(`${API_BASE_URL}/api/mail/fetch`, {
+      const response = await fetch(`${apiConfig.emailURL}/api/mail/fetch`, {
         method: 'POST',
         headers
       })
@@ -553,96 +557,39 @@ export const adminEmailService = {
     }
   },
 
-  // NIEUW: Functie om email te versturen als ingelogde admin (via JWT)
-  async sendMailAsAdmin(payload: SendAdminMailPayload): Promise<{ success: boolean }> {
-    console.log('[sendMailAsAdmin] Attempting to send email:', payload);
-    try {
-      // 1. Haal de huidige Supabase sessie en token op
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error('[sendMailAsAdmin] Error getting session:', sessionError);
-        throw new Error('Kon gebruikerssessie niet ophalen.');
-      }
-      if (!session) {
-        console.error('[sendMailAsAdmin] No active session found.');
-        throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in.');
-      }
-      const token = session.access_token;
-
-      // 2. Haal de basis URL van de Vercel/Supabase backend op
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      if (!apiUrl) {
-        console.error('[sendMailAsAdmin] VITE_API_URL is not configured.');
-        throw new Error('API URL niet geconfigureerd.');
-      }
-
-      // 3. Bouw de headers met JWT
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-
-      // 4. Maak de API call naar het nieuwe endpoint
-      const url = `${apiUrl}/api/admin/mail/send`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          to: payload.to, // Backend verwacht komma-gescheiden string
-          subject: payload.subject,
-          body: payload.body, // Backend verwacht HTML body
-          from: payload.from // Pass the 'from' field to the backend API
-        })
-      });
-      console.log(`[sendMailAsAdmin] Response status from ${url}: ${response.status}`);
-
-      // 5. Handel de response af
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Failed to get error details');
-        let errorMessage = `Error sending email via ${url}: ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorJson.message || errorMessage;
-        } catch { /* Ignore parsing error */ }
-        console.error(`[sendMailAsAdmin] Error response: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-
-      // Success
-      console.log('[sendMailAsAdmin] Email sent successfully.');
-      return { success: true };
-
-    } catch (error) {
-      console.error('[sendMailAsAdmin] Failed:', error);
-      throw error; // Re-throw voor de UI laag om af te handelen
-    }
-  },
-
-  // NIEUW: Haal unieke emailadressen op van aanmeldingen
+  /**
+   * Haal unieke emailadressen op van aanmeldingen via Go backend
+   * GET /api/aanmeldingen/emails
+   */
   async fetchAanmeldingenEmails(): Promise<string[]> {
     try {
-      const { data, error } = await supabase
-        .from('aanmeldingen')
-        .select('email')
-        // .neq('email', '') // Optional: exclude empty emails if they can exist
-        // .not('email', 'is', null); // Optional: exclude null emails
+      const headers = getAuthHeaders(true)
+      const response = await fetch(`${apiConfig.emailURL}/api/aanmeldingen/emails`, { headers })
 
-      if (error) {
-        console.error('Error fetching aanmeldingen emails:', error);
-        throw error;
+      if (!response.ok) {
+        console.error('Error fetching aanmeldingen emails')
+        return []
       }
 
-      // Haal unieke, niet-lege emails op
-      const emails = data
-        ?.map(item => item.email)
-        .filter((email): email is string => !!email && email.trim() !== ''); 
-        
-      return [...new Set(emails)]; // Return unique emails
+      const data = await response.json()
+      
+      // Verwacht array van strings
+      if (Array.isArray(data)) {
+        return data.filter((email): email is string => !!email && email.trim() !== '')
+      }
+      
+      // Alternatief: array van objecten met email veld
+      if (data.emails && Array.isArray(data.emails)) {
+        const emailObjects = data.emails as Array<{ email?: string }>
+        return emailObjects
+          .map(item => item.email)
+          .filter((email): email is string => !!email && email.trim() !== '')
+      }
 
+      return []
     } catch (error) {
-      console.error('Failed in fetchAanmeldingenEmails:', error);
-      return []; // Return empty array on failure
+      console.error('Failed in fetchAanmeldingenEmails:', error)
+      return []
     }
   },
 
@@ -666,21 +613,16 @@ export const adminEmailService = {
     failed: number
   }> {
     try {
-      // Haal Supabase sessie op voor JWT auth
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      if (sessionError) {
-        console.error('[reprocessEmails] Error getting session:', sessionError)
-        throw new Error('Kon gebruikerssessie niet ophalen')
-      }
-      if (!session) {
-        console.error('[reprocessEmails] No active session found')
+      // Get JWT token
+      const token = getAuthToken()
+      
+      if (!token) {
+        console.error('[reprocessEmails] No auth token found')
         throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in')
       }
-      const token = session.access_token
 
-      // Roep admin endpoint aan
-      const url = `${API_BASE_URL}/api/admin/mail/reprocess`
+      // Roep Go backend endpoint aan
+      const url = `${apiConfig.emailURL}/api/admin/mail/reprocess`
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`

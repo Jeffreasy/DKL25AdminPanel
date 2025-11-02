@@ -63,7 +63,7 @@ export function UserRoleAssignmentModal({ user, isOpen, onClose }: UserRoleAssig
     } else if (isOpen && userRoles.length === 0) {
       setSelectedRoleIds([])
     }
-  }, [isOpen, userRoleIdsString])
+  }, [isOpen, userRoleIdsString, userRoles.length])
 
   // Mutation for assigning role
   const assignMutation = useMutation({

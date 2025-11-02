@@ -39,14 +39,14 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: unknown) => Promise.reject(error)
 );
 
-// Response Interceptor - Handle errors (vooral 401 unauthorized)
+// Response Interceptor - Handle errors (401 unauthorized vs 403 forbidden)
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    // Token expired of unauthorized
+    // 401 UNAUTHORIZED - Token invalid/expired, force logout
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
@@ -56,6 +56,10 @@ apiClient.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    
+    // 403 FORBIDDEN - No permission, but token is valid, DON'T logout
+    // Just pass the error through to be handled by the component
+    // Components should show error message but NOT logout user
     
     return Promise.reject(error);
   }
@@ -467,12 +471,17 @@ export const clearAuth = (): void => {
  * Handle API errors met vriendelijke berichten
  */
 export const handleAPIError = (error: unknown): string => {
+  // Type guard to check if error is an AxiosError
   if (axios.isAxiosError(error)) {
-    if (error.response) {
+    // Now TypeScript knows error is AxiosError
+    const axiosError = error as AxiosError<{ error?: string }>;
+    
+    if (axiosError.response) {
       // Server responded with error status
-      switch (error.response.status) {
+      const responseData = axiosError.response.data;
+      switch (axiosError.response.status) {
         case 400:
-          return error.response.data?.error || 'Ongeldige invoer';
+          return responseData?.error || 'Ongeldige invoer';
         case 401:
           return 'Niet geautoriseerd - log opnieuw in';
         case 403:
@@ -484,9 +493,9 @@ export const handleAPIError = (error: unknown): string => {
         case 500:
           return 'Server error - probeer later opnieuw';
         default:
-          return error.response.data?.error || 'Er is iets misgegaan';
+          return responseData?.error || 'Er is iets misgegaan';
       }
-    } else if (error.request) {
+    } else if (axiosError.request) {
       // Request made but no response received
       return 'Geen verbinding met server - check of backend draait';
     }

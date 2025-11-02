@@ -15,16 +15,37 @@ interface SidebarContentProps {
 export function SidebarContent({ variant, isCollapsed = false, onClose }: SidebarContentProps) {
   const { hasPermission } = usePermissions();
 
+  // Check if user has staff access (for fallback read permissions)
+  const hasStaffAccess = hasPermission('staff', 'access');
+
   const filterMenuItems = (items: MenuItemOrGroup[]): MenuItemOrGroup[] => {
     return items
       .map(item => {
         if ('items' in item) {
-          const filteredItems = item.items.filter(subItem =>
-            !subItem.permission || hasPermission(subItem.permission.split(':')[0], subItem.permission.split(':')[1])
-          );
+          const filteredItems = item.items.filter(subItem => {
+            if (!subItem.permission) return true;
+            
+            const [resource, action] = subItem.permission.split(':');
+            
+            // Check specific permission OR staff access for read-only items
+            if (action === 'read' && hasStaffAccess) {
+              return true; // Staff gets all read permissions
+            }
+            
+            return hasPermission(resource, action);
+          });
           return filteredItems.length > 0 ? { ...item, items: filteredItems } : null;
         } else {
-          return !item.permission || hasPermission(item.permission.split(':')[0], item.permission.split(':')[1]) ? item : null;
+          if (!item.permission) return item;
+          
+          const [resource, action] = item.permission.split(':');
+          
+          // Check specific permission OR staff access for read-only items
+          if (action === 'read' && hasStaffAccess) {
+            return item; // Staff gets all read permissions
+          }
+          
+          return hasPermission(resource, action) ? item : null;
         }
       })
       .filter((item): item is MenuItemOrGroup => item !== null);

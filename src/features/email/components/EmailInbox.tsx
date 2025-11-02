@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, Fragment } from 'react'
+import React, { useEffect, useMemo, useState, Fragment, useRef } from 'react'
 import { Listbox, Dialog, Transition } from '@headlessui/react'
 import {
   ArrowPathIcon,
@@ -8,11 +8,14 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   ChevronUpDownIcon,
-  CheckIcon
+  CheckIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 import type { Email } from '../types'
 import { adminEmailService } from '../adminEmailService'
+import { emailConfig } from '../../../config/api.config'
 import { useAuth } from '../../auth'
 import { EmailDialog } from './EmailDialog'
 import EmailItem from './EmailItem'
@@ -47,8 +50,14 @@ export default function EmailInbox({ account = 'info' }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEmailDialogOpen, setIsNewEmailDialogOpen] = useState(false);
   const [suggestionEmails, setSuggestionEmails] = useState<string[]>([]);
+  const [replyEmail, setReplyEmail] = useState<Email | null>(null);
+  const [isForwarding, setIsForwarding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyUnread, setShowOnlyUnread] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   
-  const loggedInUserEmail = user?.email || 'info@dekoninklijkeloop.nl'
+  const loggedInUserEmail = user?.email || emailConfig.defaultFromAddress
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.ceil(totalEmails / EMAILS_PER_PAGE);
 
@@ -175,24 +184,61 @@ export default function EmailInbox({ account = 'info' }: Props) {
   }, [selectedEmailId])
 
   const sortedEmails = useMemo(() => {
-    return [...emails].sort((a, b) => {
+    let filtered = [...emails];
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(email =>
+        email.subject.toLowerCase().includes(query) ||
+        email.sender.toLowerCase().includes(query) ||
+        email.html.toLowerCase().includes(query)
+      );
+    }
+    
+    // Filter by unread status
+    if (showOnlyUnread) {
+      filtered = filtered.filter(email => !email.read);
+    }
+    
+    // Sort
+    return filtered.sort((a, b) => {
       if (a.read !== b.read) {
         return a.read ? 1 : -1
       }
-      // Use received_at for more accurate sorting (when email was actually received)
       const dateA = new Date(a.received_at || a.created_at).getTime()
       const dateB = new Date(b.received_at || b.created_at).getTime()
       return dateB - dateA
     })
-  }, [emails])
+  }, [emails, searchQuery, showOnlyUnread])
 
   const unreadCount = useMemo(() => {
     return emails.filter(email => !email.read).length
   }, [emails])
+  
+  const filteredCount = sortedEmails.length
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1)
   }
+
+  const handleCloseEmailDialog = () => {
+    setIsNewEmailDialogOpen(false);
+    setReplyEmail(null);
+    setIsForwarding(false);
+  };
+
+  const handleReply = (email: Email) => {
+    setReplyEmail(email);
+    setIsForwarding(false);
+    setIsNewEmailDialogOpen(true);
+  };
+
+  const handleForward = (email: Email) => {
+    setReplyEmail(email);
+    setIsForwarding(true);
+    setIsNewEmailDialogOpen(true);
+  };
 
   const handleEmailClick = (id: string) => {
     setSelectedEmailId(id);
@@ -233,26 +279,100 @@ export default function EmailInbox({ account = 'info' }: Props) {
 
   const handleSendNewEmail = async (data: { to: string; subject: string; body: string; sender: string }) => {
       try {
-          await adminEmailService.sendMailAsAdmin({
+          await adminEmailService.sendEmail({
               to: data.to,
               subject: data.subject,
               body: data.body,
-              from: 'info@dekoninklijkeloop.nl'
+              from: emailConfig.defaultFromAddress
           });
           toast.success("E-mail succesvol verzonden.");
       } catch (error) {
-          console.error('Failed to send new email via admin endpoint:', error);
+          console.error('Failed to send new email:', error);
           toast.error(error instanceof Error ? error.message : "Fout bij verzenden van e-mail.");
       }
   };
+
+  // Keyboard shortcuts - must be after all handler definitions
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        // Allow / to focus search even in input
+        if (e.key === '/' && !(e.target === searchInputRef.current)) {
+          return;
+        }
+        if (e.key !== '/') return;
+      }
+
+      switch (e.key) {
+        case '/':
+          e.preventDefault();
+          searchInputRef.current?.focus();
+          break;
+        
+        case 'j':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, sortedEmails.length - 1));
+          break;
+        
+        case 'k':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+          break;
+        
+        case 'Enter':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < sortedEmails.length) {
+            handleEmailClick(sortedEmails[selectedIndex].id);
+          }
+          break;
+        
+        case 'r':
+          e.preventDefault();
+          if (selectedEmail) {
+            handleReply(selectedEmail);
+          } else if (selectedIndex >= 0 && selectedIndex < sortedEmails.length) {
+            handleReply(sortedEmails[selectedIndex]);
+          }
+          break;
+        
+        case 'f':
+          e.preventDefault();
+          if (selectedEmail) {
+            handleForward(selectedEmail);
+          } else if (selectedIndex >= 0 && selectedIndex < sortedEmails.length) {
+            handleForward(sortedEmails[selectedIndex]);
+          }
+          break;
+        
+        case 'n':
+          e.preventDefault();
+          setIsNewEmailDialogOpen(true);
+          break;
+        
+        case 'Escape':
+          e.preventDefault();
+          if (isModalOpen) {
+            setIsModalOpen(false);
+          } else if (isNewEmailDialogOpen) {
+            handleCloseEmailDialog();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, sortedEmails, selectedEmail, isModalOpen, isNewEmailDialogOpen]);
 
   return (
     <>
       <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
-        <div className={`flex items-center justify-between ${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700 flex-wrap ${cc.spacing.gap.lg}`}>
-          
-          <div className="flex-shrink-0 w-48 z-10">
+        {/* Header with filters */}
+        <div className={`${cc.spacing.container.sm} border-b border-gray-200 dark:border-gray-700`}>
+          <div className={`flex items-center justify-between flex-wrap ${cc.spacing.gap.md} mb-3`}>
+            <div className="flex-shrink-0 w-48 z-10">
             <Listbox value={selectedAccount} onChange={setSelectedAccount}>
               <div className="relative">
                 <Listbox.Button className="relative w-full cursor-default rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 pl-3 pr-10 text-left shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
@@ -314,44 +434,84 @@ export default function EmailInbox({ account = 'info' }: Props) {
                 </Transition>
               </div>
             </Listbox>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                {unreadCount} Ongelezen
+                {searchQuery && ` • ${filteredCount} resultaten`}
+              </div>
+            </div>
+
+            <div className="flex-grow"></div>
+
+            <div className={`flex items-center ${cc.spacing.gap.sm} flex-wrap`}>
+              <button
+                type="button"
+                className={cc.button.base({ color: 'primary', size: 'sm' })}
+                onClick={() => setIsNewEmailDialogOpen(true)}
+                disabled={!loggedInUserEmail}
+              >
+                Nieuwe Email
+              </button>
+              <button
+                type="button"
+                title="Nieuwe emails ophalen"
+                className={cc.button.icon({ className: 'text-gray-500 dark:text-gray-400'})}
+                onClick={handleFetchNewEmails}
+                disabled={isFetchingNew}
+              >
+                {isFetchingNew ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CloudArrowDownIcon className="h-5 w-5" />
+                )}
+              </button>
+              <button
+                type="button"
+                title="Vernieuwen"
+                className={cc.button.icon({ className: 'text-gray-500 dark:text-gray-400'})}
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {unreadCount} Ongelezen
-          </div>
-
-          <div className="flex-grow"></div>
-
+          
+          {/* Search and filter bar */}
           <div className={`flex items-center ${cc.spacing.gap.sm} flex-wrap`}>
-            <button
-              type="button"
-              className={cc.button.base({ color: 'primary', size: 'sm' })} 
-              onClick={() => setIsNewEmailDialogOpen(true)}
-              disabled={!loggedInUserEmail}
-            >
-              Nieuwe Email
-            </button>
-            <button
-              type="button"
-              title="Nieuwe emails ophalen"
-              className={cc.button.icon({ className: 'text-gray-500 dark:text-gray-400'})}
-              onClick={handleFetchNewEmails}
-              disabled={isFetchingNew}
-            >
-              {isFetchingNew ? (
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
-              ) : (
-                <CloudArrowDownIcon className="h-5 w-5" />
+            <div className="flex-1 min-w-[200px] relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Zoek emails... (druk / voor focus)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`${cc.form.input()} pl-10`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
               )}
-            </button>
+            </div>
+            
             <button
               type="button"
-              title="Vernieuwen"
-              className={cc.button.icon({ className: 'text-gray-500 dark:text-gray-400'})}
-              onClick={handleRefresh}
-              disabled={isLoading}
+              onClick={() => setShowOnlyUnread(!showOnlyUnread)}
+              className={`${cc.button.base({
+                color: showOnlyUnread ? 'primary' : 'secondary',
+                size: 'sm'
+              })} flex items-center gap-2`}
+              title={showOnlyUnread ? 'Toon alle emails' : 'Toon alleen ongelezen'}
             >
-              <ArrowPathIcon className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              <FunnelIcon className="h-4 w-4" />
+              {showOnlyUnread ? 'Alleen ongelezen' : 'Alle emails'}
             </button>
           </div>
         </div>
@@ -373,12 +533,15 @@ export default function EmailInbox({ account = 'info' }: Props) {
                     />
                  ) : (
                     <div>
-                       {sortedEmails.map(email => (
+                       {sortedEmails.map((email, index) => (
                           <EmailItem
                              key={email.id}
                              email={email}
-                             isSelected={selectedEmailId === email.id}
-                             onClick={() => handleEmailClick(email.id)}
+                             isSelected={selectedEmailId === email.id || selectedIndex === index}
+                             onClick={() => {
+                               handleEmailClick(email.id);
+                               setSelectedIndex(index);
+                             }}
                              formattedDate={formatDistanceToNow(new Date(email.received_at || email.created_at), { addSuffix: true, locale: nl })}
                           />
                        ))}
@@ -426,7 +589,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
                            </button>
                        </div>
                        <div className="overflow-y-auto flex-1">
-                           <EmailDetail email={selectedEmail} />
+                           <EmailDetail
+                             email={selectedEmail}
+                             onReply={handleReply}
+                             onForward={handleForward}
+                           />
                        </div>
                     </>
                  ) : error ? (
@@ -446,8 +613,10 @@ export default function EmailInbox({ account = 'info' }: Props) {
               )}
            </div>
         </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            Pagination Placeholder
+
+        {/* Keyboard shortcuts help */}
+        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+          <span className="font-medium">Sneltoetsen:</span> j/k = navigeren • Enter = openen • r = beantwoorden • f = doorsturen • n = nieuw • / = zoeken • Esc = sluiten
         </div>
 
         <Transition appear show={isModalOpen} as={Fragment}>
@@ -500,7 +669,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
                       {isFetchingDetail ? (
                         <LoadingGrid count={3} variant="compact" />
                       ) : selectedEmail ? (
-                        <EmailDetail email={selectedEmail} />
+                        <EmailDetail
+                          email={selectedEmail}
+                          onReply={handleReply}
+                          onForward={handleForward}
+                        />
                       ) : error ? (
                         <div className="p-4 m-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200 rounded-md">
                            {error}
@@ -541,10 +714,16 @@ export default function EmailInbox({ account = 'info' }: Props) {
       {loggedInUserEmail && (
           <EmailDialog
               isOpen={isNewEmailDialogOpen}
-              onClose={() => setIsNewEmailDialogOpen(false)}
+              onClose={handleCloseEmailDialog}
               initialSenderEmail={loggedInUserEmail}
               onSend={handleSendNewEmail}
               suggestionEmails={suggestionEmails}
+              replyToEmail={replyEmail ? {
+                subject: replyEmail.subject,
+                sender: replyEmail.sender,
+                html: replyEmail.html
+              } : undefined}
+              isForward={isForwarding}
           />
       )}
 

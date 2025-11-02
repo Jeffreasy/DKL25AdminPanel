@@ -29,13 +29,13 @@ export const menuItems: MenuItemOrGroup[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: HomeIcon,
-    // Dashboard is accessible to all authenticated users
+    // Dashboard accessible to all authenticated users
   },
   {
     label: 'Media',
     path: '/media',
     icon: FilmIcon,
-    permission: 'photo:read', // Users need at least photo:read or album:read
+    permission: 'photo:read',
   },
   {
     label: "Video's",
@@ -52,11 +52,11 @@ export const menuItems: MenuItemOrGroup[] = [
   },
   { label: 'Nieuwsbrieven', path: '/newsletters', icon: EnvelopeIcon, permission: 'newsletter:read' },
   { label: 'Gebruikers', path: '/users', icon: UserGroupIcon, permission: 'user:read' },
-  { label: 'Admin', path: '/admin', icon: ShieldCheckIcon, permission: 'system:admin' },
+  { label: 'Admin', path: '/admin', icon: ShieldCheckIcon, permission: 'admin:access' },
   {
     label: 'Frontend',
     path: '/frontend',
     icon: GlobeAltIcon,
-    // Frontend is accessible to all authenticated users
+    // Frontend accessible to all authenticated users
   }
 ]

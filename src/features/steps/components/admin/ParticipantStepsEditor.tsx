@@ -238,7 +238,26 @@ function EditStepsModal({ participant, open, onClose, onUpdate }: EditStepsModal
         onUpdate();
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kon stappen niet bijwerken');
+      console.error('❌ Steps update failed:', err);
+      
+      // Extract detailed error information
+      const error = err as { status?: number; message?: string; response?: { data?: { error?: string } } };
+      
+      if (error.status === 403) {
+        // FORBIDDEN - No permission, show error but DON'T logout
+        setError('❌ Geen toegang: Je hebt geen toestemming om stappen aan te passen. Neem contact op met een administrator.');
+      } else if (error.status === 401) {
+        // UNAUTHORIZED - Already logged out by interceptor, just show message
+        setError('❌ Sessie verlopen: Je wordt doorgestuurd naar de inlogpagina...');
+      } else if (error.status === 500) {
+        // SERVER ERROR - Show backend error message if available
+        const backendMessage = error.message || 'Server error';
+        setError(`❌ Backend Error (500): ${backendMessage}. Dit is een backend database probleem - neem contact op met de ontwikkelaar.`);
+      } else {
+        // Generic error
+        const errorMessage = error.message || 'Onbekende fout bij bijwerken stappen';
+        setError(`❌ Error: ${errorMessage}`);
+      }
     } finally {
       setSubmitting(false);
     }

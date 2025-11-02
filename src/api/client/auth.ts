@@ -1,11 +1,24 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com';
 
+interface ApiError extends Error {
+  status?: number;
+  code?: string;
+}
+
 class AuthManager {
   private token: string | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.token = localStorage.getItem('jwtToken');
+    // Migration: Check for old jwtToken key and migrate to auth_token
+    const oldToken = localStorage.getItem('jwtToken');
+    if (oldToken && !localStorage.getItem('auth_token')) {
+      localStorage.setItem('auth_token', oldToken);
+      localStorage.removeItem('jwtToken');
+      console.log('✅ Migrated token from jwtToken to auth_token');
+    }
+    
+    this.token = localStorage.getItem('auth_token');
     if (this.token) {
       this.scheduleRefresh();
     }
@@ -43,7 +56,7 @@ class AuthManager {
 
   setToken(token: string) {
     this.token = token;
-    localStorage.setItem('jwtToken', token);
+    localStorage.setItem('auth_token', token);
     this.scheduleRefresh();
   }
 
@@ -67,7 +80,7 @@ class AuthManager {
     try {
       // Call backend logout endpoint if token exists
       if (this.token) {
-        await fetch(`${API_BASE}/auth/logout`, {
+        await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.token}`,
@@ -79,7 +92,7 @@ class AuthManager {
       }
     } finally {
       this.token = null;
-      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('auth_token');
       if (this.refreshTimer) clearTimeout(this.refreshTimer);
       window.location.href = '/login';
     }
@@ -136,23 +149,43 @@ class AuthManager {
 
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
 
-    const defaultOptions: RequestInit = {
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
+    // Merge headers properly to avoid overwriting Authorization header
+    const mergedHeaders = {
+      'Authorization': `Bearer ${this.token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+
+    const mergedOptions: RequestInit = {
+      ...options,
+      headers: mergedHeaders,
       credentials: 'include', // Include cookies for session management
     };
 
-    const response = await fetch(url, { ...defaultOptions, ...options });
+    const response = await fetch(url, mergedOptions);
 
     if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'API Error' }));
+      
+      // 401 UNAUTHORIZED - Token invalid/expired, force logout
       if (response.status === 401) {
         this.logout();
-        throw new Error('Authentication expired');
+        throw new Error(error.error || 'Authentication expired');
       }
-      const error = await response.json();
-      throw new Error(error.error || 'API Error');
+      
+      // 403 FORBIDDEN - No permission, but token is valid, DON'T logout
+      if (response.status === 403) {
+        const forbiddenError: ApiError = new Error(error.error || 'Geen toegang tot deze resource');
+        forbiddenError.status = 403;
+        forbiddenError.code = error.code || 'FORBIDDEN';
+        throw forbiddenError;
+      }
+      
+      // Other errors
+      const apiError: ApiError = new Error(error.error || 'API Error');
+      apiError.status = response.status;
+      apiError.code = error.code;
+      throw apiError;
     }
 
     return response.json();

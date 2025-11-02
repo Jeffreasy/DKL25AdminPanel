@@ -5,23 +5,27 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import { RichTextEditor } from '@mantine/tiptap'
 import {
-  ExclamationTriangleIcon, 
-  XMarkIcon, 
+  ExclamationTriangleIcon,
+  XMarkIcon,
   ChevronUpDownIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { cc } from '../../../styles/shared'
+import { emailConfig } from '../../../config/api.config'
+import { useEmailDraft } from '../../../hooks/useEmailDraft'
 import TextStyle from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import TextAlign from '@tiptap/extension-text-align'
 import Image from '@tiptap/extension-image'
 import Highlight from '@tiptap/extension-highlight'
 import { PhotoIcon } from '@heroicons/react/24/solid'
+import { ImageUploadModal } from './ImageUploadModal'
 
 // Define the signature HTML
 const SIGNATURE_HTML = `<p><br></p><p>-- <br>Met vriendelijke groet,<br>Het DKL25 Team</p>`;
 
-// Define the props interface again, without availableSenders
+// Define the props interface
 interface EmailDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -31,7 +35,13 @@ interface EmailDialogProps {
   }
   initialSenderEmail: string
   onSend: (data: { to: string; subject: string; body: string; sender: string }) => Promise<void>
-  suggestionEmails?: string[] 
+  suggestionEmails?: string[]
+  replyToEmail?: {
+    subject: string
+    sender: string
+    html: string
+  }
+  isForward?: boolean
 }
 
 // Email templates
@@ -64,22 +74,27 @@ const COLORS = [
   '#15aabf', '#12b886', '#40c057', '#82c91e', '#fab005', '#fd7e14', '#868e96'
 ];
 
-export function EmailDialog({ 
-  isOpen, 
-  onClose, 
-  recipient, 
-  initialSenderEmail, 
+export function EmailDialog({
+  isOpen,
+  onClose,
+  recipient,
+  initialSenderEmail,
   onSend,
-  suggestionEmails = [] // Default to empty array
+  suggestionEmails = [],
+  replyToEmail,
+  isForward = false
 }: EmailDialogProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>('default')
   const [subject, setSubject] = useState<string>(EMAIL_TEMPLATES.default.subject)
   const [toEmail, setToEmail] = useState('');
-  // State for Combobox query
-  const [query, setQuery] = useState('') 
+  const [query, setQuery] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [showDraftNotification, setShowDraftNotification] = useState(false);
+  
+  const { draft, saveDraft, clearDraft, hasDraft, getDraftAge } = useEmailDraft();
 
   const editor = useEditor({
     extensions: [
@@ -97,12 +112,10 @@ export function EmailDialog({
     }
   })
 
-  // Function to handle image insertion via prompt
-  const addImage = () => {
-    const url = window.prompt('Afbeelding URL:');
-
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+  // Function to handle image insertion via modal
+  const handleInsertImage = (url: string, alt?: string) => {
+    if (editor) {
+      editor.chain().focus().setImage({ src: url, alt }).run();
     }
   };
 
@@ -127,27 +140,66 @@ export function EmailDialog({
     editor?.chain().focus().setContent(fullContent).run();
   }, [selectedTemplate, editor, recipient?.name]) // Add optional chaining to dependency
 
+  // Auto-save draft
+  useEffect(() => {
+    if (isOpen && !replyToEmail && !recipient && editor) {
+      // Only auto-save for new compose emails, not replies/forwards
+      const htmlContent = editor.getHTML();
+      if (toEmail || subject || htmlContent) {
+        saveDraft(toEmail, subject, htmlContent);
+      }
+    }
+  }, [toEmail, subject, editor, isOpen, replyToEmail, recipient, saveDraft]);
+
   useEffect(() => {
     if (isOpen) {
-      const recipientName = recipient?.name; // Use optional chaining
-      const defaultContent = EMAIL_TEMPLATES.default.content(recipientName);
-      const fullContent = getContentWithSignature(defaultContent);
-      setSelectedTemplate('default');
-      setSubject(EMAIL_TEMPLATES.default.subject);
-      editor?.commands.setContent(fullContent);
-      // Reset manual recipient field if dialog opens for composing new email
-      if (!recipient) {
-          setToEmail('');
+      const recipientName = recipient?.name;
+      
+      // Check for existing draft when opening for new email
+      if (!replyToEmail && !recipient && hasDraft()) {
+        setShowDraftNotification(true);
       }
+      
+      // Handle reply/forward
+      if (replyToEmail) {
+        if (isForward) {
+          // Forward: no recipient pre-filled, subject with Fwd:
+          setToEmail('');
+          setSubject(replyToEmail.subject.startsWith('Fwd:') ? replyToEmail.subject : `Fwd: ${replyToEmail.subject}`);
+          // Include original message in forward
+          const forwardContent = `<p><br></p><p>---------- Doorgestuurd bericht ----------</p><p><strong>Van:</strong> ${replyToEmail.sender}</p><p><strong>Onderwerp:</strong> ${replyToEmail.subject}</p><p><br></p>${replyToEmail.html}`;
+          const fullContent = getContentWithSignature(forwardContent);
+          editor?.commands.setContent(fullContent);
+        } else {
+          // Reply: pre-fill recipient, subject with Re:
+          setToEmail(replyToEmail.sender);
+          setSubject(replyToEmail.subject.startsWith('Re:') ? replyToEmail.subject : `Re: ${replyToEmail.subject}`);
+          // Quote original message
+          const replyContent = `<p><br></p><p><br></p><blockquote><p><strong>${replyToEmail.sender} schreef:</strong></p>${replyToEmail.html}</blockquote>`;
+          const fullContent = getContentWithSignature(replyContent);
+          editor?.commands.setContent(fullContent);
+        }
+      } else {
+        // New email
+        const defaultContent = EMAIL_TEMPLATES.default.content(recipientName);
+        const fullContent = getContentWithSignature(defaultContent);
+        setSelectedTemplate('default');
+        setSubject(EMAIL_TEMPLATES.default.subject);
+        editor?.commands.setContent(fullContent);
+        
+        if (!recipient) {
+          setToEmail('');
+        }
+      }
+      
       setError(null);
       setSending(false);
-      // Reset query on open
-      setQuery(''); 
+      setQuery('');
     } else {
       editor?.commands.clearContent();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, editor, recipient?.name]);
+  }, [isOpen, editor, recipient?.name, replyToEmail, isForward]);
 
   const handleSend = async () => {
     const finalToEmail = recipient ? recipient.email : toEmail;
@@ -171,6 +223,8 @@ export function EmailDialog({
         body: editor?.getHTML() || '',
         sender: initialSenderEmail
       });
+      // Clear draft on successful send
+      clearDraft();
       onClose();
     } catch (err) {
       console.error('Failed to send email:', err);
@@ -179,6 +233,20 @@ export function EmailDialog({
       setSending(false);
     }
   }
+
+  const handleRestoreDraft = () => {
+    if (draft) {
+      setToEmail(draft.to);
+      setSubject(draft.subject);
+      editor?.commands.setContent(draft.body);
+      setShowDraftNotification(false);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftNotification(false);
+  };
 
   // Filter suggestions based on query
   const filteredSuggestions = 
@@ -218,10 +286,53 @@ export function EmailDialog({
               >
                 <Dialog.Panel className={`w-full max-w-3xl transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 ${cc.spacing.container.md} shadow-xl transition-all`}>
                   <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-                    Email Opstellen
+                    {replyToEmail ? (isForward ? 'Email Doorsturen' : 'Email Beantwoorden') : 'Email Opstellen'}
                   </Dialog.Title>
 
                   <div className={cc.spacing.section.md}>
+                    {/* Draft notification */}
+                    {showDraftNotification && draft && (
+                      <div className="mb-4 rounded-md bg-blue-50 dark:bg-blue-900/30 p-4 border border-blue-200 dark:border-blue-700/50">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <DocumentTextIcon className="h-5 w-5 text-blue-400 dark:text-blue-500" aria-hidden="true" />
+                          </div>
+                          <div className="ml-3 flex-1">
+                            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Concept gevonden</h3>
+                            <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                              <p>Er is een concept e-mail van {getDraftAge()} minuten geleden. Wilt u deze herstellen?</p>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={handleRestoreDraft}
+                                className={cc.button.base({ color: 'primary', size: 'sm' })}
+                              >
+                                Herstellen
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDiscardDraft}
+                                className={cc.button.base({ color: 'secondary', size: 'sm' })}
+                              >
+                                Verwijderen
+                              </button>
+                            </div>
+                          </div>
+                          <div className="ml-auto pl-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowDraftNotification(false)}
+                              className="inline-flex rounded-md bg-blue-50 dark:bg-blue-900/0 p-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                            >
+                              <span className="sr-only">Sluiten</span>
+                              <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {error && (
                       <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-700/50">
                         <div className="flex">
@@ -310,7 +421,7 @@ export function EmailDialog({
 
                     <div className="flex items-center">
                       <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">Van:</label>
-                      <p className="text-sm text-gray-900 dark:text-white">info@dekoninklijkeloop.nl</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{emailConfig.defaultFromAddress}</p>
                     </div>
 
                     <div>
@@ -365,11 +476,11 @@ export function EmailDialog({
                             {/* Group 4: Insertions & Formatting */}
                             <RichTextEditor.ControlsGroup>
                               <RichTextEditor.Hr />
-                              {/* Replace RichTextEditor.Image with custom button */}
-                              <RichTextEditor.Control 
-                                onClick={addImage} 
+                              {/* Custom image button */}
+                              <RichTextEditor.Control
+                                onClick={() => setIsImageModalOpen(true)}
                                 aria-label="Afbeelding invoegen"
-                                title="Afbeelding invoegen (URL)"
+                                title="Afbeelding invoegen"
                               >
                                 <PhotoIcon className="h-4 w-4" />
                               </RichTextEditor.Control>
@@ -459,7 +570,7 @@ export function EmailDialog({
                   
                   {/* Add Subject, To, From fields */}
                   <div className={`mb-4 ${cc.spacing.section.xs} border-b border-gray-200 dark:border-gray-700 pb-3 text-sm`}>
-                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Van:</strong> <span className="text-gray-800 dark:text-white">info@dekoninklijkeloop.nl</span></p>
+                     <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Van:</strong> <span className="text-gray-800 dark:text-white">{emailConfig.defaultFromAddress}</span></p>
                      <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Aan:</strong> <span className="text-gray-800 dark:text-white">{recipient ? `${recipient.name} <${recipient.email}>` : toEmail}</span></p>
                      <p><strong className="text-gray-500 dark:text-gray-400 font-medium w-16 inline-block">Onderwerp:</strong> <span className="text-gray-800 dark:text-white">{subject}</span></p>
                   </div>
@@ -489,6 +600,13 @@ export function EmailDialog({
           </div>
         </Dialog>
       </Transition>
+
+      {/* Image Upload Modal */}
+      <ImageUploadModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onInsert={handleInsertImage}
+      />
     </>
   )
-} 
+}

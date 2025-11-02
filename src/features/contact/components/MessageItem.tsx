@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ContactMessage, ContactStatus } from './../types'
 import { updateMessageStatus } from './../services/messageService'
 import { adminEmailService } from '../../email/adminEmailService'
+import { emailConfig } from '../../../config/api.config'
 import { useAuth } from '../../auth'
 import { cc } from '../../../styles/shared'
 import { format } from 'date-fns'
@@ -18,7 +19,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   
-  const senderEmail = user?.email || 'info@dekoninklijkeloop.nl'
+  const senderEmail = user?.email || emailConfig.defaultFromAddress
 
   const handleStatusUpdate = async (newStatus: ContactStatus) => {
     if (newStatus === message.status) return;
@@ -31,16 +32,16 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
 
   const handleSendEmail = async (data: { to: string; subject: string; body: string; sender: string }) => {
     try {
-      await adminEmailService.sendMailAsAdmin({
+      await adminEmailService.sendEmail({
         to: message.email,
         subject: data.subject,
         body: data.body,
-        from: 'info@dekoninklijkeloop.nl'
+        from: emailConfig.defaultFromAddress
       })
       await updateMessageStatus(message.id, 'afgehandeld')
       onStatusUpdate()
     } catch (error) {
-      console.error('Failed to send email via admin endpoint:', error)
+      console.error('Failed to send email:', error)
       throw error
     }
   }
@@ -224,7 +225,7 @@ export function MessageItem({ message, onStatusUpdate }: MessageItemProps) {
           email: message.email,
           name: message.naam
         }}
-        initialSenderEmail={senderEmail || 'info@dekoninklijkeloop.nl'}
+        initialSenderEmail={senderEmail}
         onSend={handleSendEmail}
       />
     </>

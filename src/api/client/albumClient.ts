@@ -37,7 +37,7 @@ export interface AlbumPhoto {
 
 class AlbumClient {
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('jwtToken');
+    const token = localStorage.getItem('auth_token');
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })

@@ -8,7 +8,7 @@ const getAuthHeaders = () => {
   }
 
   // Get JWT token from localStorage
-  const token = localStorage.getItem('jwtToken')
+  const token = localStorage.getItem('auth_token')
   if (!token) {
     console.error('[aanmeldingenService] No auth token found.')
     throw new Error('Geen actieve gebruikerssessie gevonden. Log opnieuw in.')

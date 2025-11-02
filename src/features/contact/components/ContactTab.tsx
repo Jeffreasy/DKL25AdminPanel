@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../auth'
 import { EmailDialog } from '../../email/components/EmailDialog'
 import { adminEmailService } from '../../email/adminEmailService'
+import { emailConfig } from '../../../config/api.config'
 import { cc } from '../../../styles/shared'
 import { usePermissions } from '../../../hooks/usePermissions'
 
@@ -19,7 +20,7 @@ export function ContactTab() {
 
   const canReadContacts = hasPermission('contact', 'read')
   const canSendAdminEmail = hasPermission('admin_email', 'send')
-  const loggedInUserEmail = user?.email || 'info@dekoninklijkeloop.nl'
+  const loggedInUserEmail = user?.email || emailConfig.defaultFromAddress
 
   // Filter messages
   const filteredMessages = messages.filter(message => {
@@ -43,14 +44,14 @@ export function ContactTab() {
 
   const handleSendNewEmail = async (data: { to: string; subject: string; body: string; sender: string }) => {
     try {
-      await adminEmailService.sendMailAsAdmin({
+      await adminEmailService.sendEmail({
         to: data.to,
         subject: data.subject,
         body: data.body,
-        from: 'info@dekoninklijkeloop.nl' 
+        from: emailConfig.defaultFromAddress
       });
     } catch (error) {
-      console.error('Failed to send new email via admin endpoint:', error);
+      console.error('Failed to send new email:', error);
       throw error;
     }
   };
