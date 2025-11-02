@@ -13,9 +13,10 @@ describe('apiErrorHandler', () => {
         }
       }
       
-      const error = new ApiPermissionError(errorData)
+      const error = new ApiPermissionError(errorData, 403)
       
       expect(error.message).toBe('Permission denied')
+      expect(error.status).toBe(403)
       expect(error.code).toBe('PERMISSION_DENIED')
       expect(error.requiredPermission).toBe('contact:write')
       expect(error.userPermissions).toEqual(['contact:read'])
@@ -32,7 +33,7 @@ describe('apiErrorHandler', () => {
         }
       }
       
-      const error = new ApiPermissionError(errorData)
+      const error = new ApiPermissionError(errorData, 403)
       
       expect(error).toBeInstanceOf(Error)
       expect(error).toBeInstanceOf(ApiPermissionError)
@@ -49,7 +50,7 @@ describe('apiErrorHandler', () => {
           user_permissions: []
         }
       }
-      const error = new ApiPermissionError(errorData)
+      const error = new ApiPermissionError(errorData, 403)
       
       expect(isPermissionError(error)).toBe(true)
     })

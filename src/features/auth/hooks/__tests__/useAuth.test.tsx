@@ -12,7 +12,13 @@ describe('useAuth', () => {
 
   it('returns context value when used within AuthProvider', () => {
     const mockContextValue = {
-      user: { id: '1', email: 'test@example.com', role: 'admin', permissions: [] },
+      user: {
+        id: '1',
+        email: 'test@example.com',
+        role: 'admin',
+        roles: [{ id: 'admin-role', name: 'admin', description: 'Administrator' }],
+        permissions: []
+      },
       loading: false,
       error: null,
       signIn: vi.fn(),

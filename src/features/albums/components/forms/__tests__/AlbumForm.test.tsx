@@ -14,7 +14,8 @@ vi.mock('../../../../../api/client/supabase', () => ({
 const mockUser = {
   id: 'user-1',
   email: 'test@example.com',
-  role: 'admin'
+  role: 'admin',
+  roles: [{ id: 'admin-role', name: 'admin', description: 'Administrator' }]
 }
 
 vi.mock('../../../../auth/hooks/useAuth', () => ({
