@@ -21,7 +21,7 @@ const getAuthHeaders = () => {
 export async function fetchAanmeldingen(limit = 100, offset = 0): Promise<{ data: Aanmelding[], error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding?limit=${limit}&offset=${offset}`, { headers })
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen?limit=${limit}&offset=${offset}`, { headers })
 
     const data = await handleApiResponse<Aanmelding[]>(response)
     return { data, error: null }
@@ -37,7 +37,7 @@ export async function fetchAanmeldingen(limit = 100, offset = 0): Promise<{ data
 export async function fetchAanmeldingDetails(id: string): Promise<{ data: Aanmelding | null, error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding/${id}`, { headers })
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen/${id}`, { headers })
 
     const data = await handleApiResponse<Aanmelding>(response)
     return { data, error: null }
@@ -53,7 +53,7 @@ export async function fetchAanmeldingDetails(id: string): Promise<{ data: Aanmel
 export async function fetchAanmeldingenByRol(rol: string): Promise<{ data: Aanmelding[], error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding/rol/${encodeURIComponent(rol)}`, { headers })
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen/rol/${encodeURIComponent(rol)}`, { headers })
 
     const data = await handleApiResponse<Aanmelding[]>(response)
     return { data, error: null }
@@ -69,7 +69,7 @@ export async function fetchAanmeldingenByRol(rol: string): Promise<{ data: Aanme
 export async function updateAanmelding(id: string, updates: Partial<Aanmelding>): Promise<{ data: Aanmelding | null, error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen/${id}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(updates)
@@ -89,7 +89,7 @@ export async function updateAanmelding(id: string, updates: Partial<Aanmelding>)
 export async function addAanmeldingAntwoord(aanmeldingId: string, tekst: string): Promise<{ data: AanmeldingAntwoord | null, error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding/${aanmeldingId}/antwoord`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen/${aanmeldingId}/antwoord`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ tekst })
@@ -109,7 +109,7 @@ export async function addAanmeldingAntwoord(aanmeldingId: string, tekst: string)
 export async function deleteAanmelding(id: string): Promise<{ error: Error | null }> {
   try {
     const headers = getAuthHeaders()
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmelding/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.dekoninklijkeloop.nl'}/api/aanmeldingen/${id}`, {
       method: 'DELETE',
       headers
     })

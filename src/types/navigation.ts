@@ -1,7 +1,6 @@
 import {
   HomeIcon,
-  PhotoIcon,
-  FolderIcon,
+  FilmIcon,
   VideoCameraIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
@@ -34,11 +33,15 @@ export const menuItems: MenuItemOrGroup[] = [
   },
   {
     label: 'Media',
-    items: [
-      { label: "Foto's", path: '/photos', icon: PhotoIcon, permission: 'photo:read' },
-      { label: 'Albums', path: '/albums', icon: FolderIcon, permission: 'album:read' },
-      { label: "Video's", path: '/videos', icon: VideoCameraIcon, permission: 'video:read' },
-    ]
+    path: '/media',
+    icon: FilmIcon,
+    permission: 'photo:read', // Users need at least photo:read or album:read
+  },
+  {
+    label: "Video's",
+    path: '/videos',
+    icon: VideoCameraIcon,
+    permission: 'video:read',
   },
   {
     label: 'Relaties',

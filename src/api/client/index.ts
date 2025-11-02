@@ -25,3 +25,19 @@ export { albumClient } from './albumClient';
 export type { Album, AlbumCreateData, AlbumUpdateData, AlbumPhoto } from './albumClient';
 export { partnerClient } from './partnerClient';
 export type { Partner, PartnerCreateData, PartnerUpdateData } from './partnerClient';
+
+// Steps
+export { stepsClient } from './stepsClient';
+export type {
+  Participant,
+  RouteFund,
+  ParticipantDashboard,
+  TotalStepsResponse,
+  FundsDistribution,
+  UpdateStepsRequest,
+  CreateRouteFundRequest,
+  UpdateRouteFundRequest,
+  DeleteRouteFundResponse,
+  RouteOption,
+  StepsStats
+} from '../../features/steps/types';

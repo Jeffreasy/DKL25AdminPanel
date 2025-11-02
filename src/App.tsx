@@ -10,8 +10,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { OverviewTab } from './features/dashboard/components/OverviewTab'
 
 // Lazy load all other pages for better performance
-const PhotoManagementPage = lazy(() => import('./pages/PhotoManagementPage').then(m => ({ default: m.PhotoManagementPage })))
-const AlbumManagementPage = lazy(() => import('./pages/AlbumManagementPage').then(m => ({ default: m.AlbumManagementPage })))
+const MediaManagementPage = lazy(() => import('./pages/MediaManagementPage').then(m => ({ default: m.MediaManagementPage })))
 const VideoManagementPage = lazy(() => import('./pages/VideoManagementPage').then(m => ({ default: m.VideoManagementPage })))
 const PartnerManagementPage = lazy(() => import('./pages/PartnerManagementPage').then(m => ({ default: m.PartnerManagementPage })))
 const SponsorManagementPage = lazy(() => import('./pages/SponsorManagementPage').then(m => ({ default: m.SponsorManagementPage })))
@@ -21,6 +20,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ defaul
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage').then(m => ({ default: m.UserManagementPage })))
 const AdminPermissionsPage = lazy(() => import('./pages/AdminPermissionsPage').then(m => ({ default: m.AdminPermissionsPage })))
+const StepsAdminPage = lazy(() => import('./pages/StepsAdminPage').then(m => ({ default: m.StepsAdminPage })))
 const AanmeldingenTab = lazy(() => import('./features/aanmeldingen/components/AanmeldingenTab').then(m => ({ default: m.AanmeldingenTab })))
 const ContactTab = lazy(() => import('./features/contact/components/ContactTab').then(m => ({ default: m.ContactTab })))
 const InboxTab = lazy(() => import('./features/email/components/InboxTab').then(m => ({ default: m.InboxTab })))
@@ -96,14 +96,20 @@ export function App() {
             </Suspense>
           } />
         </Route>
+        <Route path="/media" element={
+          <Suspense fallback={<PageLoader />}>
+            <MediaManagementPage />
+          </Suspense>
+        } />
+        {/* Legacy redirects for backward compatibility */}
         <Route path="/photos" element={
           <Suspense fallback={<PageLoader />}>
-            <PhotoManagementPage />
+            <MediaManagementPage />
           </Suspense>
         } />
         <Route path="/albums" element={
           <Suspense fallback={<PageLoader />}>
-            <AlbumManagementPage />
+            <MediaManagementPage />
           </Suspense>
         } />
         <Route path="/videos" element={
@@ -129,6 +135,11 @@ export function App() {
         <Route path="/admin" element={
           <Suspense fallback={<PageLoader />}>
             <AdminPermissionsPage />
+          </Suspense>
+        } />
+        <Route path="/steps-admin" element={
+          <Suspense fallback={<PageLoader />}>
+            <StepsAdminPage />
           </Suspense>
         } />
         <Route path="/frontend" element={

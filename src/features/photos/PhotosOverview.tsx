@@ -17,7 +17,11 @@ import {
   FolderIcon,
   PhotoIcon,
   MagnifyingGlassIcon,
-  CloudArrowDownIcon
+  CloudArrowDownIcon,
+  InformationCircleIcon,
+  ArrowUpTrayIcon,
+  TagIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline'
 import { cc } from '../../styles/shared'
 import { LoadingGrid, EmptyState } from '../../components/ui'
@@ -168,13 +172,82 @@ export function PhotosOverview() {
   return (
     <PhotoErrorBoundary>
       <div className={cc.spacing.section.md}>
+        {/* Help Section - Explaining Photos */}
+        <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border border-green-200 dark:border-green-800 rounded-lg p-5 mb-6">
+          <div className="flex gap-4">
+            <InformationCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-green-900 dark:text-green-100 mb-3 flex items-center gap-2">
+                📸 Foto's Beheren - Jouw Centrale Bibliotheek
+              </h3>
+              <div className="text-sm text-green-800 dark:text-green-200 space-y-3">
+                <p>
+                  Dit is je centrale foto bibliotheek. Alle foto's die je uploadt worden hier opgeslagen.
+                  Je kunt foto's individueel beheren en later toevoegen aan verschillende albums.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                  <div className="bg-white/50 dark:bg-green-800/20 rounded-lg p-3 border border-green-200/50 dark:border-green-700/50">
+                    <div className="flex items-start gap-2">
+                      <ArrowUpTrayIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium mb-1">Upload Foto's</p>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Upload meerdere foto's tegelijk vanaf je computer
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/50 dark:bg-green-800/20 rounded-lg p-3 border border-green-200/50 dark:border-green-700/50">
+                    <div className="flex items-start gap-2">
+                      <TagIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium mb-1">Organiseer</p>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Voeg foto's toe aan albums om ze te groeperen
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/50 dark:bg-green-800/20 rounded-lg p-3 border border-green-200/50 dark:border-green-700/50">
+                    <div className="flex items-start gap-2">
+                      <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium mb-1">Voltooid</p>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Foto's in albums zijn georganiseerd en klaar
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-100/70 dark:bg-green-800/30 rounded-lg p-3 mt-3">
+                  <p className="font-medium mb-2 flex items-center gap-2">
+                    <FolderIcon className="w-4 h-4" />
+                    💡 Tips voor Organisatie:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
+                    <li>Gebruik de <strong>"Niet Georganiseerd"</strong> tab om foto's te zien die nog niet in een album zitten</li>
+                    <li>Selecteer meerdere foto's tegelijk om ze in bulk aan een album toe te voegen</li>
+                    <li>Foto's kunnen in meerdere albums tegelijk voorkomen</li>
+                    <li>Verwijder foto's om ze uit alle albums en de bibliotheek te verwijderen</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
           <div className={`${cc.spacing.px.sm} ${cc.spacing.py.lg} sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center ${cc.spacing.gap.lg}`}>
             <div>
-              <H1 className="mb-1">Foto's</H1>
+              <H1 className="mb-1">Foto Bibliotheek</H1>
               <SmallText>
-                Beheer al je foto's in albums en georganiseerde collecties
+                Centrale bibliotheek voor al je foto's - upload en organiseer in albums
               </SmallText>
             </div>
             <div className={`flex ${cc.spacing.gap.md} justify-end sm:justify-normal flex-shrink-0`}>
@@ -201,7 +274,7 @@ export function PhotosOverview() {
         {/* Filters and Controls */}
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
           <div className={`${cc.spacing.container.sm} sm:p-6 ${cc.spacing.section.sm} sm:gap-6`}>
-            {/* Tab Navigation */}
+            {/* Tab Navigation with Tooltips */}
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab('all')}
@@ -210,8 +283,9 @@ export function PhotosOverview() {
                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
+                title="Toon alle foto's uit je bibliotheek, inclusief die in albums"
               >
-                Alle Foto's
+                📚 Alle Foto's
               </button>
               <button
                 onClick={() => setActiveTab('unorganized')}
@@ -220,11 +294,12 @@ export function PhotosOverview() {
                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
+                title="Foto's die nog niet aan een album zijn toegevoegd - organiseer deze eerst"
               >
-                <span className="hidden sm:inline">Niet Georganiseerd</span>
+                <span className="hidden sm:inline">⚠️ Niet Georganiseerd</span>
                 <span className="sm:hidden">Niet Geordend</span>
                 {unorganizedPhotos.length > 0 && (
-                  <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                  <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-orange-500 text-white text-xs rounded-full font-semibold">
                     {unorganizedPhotos.length}
                   </span>
                 )}
@@ -294,7 +369,7 @@ export function PhotosOverview() {
                   </p>
                 </div>
                 <Link
-                  to="/albums"
+                  to="/media?tab=albums"
                   className={`text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm flex items-center ${cc.spacing.gap.sm} ${cc.transition.colors}`}
                 >
                   <FolderIcon className="w-4 h-4" />
@@ -363,7 +438,7 @@ export function PhotosOverview() {
               </div>
               {activeTab === 'all' && !recentPhotos.length && (
                 <Link
-                  to="/albums"
+                  to="/media?tab=albums"
                   className={`text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm flex items-center ${cc.spacing.gap.sm} ${cc.transition.colors}`}
                 >
                   <FolderIcon className="w-4 h-4" />
@@ -425,28 +500,46 @@ export function PhotosOverview() {
                   </div>
                 )}
 
-                {/* Empty State */}
+                {/* Empty State with Enhanced Guidance */}
                 {photosToShowInGridOrList.length === 0 && (
-                  <EmptyState
-                    icon={
-                      <svg className="w-16 h-16 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    }
-                    title={activeTab === 'all' ? 'Geen foto\'s gevonden' : 'Geen niet-georganiseerde foto\'s'}
-                    description={
-                      searchQuery
-                        ? `Geen resultaten voor "${searchQuery}"`
-                        : activeTab === 'all'
-                          ? 'Upload je eerste foto\'s om te beginnen'
-                          : 'Alle foto\'s zijn georganiseerd in albums'
-                    }
-                    action={activeTab === 'all' && !searchQuery ? {
-                      label: "Foto's uploaden",
-                      onClick: () => setShowUploadModal(true),
-                      icon: <PhotoIcon className="w-5 h-5" />
-                    } : undefined}
-                  />
+                  <div className="py-12">
+                    <EmptyState
+                      icon={
+                        activeTab === 'unorganized' ? (
+                          <CheckCircleIcon className="w-16 h-16 text-green-400 dark:text-green-500" />
+                        ) : (
+                          <svg className="w-16 h-16 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        )
+                      }
+                      title={
+                        searchQuery
+                          ? 'Geen resultaten gevonden'
+                          : activeTab === 'all'
+                            ? 'Nog geen foto\'s in je bibliotheek'
+                            : 'Goed bezig! Alle foto\'s zijn georganiseerd! 🎉'
+                      }
+                      description={
+                        searchQuery
+                          ? `Geen foto's gevonden voor "${searchQuery}". Probeer een andere zoekterm.`
+                          : activeTab === 'all'
+                            ? 'Begin met het uploaden van foto\'s om je bibliotheek op te bouwen. Je kunt ze daarna organiseren in albums.'
+                            : 'Alle foto\'s zijn al toegevoegd aan één of meerdere albums. Super werk! Je kunt naar de Albums tab gaan om je collecties te bekijken.'
+                      }
+                      action={
+                        activeTab === 'all' && !searchQuery ? {
+                          label: "📤 Upload je eerste foto's",
+                          onClick: () => setShowUploadModal(true),
+                          icon: <PhotoIcon className="w-5 h-5" />
+                        } : activeTab === 'unorganized' && !searchQuery ? {
+                          label: "📁 Bekijk Albums",
+                          onClick: () => window.location.href = '/media?tab=albums',
+                          icon: <FolderIcon className="w-5 h-5" />
+                        } : undefined
+                      }
+                    />
+                  </div>
                 )}
               </>
             )}

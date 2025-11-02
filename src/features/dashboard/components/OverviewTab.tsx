@@ -1,9 +1,11 @@
 import { useOutletContext } from 'react-router-dom'
 import type { DashboardContext } from '../../../types/dashboard'
 import { cc } from '../../../styles/shared'
+import { useLiveTotalSteps } from '../../steps/hooks'
 
 export function OverviewTab() {
   const { stats, contactStats } = useOutletContext<DashboardContext>()
+  const { totalSteps, loading: stepsLoading } = useLiveTotalSteps(30000)
   
   if (!stats || !contactStats) {
     return (
@@ -77,6 +79,45 @@ export function OverviewTab() {
               <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Total Steps Counter */}
+      <div className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-500 dark:to-green-600 rounded-lg shadow-lg border border-green-200 dark:border-green-700 overflow-hidden">
+        <div className="p-8">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Totaal Gewandelde Stappen</h3>
+                  <p className="text-sm text-green-100 dark:text-green-200 mt-1">Door alle deelnemers samen</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                {stepsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    <p className="text-white">Laden...</p>
+                  </div>
+                ) : (
+                  <p className="text-5xl font-bold text-white tracking-tight">
+                    {totalSteps.toLocaleString('nl-NL')}
+                  </p>
+                )}
+                <p className="text-sm text-green-100 dark:text-green-200 mt-2">
+                  🚶 Elke stap telt mee voor ons doel!
+                </p>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <div className="text-9xl opacity-20">🚶</div>
             </div>
           </div>
         </div>
