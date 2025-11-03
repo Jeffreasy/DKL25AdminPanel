@@ -1,408 +1,362 @@
-# Steps Feature - Stappen Tracking Systeem
+# Steps Feature
 
-## Overzicht
+De Steps feature biedt een complete oplossing voor het tracken van stappen van deelnemers, inclusief real-time updates via WebSocket, REST API integratie, en een admin interface.
 
-Het Steps systeem is een volledig geïntegreerde feature voor het tracken van stappen en fondsenallocatie voor wandelevenementen. Deelnemers kunnen hun stappen bijwerken, voortgang volgen, en zien hoeveel fondsen er zijn toegewezen aan hun gekozen route.
-
-## Architectuur
+## Structuur
 
 ```
 src/features/steps/
-├── types.ts                    # TypeScript type definitions
-├── hooks/
-│   ├── useSteps.ts            # Main steps hook with data management
-│   └── index.ts               # Hook exports
-├── components/
-│   ├── StatCard.tsx           # Reusable stat display card
-│   ├── ProgressBar.tsx        # Progress bar component
-│   ├── StepsTracker.tsx       # Main tracker component
-│   └── index.ts               # Component exports
-└── index.ts                   # Feature exports
+├── components/          # UI componenten
+│   ├── admin/          # Admin-specifieke componenten
+│   │   ├── ParticipantStepsEditor.tsx
+│   │   └── RouteFundsManager.tsx
+│   ├── ProgressBar.tsx
+│   ├── StatCard.tsx
+│   └── StepsTracker.tsx
+├── hooks/              # React hooks
+│   ├── useSteps.ts             # REST API hook
+│   └── useStepsWebSocket.ts    # WebSocket hook
+├── services/           # Business logic
+│   └── StepsWebSocketClient.ts # WebSocket client
+├── types.ts            # TypeScript definities
+├── index.ts            # Public exports
+└── README.md           # Deze file
 ```
 
-## API Client
+## REST API Gebruik
 
-Het Steps systeem gebruikt de [`stepsClient`](../../../api/client/stepsClient.ts) voor alle backend communicatie:
+### useSteps Hook
 
-```typescript
-import { stepsClient } from '../api/client';
-
-// User endpoints
-await stepsClient.updateMySteps(1000);
-await stepsClient.getMyDashboard();
-await stepsClient.getTotalSteps();
-await stepsClient.getFundsDistribution();
-
-// Admin endpoints
-await stepsClient.updateParticipantSteps(participantId, 500);
-await stepsClient.getRouteFunds();
-await stepsClient.createRouteFund('25 KM', 150);
-```
-
-## Componenten
-
-### StepsTracker
-
-Hoofd component voor stappen tracking met volledige functionaliteit:
+Voor standaard REST API interacties:
 
 ```tsx
-import { StepsTracker } from '../features/steps';
-
-function ProfilePage() {
-  return (
-    <div>
-      <h1>Profiel</h1>
-      <StepsTracker />
-    </div>
-  );
-}
-```
-
-**Features:**
-- Persoonlijke stappen statistieken
-- Toegewezen fondsen per route
-- Totaal stappen van alle deelnemers
-- Stappen toevoegen interface
-- Voortgangs tracking
-- Real-time updates
-- Error handling
-- Loading states
-
-### StatCard
-
-Herbruikbare card voor het tonen van statistieken:
-
-```tsx
-import { StatCard } from '../features/steps/components';
-
-<StatCard
-  icon="🚶"
-  title="Jouw Stappen"
-  value={stats.personalSteps.toLocaleString()}
-  subtitle={`Route: ${dashboard.route}`}
-/>
-```
-
-**Props:**
-- `icon`: string - Emoji of icon character
-- `title`: string - Card titel
-- `value`: string | number - Hoofd waarde
-- `subtitle?`: string - Optionele ondertitel
-- `className?`: string - Extra CSS classes
-
-### ProgressBar
-
-Visuele voortgangsbalk component:
-
-```tsx
-import { ProgressBar } from '../features/steps/components';
-
-<ProgressBar
-  current={stats.personalSteps}
-  goal={100000}
-  label="Persoonlijk doel"
-  showPercentage={true}
-/>
-```
-
-**Props:**
-- `current`: number - Huidige waarde
-- `goal`: number - Doel waarde
-- `label?`: string - Label tekst (default: 'Voortgang')
-- `showPercentage?`: boolean - Toon percentage (default: true)
-- `className?`: string - Extra CSS classes
-
-## Hooks
-
-### useSteps
-
-Main hook voor steps functionaliteit:
-
-```typescript
-import { useSteps } from '../features/steps/hooks';
+import { useSteps } from '@/features/steps';
 
 function MyComponent() {
   const {
-    dashboard,        // ParticipantDashboard | null
-    totalSteps,       // number
-    fundsDistribution,// FundsDistribution | null
-    stats,            // StepsStats | null
-    loading,          // boolean
-    error,            // string | null
-    updateSteps,      // (deltaSteps: number) => Promise<void>
-    refreshData       // () => Promise<void>
+    dashboard,       // ParticipantDashboard | null
+    totalSteps,      // number
+    fundsDistribution, // FundsDistribution | null
+    stats,           // StepsStats | null
+    loading,         // boolean
+    error,           // string | null
+    updateSteps,     // (delta: number) => Promise<void>
+    refreshData,     // () => Promise<void>
   } = useSteps();
 
-  // Gebruik de data...
+  return (
+    <div>
+      <p>Mijn stappen: {dashboard?.steps || 0}</p>
+      <button onClick={() => updateSteps(100)}>+100 stappen</button>
+    </div>
+  );
 }
 ```
 
-**Functionaliteit:**
-- Automatisch dashboard data ophalen
-- Totaal stappen tracking
-- Fondsverdeling informatie
-- Fout afhandeling
-- Loading states
-- Data refresh functie
-- Optimistische updates
+### useLiveTotalSteps Hook
 
-### useLiveTotalSteps
+Voor live updates van totale stappen (polling):
 
-Hook voor auto-refreshing totaal stappen:
-
-```typescript
-import { useLiveTotalSteps } from '../features/steps/hooks';
+```tsx
+import { useLiveTotalSteps } from '@/features/steps';
 
 function TotalStepsDisplay() {
-  const { totalSteps, loading, error } = useLiveTotalSteps(30000); // Refresh elke 30s
-
-  return (
-    <div>
-      <h3>Totaal Stappen</h3>
-      <p>{totalSteps.toLocaleString()}</p>
-    </div>
-  );
-}
-```
-
-**Parameters:**
-- `refreshInterval`: number - Refresh interval in milliseconds (default: 30000)
-
-**Returns:**
-- `totalSteps`: number - Totaal aantal stappen
-- `loading`: boolean - Loading state
-- `error`: string | null - Error message
-
-## Integraties
-
-### Dashboard Page
-
-Totaal stappen worden automatisch getoond in de [`OverviewTab`](../../features/dashboard/components/OverviewTab.tsx):
-
-```tsx
-import { useLiveTotalSteps } from '../../steps/hooks';
-
-export function OverviewTab() {
-  const { totalSteps, loading: stepsLoading } = useLiveTotalSteps(30000);
+  const { totalSteps, loading, error } = useLiveTotalSteps(30000); // 30 sec interval
   
+  return <p>Totaal: {totalSteps.toLocaleString()}</p>;
+}
+```
+
+## WebSocket Gebruik
+
+### useStepsWebSocket Hook
+
+Voor real-time updates via WebSocket:
+
+```tsx
+import { useStepsWebSocket } from '@/features/steps';
+
+function Dashboard() {
+  const {
+    connected,          // boolean
+    connectionState,    // ConnectionState
+    latestUpdate,       // StepUpdateMessage | null
+    totalSteps,         // number
+    leaderboard,        // LeaderboardUpdateMessage | null
+    latestBadge,        // BadgeEarnedMessage | null
+    subscribe,          // (channels: string[]) => void
+    unsubscribe,        // (channels: string[]) => void
+    reconnect,          // () => void
+    disconnect,         // () => void
+  } = useStepsWebSocket('user-123', 'participant-456', {
+    debug: true,
+    reconnectInterval: 1000,
+  });
+
+  useEffect(() => {
+    if (connected) {
+      subscribe(['step_updates', 'leaderboard_updates']);
+    }
+  }, [connected, subscribe]);
+
   return (
-    <div className="bg-gradient-to-r from-green-600 to-emerald-700...">
-      <h3>Totaal Gewand elde Stappen</h3>
-      <p className="text-5xl">{totalSteps.toLocaleString('nl-NL')}</p>
+    <div>
+      <p>Status: {connectionState}</p>
+      <p>Stappen: {latestUpdate?.steps || 0}</p>
     </div>
   );
 }
 ```
 
-### Profile Page
+### Specialized Hooks
 
-Volledige steps tracker is geïntegreerd in de [`ProfilePage`](../../pages/ProfilePage.tsx):
+#### useParticipantDashboard
+
+Auto-subscribed op participant relevante channels:
 
 ```tsx
-import { StepsTracker } from '../features/steps';
+import { useParticipantDashboard } from '@/features/steps';
 
-export function ProfilePage() {
-  return (
-    <div>
-      {/* Profiel formulier */}
-      
-      {/* Steps Tracking Section */}
-      <div className="mt-6">
-        <h2>Stappen Tracking</h2>
-        <StepsTracker />
-      </div>
-    </div>
-  );
+function ParticipantView() {
+  const dashboard = useParticipantDashboard(userId, participantId);
+  // Auto-subscribed: step_updates, badge_earned
 }
+```
+
+#### useLeaderboard
+
+Voor publieke leaderboard views:
+
+```tsx
+import { useLeaderboard } from '@/features/steps';
+
+function PublicLeaderboard() {
+  const { leaderboard, totalSteps, connected } = useLeaderboard();
+  // Auto-subscribed: total_updates, leaderboard_updates
+}
+```
+
+#### useStepsMonitoring
+
+Voor admin monitoring (alle channels):
+
+```tsx
+import { useStepsMonitoring } from '@/features/steps';
+
+function AdminMonitor() {
+  const monitoring = useStepsMonitoring(adminUserId);
+  // Auto-subscribed: alle channels
+}
+```
+
+## Components
+
+### StepsTracker
+
+Display van persoonlijke steps met progress indicator:
+
+```tsx
+import { StepsTracker } from '@/features/steps';
+
+<StepsTracker 
+  currentSteps={5000}
+  goalSteps={10000}
+  route="10 KM"
+/>
+```
+
+### ProgressBar
+
+Herbruikbare progress bar:
+
+```tsx
+import { ProgressBar } from '@/features/steps';
+
+<ProgressBar 
+  progress={75}
+  label="75% van doel"
+  color="blue"
+/>
+```
+
+### StatCard
+
+Card voor het weergeven van statistieken:
+
+```tsx
+import { StatCard } from '@/features/steps';
+
+<StatCard
+  title="Totaal Stappen"
+  value="15,234"
+  icon={<StepsIcon />}
+  trend="+12%"
+/>
+```
+
+### Admin Components
+
+#### RouteFundsManager
+
+Admin interface voor het beheren van route fondsen:
+
+```tsx
+import { RouteFundsManager } from '@/features/steps/components/admin';
+
+<RouteFundsManager />
+```
+
+#### ParticipantStepsEditor
+
+Admin interface voor het bewerken van deelnemer stappen:
+
+```tsx
+import { ParticipantStepsEditor } from '@/features/steps/components/admin';
+
+<ParticipantStepsEditor />
 ```
 
 ## Types
 
-### ParticipantDashboard
+### REST API Types
 
 ```typescript
+interface Participant {
+  id: string;
+  naam: string;
+  email: string;
+  steps: number;
+  // ... meer fields
+}
+
 interface ParticipantDashboard {
-  steps: number;           // Aantal gewandelde stappen
-  route: string;           // Gekozen route (bijv. "10 KM")
-  allocatedFunds: number;  // Toegewezen fondsen in euro's
-  naam: string;            // Naam deelnemer
-  email: string;           // Email deelnemer
+  steps: number;
+  route: string;
+  allocatedFunds: number;
+  naam: string;
+  email: string;
+}
+
+interface RouteFund {
+  id: string;
+  route: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
-### StepsStats
+### WebSocket Types
 
 ```typescript
-interface StepsStats {
-  personalSteps: number;      // Persoonlijke stappen
-  totalSteps: number;         // Totaal alle deelnemers
-  personalGoal: number;       // Persoonlijk doel
-  progressPercentage: number; // Voortgang percentage
+interface WebSocketStepUpdate {
+  type: 'step_update';
+  participant_id: string;
+  naam: string;
+  steps: number;
+  delta: number;
+  route: string;
+  allocated_funds: number;
+  timestamp: number;
+}
+
+interface WebSocketLeaderboardUpdate {
+  type: 'leaderboard_update';
+  top_n: number;
+  entries: WebSocketLeaderboardEntry[];
+  timestamp: number;
+}
+
+enum WebSocketConnectionState {
+  DISCONNECTED = 'DISCONNECTED',
+  CONNECTING = 'CONNECTING',
+  CONNECTED = 'CONNECTED',
+  RECONNECTING = 'RECONNECTING',
+  FAILED = 'FAILED',
 }
 ```
 
-### FundsDistribution
+## Configuration
+
+### WebSocket Config
 
 ```typescript
-interface FundsDistribution {
-  totalX: number;                    // Totaal beschikbaar bedrag
-  routes: Record<string, number>;    // Bedrag per route
+interface WebSocketConfig {
+  reconnectInterval?: number;      // Default: 1000ms
+  maxReconnectInterval?: number;   // Default: 30000ms
+  reconnectDecay?: number;          // Default: 1.5
+  maxReconnectAttempts?: number;   // Default: Infinity
+  pingInterval?: number;            // Default: 30000ms
+  debug?: boolean;                  // Default: false
 }
 ```
 
-## Permissies
+## API Client
 
-Het Steps systeem gebruikt de volgende permissies:
-
-| Permissie | Beschrijving | Endpoints |
-|-----------|--------------|-----------|
-| `steps:read` | Eigen dashboard bekijken | `GET /api/participant/dashboard` |
-| `steps:write` | Eigen stappen bijwerken | `POST /api/steps` |
-| `steps:read_total` | Totaal stappen zien | `GET /api/total-steps` |
-| `steps:write` (admin) | Stappen van anderen bijwerken | `POST /api/steps/:id` |
-| `steps:read` (admin) | Fondsverdeling beheren | `GET /api/funds-distribution` |
-
-## Error Handling
-
-Het systeem heeft uitgebreide error handling:
+De REST API client is beschikbaar via:
 
 ```typescript
-const { error, refreshData } = useSteps();
+import { stepsClient } from '@/api/client/stepsClient';
 
-if (error) {
-  return (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-      <p>{error}</p>
-      <button onClick={refreshData}>Opnieuw proberen</button>
-    </div>
-  );
-}
+// User endpoints
+await stepsClient.updateMySteps(100);
+await stepsClient.getMyDashboard();
+
+// Public endpoints
+await stepsClient.getTotalSteps(2025);
+await stepsClient.getFundsDistribution();
+
+// Admin endpoints
+await stepsClient.updateParticipantSteps('participant-id', 100);
+await stepsClient.getRouteFunds();
+await stepsClient.createRouteFund('6 KM', 500);
 ```
 
-**Error Types:**
-- Network errors (geen internet)
-- Authentication errors (ongeldig token)
-- Validation errors (ongeldige input)
-- Server errors (backend problemen)
+## Voorbeelden
 
-## Best Practices
+Zie `docs/examples/` voor complete werkende voorbeelden:
 
-### 1. Optimistische Updates
-
-```typescript
-const handleAddSteps = async (steps: number) => {
-  // Update UI direct
-  setLocalSteps(prev => prev + steps);
-  
-  try {
-    await updateSteps(steps);
-  } catch (error) {
-    // Rollback bij fout
-    setLocalSteps(prev => prev - steps);
-  }
-};
-```
-
-### 2. Auto-refresh
-
-```typescript
-// Gebruik useLiveTotalSteps voor auto-refreshing data
-const { totalSteps } = useLiveTotalSteps(30000); // Elke 30 seconden
-```
-
-### 3. Loading States
-
-```typescript
-const { loading } = useSteps();
-
-if (loading) {
-  return <LoadingGrid count={3} variant="compact" />;
-}
-```
-
-### 4. Error Recovery
-
-```typescript
-const { error, refreshData } = useSteps();
-
-useEffect(() => {
-  if (error && error.includes('network')) {
-    const timer = setTimeout(() => refreshData(), 5000);
-    return () => clearTimeout(timer);
-  }
-}, [error, refreshData]);
-```
+- **StepsWebSocketDashboard.tsx** - Volledig dashboard met alle features
+- **README.md** - Gedetailleerde uitleg en meer voorbeelden
 
 ## Testing
 
-```typescript
-import { render, screen, waitFor } from '@testing-library/react';
-import { StepsTracker } from '../StepsTracker';
+```bash
+# Run tests
+npm test src/features/steps
 
-test('displays steps data', async () => {
-  render(<StepsTracker />);
-  
-  await waitFor(() => {
-    expect(screen.getByText(/Jouw Stappen/i)).toBeInTheDocument();
-  });
-});
+# Run with coverage
+npm test -- --coverage src/features/steps
 ```
 
-## Styling
+## Best Practices
 
-Het Steps systeem gebruikt het gedeelde [`cc`](../../../styles/shared.ts) styling systeem:
+1. **Gebruik WebSocket voor real-time updates**: Polling vermijden waar mogelijk
+2. **Handle connection states**: Toon feedback aan gebruiker over verbindingsstatus
+3. **Auto-reconnect**: De WebSocket client doet dit automatisch
+4. **Cleanup**: De hooks cleanen automatisch op bij unmount
+5. **Error handling**: Altijd error states afhandelen
+6. **Debounce user input**: Bij manual step updates
 
-```typescript
-import { cc } from '../../../styles/shared';
+## Troubleshooting
 
-<div className={cc.form.input()}>
-  <input type="number" />
-</div>
-```
+### WebSocket issues
+- Check browser console met `debug: true`
+- Verify backend WebSocket server is running
+- Check authentication token validity
 
-**Utility Classes:**
-- `cc.button.base({ color: 'primary' })` - Buttons
-- `cc.form.input()` - Form inputs
-- `cc.form.error()` - Error messages
-- `cc.spacing.section.md` - Section spacing
-- `cc.grid.threeCol()` - Grid layouts
+### Updates not showing
+- Verify you're subscribed to correct channels
+- Check connection state is CONNECTED
+- Ensure backend is sending messages correctly
 
-## Performance
+### Performance
+- Use specialized hooks (useLeaderboard, etc.) waar mogelijk
+- Implement debouncing voor frequent updates
+- Consider pagination voor grote leaderboards
 
-**Optimalisaties:**
-1. **Memoization**: Hooks gebruiken `useCallback` voor functie memoization
-2. **Auto-refresh**: Configureerbaar interval per use case
-3. **Lazy Loading**: Components worden alleen geladen wanneer nodig
-4. **Error Boundaries**: Fouten worden gelokaliseerd en afgehandeld
+## Meer Informatie
 
-## Toekomstige Features
-
-- [ ] Websocket real-time updates
-- [ ] Fitness tracker integraties (Strava, Garmin)
-- [ ] Leaderboard
-- [ ] Team/groep functionaliteit
-- [ ] Export naar CSV/Excel
-- [ ] Grafische voortgangsrapportages
-- [ ] Push notificaties voor mijlpalen
-- [ ] Social sharing features
-
-## Support
-
-Voor vragen of problemen:
-- **Backend API**: Zie [Backend API documentatie](../../../../docs/BACKEND_API_REQUIREMENTS.md)
-- **Type Definitions**: Zie [types.ts](./types.ts)
-- **API Client**: Zie [stepsClient.ts](../../../api/client/stepsClient.ts)
-
-## Changelog
-
-### v1.0.0 (2025-01-15)
-- ✅ Basis stappen tracking
-- ✅ Dashboard integratie
-- ✅ Profile page integratie
-- ✅ Real-time totaal stappen counter
-- ✅ Fondsverdeling display
-- ✅ Error handling
-- ✅ Loading states
-- ✅ TypeScript types
-- ✅ Responsive design
-- ✅ Dark mode support
+- [Backend API Documentatie](../../../docs/BACKEND_API_REQUIREMENTS.md)
+- [WebSocket Examples](../../../docs/examples/README.md)
+- [Steps Implementation Status](../../../docs/features/STEPS_IMPLEMENTATION_STATUS.md)
