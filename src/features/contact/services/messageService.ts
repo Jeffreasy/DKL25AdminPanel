@@ -1,15 +1,26 @@
-import { supabase } from '../../../api/client/supabase'
+import { contactClient } from '../../../api/client'
 import type { ContactMessage, ContactStats, ContactStatus } from '../types'
 
 export async function fetchMessages(): Promise<{ data: ContactMessage[], error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('contact_formulieren')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return { data: data || [], error: null }
+    const response = await contactClient.getMessages()
+    // Map API response to feature types
+    const mappedData: ContactMessage[] = (response as unknown as Record<string, unknown>[]).map((msg) => ({
+      id: msg.id as string,
+      naam: msg.naam as string,
+      email: msg.email as string,
+      onderwerp: (msg.telefoon as string) || '', // Map telefoon to onderwerp for compatibility
+      bericht: msg.bericht as string,
+      status: msg.status as ContactStatus,
+      privacy_akkoord: msg.privacy_akkoord as boolean,
+      email_verzonden: (msg.beantwoord as boolean) || false,
+      email_verzonden_op: (msg.beantwoord_op as string) || null,
+      created_at: msg.created_at as string,
+      updated_at: msg.updated_at as string,
+      behandeld_door: msg.behandeld_door as string,
+      behandeld_op: msg.behandeld_op as string
+    }))
+    return { data: mappedData, error: null }
   } catch (err) {
     console.error('Error fetching messages:', err)
     return { data: [], error: err as Error }
@@ -18,26 +29,10 @@ export async function fetchMessages(): Promise<{ data: ContactMessage[], error: 
 
 export async function updateMessageStatus(id: string, status: ContactStatus) {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    const updates = {
-      status,
-      ...(status === 'afgehandeld' ? {
-        behandeld_door: user?.email,
-        behandeld_op: new Date().toISOString()
-      } : {})
-    }
+    // Map status to API format
+    const apiStatus = status === 'afgehandeld' ? 'gesloten' : status
+    await contactClient.updateMessage(id, { status: apiStatus })
 
-    const { error } = await supabase
-      .from('contact_formulieren')
-      .update(updates)
-      .eq('id', id)
-
-    if (error) {
-      console.error('Update error:', error)
-      throw error
-    }
-    
     return { error: null }
   } catch (err) {
     console.error('Error updating message:', err)
@@ -47,12 +42,7 @@ export async function updateMessageStatus(id: string, status: ContactStatus) {
 
 export async function updateMessageNotes(id: string, notities: string) {
   try {
-    const { error } = await supabase
-      .from('contact_formulieren')
-      .update({ notities })
-      .eq('id', id)
-
-    if (error) throw error
+    await contactClient.updateMessage(id, { notities })
     return { error: null }
   } catch (err) {
     console.error('Error updating notes:', err)
@@ -62,25 +52,7 @@ export async function updateMessageNotes(id: string, notities: string) {
 
 export async function resendEmail(id: string): Promise<{ error: Error | null }> {
   try {
-    const { data: message } = await supabase
-      .from('contact_formulieren')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (!message) throw new Error('Message not found')
-
-    // Hier email logica toevoegen
-    
-    const { error } = await supabase
-      .from('contact_formulieren')
-      .update({ 
-        email_verzonden: true,
-        email_verzonden_op: new Date().toISOString()
-      })
-      .eq('id', id)
-
-    if (error) throw error
+    await contactClient.addAnswer(id, 'Email opnieuw verzonden')
     return { error: null }
   } catch (err) {
     console.error('Error resending email:', err)
@@ -90,11 +62,7 @@ export async function resendEmail(id: string): Promise<{ error: Error | null }> 
 
 export async function getContactStats(): Promise<{ data: ContactStats | null, error: Error | null }> {
   try {
-    const { data: messages, error } = await supabase
-      .from('contact_formulieren')
-      .select('*')
-
-    if (error) throw error
+    const messages = await contactClient.getMessages()
 
     // Calculate stats
     const stats: ContactStats = {
@@ -102,10 +70,10 @@ export async function getContactStats(): Promise<{ data: ContactStats | null, er
         total: messages.length,
         new: messages.filter(m => m.status === 'nieuw').length,
         inProgress: messages.filter(m => m.status === 'in_behandeling').length,
-        handled: messages.filter(m => m.status === 'afgehandeld').length
+        handled: messages.filter(m => m.status === 'gesloten').length
       },
-      avgResponseTime: calculateAvgResponseTime(messages),
-      messagesByPeriod: calculateMessagesByPeriod(messages)
+      avgResponseTime: calculateAvgResponseTime(messages as unknown as ContactMessage[]),
+      messagesByPeriod: calculateMessagesByPeriod(messages as unknown as ContactMessage[])
     }
 
     return { data: stats, error: null }

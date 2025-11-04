@@ -41,3 +41,18 @@ export type {
   RouteOption,
   StepsStats
 } from '../../features/steps/types';
+
+// Notulen
+export { notulenClient } from './notulenClient';
+export type {
+  Notulen,
+  NotulenCreateRequest,
+  NotulenUpdateRequest,
+  NotulenVersion,
+  AgendaItem,
+  Besluit,
+  Actiepunt,
+  NotulenFilters,
+  NotulenSearchParams,
+  NotulenListResponse
+} from '../../types/notulen';
