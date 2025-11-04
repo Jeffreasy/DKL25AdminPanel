@@ -34,7 +34,14 @@ class NotulenClient {
       transformed.besluiten = { besluiten: request.besluiten }
     }
     if (request.actiepunten) {
-      transformed.actiepunten = { acties: request.actiepunten }
+      // Strip completion tracking fields for API requests - these are managed via separate endpoints
+      transformed.actiepunten = {
+        acties: request.actiepunten.map((actie) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { voltooid, voltooid_door, voltooid_op, voltooid_opmerking, ...cleanActie } = actie
+          return cleanActie
+        })
+      }
     }
 
     return transformed
