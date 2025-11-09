@@ -1,10 +1,45 @@
 /**
- * DKL API Client
- * Centralized API communication met JWT authenticatie
+ * DKL API Client - LEGACY
+ *
+ * @deprecated This file contains legacy API methods and will be refactored in v3.0.0
+ *
+ * **Current Status:** Functional but not recommended for new code
+ *
+ * **Migration Path:**
+ * - For new features, use specific clients from `/src/api/client/`
+ * - Examples: `notulenClient`, `userClient`, `emailClient`, etc.
+ * - These clients are properly typed and follow modern patterns
+ *
+ * **Why Migrate:**
+ * - Better TypeScript type safety
+ * - Consistent error handling
+ * - Proper separation of concerns
+ * - Easier to test and maintain
+ *
+ * **Available Modern Clients:**
+ * - `notulenClient` - Meeting notes management
+ * - `userClient` - User management
+ * - `emailClient` - Email operations
+ * - `albumClient` - Photo albums
+ * - `videoClient` - Video content
+ * - `sponsorClient` - Sponsor management
+ * - `partnerClient` - Partner management
+ * - `contactClient` - Contact messages
+ * - `stepsClient` - Steps tracking
+ * - `rbacClient` - Roles & permissions
+ *
+ * @see /src/api/client/ - Modern API clients
+ * @see docs/API_CLIENT_STRATEGY.md - Migration guide
  */
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { apiConfig } from '../config/api.config';
+
+console.warn(
+  '⚠️ LEGACY API: api.client.ts is deprecated\n' +
+  'For new code, use specific clients from /src/api/client/\n' +
+  'See docs/API_CLIENT_STRATEGY.md for migration guide'
+);
 
 // =============================================================================
 // TYPES

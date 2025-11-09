@@ -23,43 +23,8 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 )
 
-// Helper functie om te checken of iemand admin is
-export const isAdmin = async () => {
-  try {
-    // 1. Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    // console.log('Auth check:', { user, userError })
-    
-    if (!user || userError) {
-      // console.log('No authenticated user found')
-      return false
-    }
-
-    // 2. Check admin table
-    const { data: admin, error: adminError } = await supabase
-      .from('admins')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-    
-    // console.log('Admin check:', { 
-    //   userId: user.id,
-    //   adminResult: admin,
-    //   error: adminError,
-    //   query: `user_id = ${user.id}`
-    // })
-    
-    if (adminError) {
-      // console.error('Admin check failed:', adminError)
-      return false
-    }
-
-    return !!admin
-  } catch {
-    // console.error('isAdmin check failed:', err)
-    return false
-  }
-}
+// REMOVED: Old Supabase-based admin check
+// Use RBAC system instead: src/hooks/usePermissions.ts -> isAdmin()
 
 // Helper om de huidige user op te halen
 export const getCurrentUser = async () => {

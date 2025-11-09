@@ -21,13 +21,11 @@ export default defineConfig(({ command }) => ({
     }
   },
   server: {
-    port: parseInt(process.env.PORT || '3000'),
-    strictPort: true,
+    port: parseInt(process.env.PORT || '5173'),
+    strictPort: false, // Allow fallback to next available port
     hmr: command === 'serve' ? {
       protocol: 'ws',
       host: 'localhost',
-      port: 24678,
-      clientPort: 24678
     } : false
   },
   optimizeDeps: {

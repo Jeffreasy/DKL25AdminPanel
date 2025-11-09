@@ -71,6 +71,47 @@ Complete documentation for the DKL25 Admin Panel project.
   - Performance metrics
   - Compatible met Backend V1.48.0+
 
+- **[🎫 TOKEN_MANAGEMENT.md](TOKEN_MANAGEMENT.md)** - 🆕 **Token Management Guide** (V1.0, 447 LOC)
+  - Official token storage keys (`auth_token`, `refresh_token`)
+  - TokenManager & TokenRefreshScheduler usage
+  - Complete lifecycle documentation
+  - Migration guide from legacy implementations
+  - Security best practices
+  - Debugging & troubleshooting
+
+- **[🔌 API_CLIENT_STRATEGY.md](API_CLIENT_STRATEGY.md)** - 🆕 **API Client Strategy** (V1.0, 639 LOC)
+  - Modern vs Legacy client comparison
+  - Migration guide from legacy api.client.ts
+  - Complete client catalog & usage examples
+  - Best practices for new features
+  - Testing strategies
+  - Decision matrix for client selection
+
+- **[📊 MIGRATION_REPORT.md](MIGRATION_REPORT.md)** - 🆕 **Migration Progress Report** (V1.0, 714 LOC)
+  - Complete phase 1 completion report
+  - Client coverage status (14 modern clients)
+  - Page migration tracking (100% legacy-free)
+  - Test results & statistics (100% pass rate!)
+  - Timeline & roadmap (Phase 1-3)
+  - Impact analysis & lessons learned
+
+- **[⚡ PERFORMANCE_BASELINE.md](PERFORMANCE_BASELINE.md)** - 🆕 **Performance Metrics** (V1.0, 282 LOC)
+  - Build & runtime performance metrics
+  - API client response times
+  - Performance goals (short/medium/long term)
+  - Monitoring strategy & tools
+  - Optimization recommendations
+  - Performance testing guide
+
+- **[👥 TEAM_ADOPTION_GUIDE.md](TEAM_ADOPTION_GUIDE.md)** - 🆕 **Team Adoption Strategy** (V1.0, 349 LOC)
+  - Adoption goals & timeline
+  - Required reading list
+  - Quick start for team members
+  - Training session outlines
+  - Adoption tracking metrics
+  - Common Q&A
+  - Success criteria
+
 #### Component Architecture
 - [**Components Architecture**](architecture/components.md) - Component structure and organization
 - [**API Integration**](guides/api-integration.md) - Supabase & Cloudinary integration
@@ -366,7 +407,40 @@ docs/
 
 ## 🔄 Version History
 
-### V2.4 (2025-11-02) - Current
+### V2.7 (2025-01-08) - Current
+- ✅ **100% Test Success + Phase 2 Completion**
+- ✅ ALL integration tests passing (14/14 - 100%!)
+- ✅ MSW infrastructure completely fixed
+- ✅ Test expectations aligned with mocks
+- ✅ New: [PERFORMANCE_BASELINE.md](PERFORMANCE_BASELINE.md) (282 LOC)
+- ✅ New: [TEAM_ADOPTION_GUIDE.md](TEAM_ADOPTION_GUIDE.md) (349 LOC)
+- ✅ Performance monitoring strategy established
+- ✅ Team adoption plan documented
+- ✅ Complete Phase 2 deliverables
+
+### V2.6 (2025-01-08)
+- ✅ **Legacy Code Deprecation & Modern Patterns**
+- ✅ Deprecated authManager class with migration guide
+- ✅ Deprecated legacy api.client.ts (543 LOC monolith)
+- ✅ New: [API_CLIENT_STRATEGY.md](API_CLIENT_STRATEGY.md) (639 LOC)
+- ✅ Complete client migration guide
+- ✅ Modern client catalog & best practices
+- ✅ Integration tests for auth flow (514 LOC)
+- ✅ Console warnings for deprecated code
+- ✅ Clear migration path to modern patterns
+
+### V2.5 (2025-01-08)
+- ✅ **Critical Bug Fixes & Documentation Updates**
+- ✅ Fixed API Base URL configuration (removed duplicate /api)
+- ✅ Updated FRONTEND_INTEGRATION.md with correct token keys
+- ✅ Corrected response structure documentation
+- ✅ New: [TOKEN_MANAGEMENT.md](TOKEN_MANAGEMENT.md) (447 LOC)
+- ✅ Standardized token storage: `auth_token` (not `access_token`)
+- ✅ Documented TokenManager & TokenRefreshScheduler
+- ✅ Added migration guide from legacy implementations
+- ✅ Security best practices for token handling
+
+### V2.4 (2025-11-02)
 - ✅ Complete codebase documentation overhaul
 - ✅ New: [CODEBASE_OVERVIEW.md](CODEBASE_OVERVIEW.md) (664 LOC)
 - ✅ New: [PROJECT_STRUCTURE.md](architecture/PROJECT_STRUCTURE.md) (721 LOC)
@@ -402,19 +476,41 @@ docs/
 
 ---
 
-**Version**: 2.4
-**Last Updated**: 2025-11-02
+**Version**: 2.7
+**Last Updated**: 2025-01-08
 **Backend Compatibility**: V1.48.0+
 **Status**: ✅ Production Ready
 
-**Latest Changes**:
+**Latest Changes** (V2.7):
+- ✅ **100% test pass rate achieved** (14/14 integration tests)
+- ✅ MSW infrastructure completely fixed (API URL + RBAC mocks)
+- ✅ Test suite validates all core auth functionality
+- ✅ New comprehensive PERFORMANCE_BASELINE.md (282 LOC)
+- ✅ New comprehensive TEAM_ADOPTION_GUIDE.md (349 LOC)
+- ✅ Performance monitoring & optimization strategy
+- ✅ Team training plan with adoption metrics
+- ✅ Complete Phase 2 tasks delivered
+
+**Previous** (V2.6):
+- ✅ authManager class fully deprecated with migration guide
+- ✅ Legacy api.client.ts marked as deprecated (console warnings)
+- ✅ New comprehensive API_CLIENT_STRATEGY.md (639 LOC)
+- ✅ Complete modern client catalog documented
+- ✅ Integration tests for authentication flow (514 LOC)
+- ✅ Newsletter + Registration clients created (362 LOC)
+- ✅ ProfilePage + Newsletter service migrated
+
+**Previous** (V2.5):
+- ✅ Critical API configuration fix (Base URL /api duplication)
+- ✅ Token key standardization (auth_token is official standard)
+- ✅ FRONTEND_INTEGRATION.md corrections (token names & response structure)
+- ✅ New comprehensive TOKEN_MANAGEMENT.md guide (447 LOC)
+
+**Previous** (V2.4):
 - ✅ Complete codebase documentation (4 new comprehensive docs, 3,158 LOC)
 - ✅ All 16 features analyzed and documented in detail
 - ✅ Project structure fully mapped and explained
 - ✅ 25 improvement recommendations with implementation roadmap
-- ✅ Structural issues identified and prioritized
-- ✅ Feature status matrix created
-- ✅ Integration points documented
 
 **Maintained By**: Development Team  
 **Documentation Status**: ✅ Complete & Verified

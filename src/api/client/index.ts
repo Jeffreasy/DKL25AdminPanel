@@ -48,7 +48,7 @@ export type {
   Notulen,
   NotulenCreateRequest,
   NotulenUpdateRequest,
-  NotulenVersion,
+  NotulenVersie as NotulenVersion,
   AgendaItem,
   Besluit,
   Actiepunt,
@@ -56,3 +56,27 @@ export type {
   NotulenSearchParams,
   NotulenListResponse
 } from '../../types/notulen';
+
+// Email
+export { emailClient } from './emailClient';
+export type { SendEmailParams, EmailEventData } from './emailClient';
+export { adminEmailService } from '../../features/email/adminEmailService';
+export type {
+  Email,
+  PaginatedEmailResponse,
+  EmailFetchResponse,
+  AutoResponse,
+  ParticipantEmailsResponse
+} from '../../features/email/types';
+
+// Users
+export { userClient } from './userClient';
+export type { User, UserSearchResult } from './userClient';
+
+// Newsletter
+export { newsletterClient } from './newsletterClient';
+// Note: Use types from features/newsletter/types for Newsletter, CreateNewsletterData, UpdateNewsletterData
+
+// Registrations
+export { registrationClient } from './registrationClient';
+export type { Registration, RegistrationCreateData, RegistrationUpdateData } from './registrationClient';

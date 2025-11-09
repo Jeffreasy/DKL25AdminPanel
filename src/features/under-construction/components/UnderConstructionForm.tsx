@@ -37,24 +37,48 @@ export function UnderConstructionForm({ onSave }: Props) {
     const loadData = async () => {
       try {
         const data = await underConstructionService.getUnderConstruction();
-        setFormData({
-          is_active: data.isActive,
-          title: data.title,
-          message: data.message,
-          footer_text: data.footerText || '',
-          logo_url: data.logoUrl || '',
-          expected_date: data.expectedDate ? new Date(data.expectedDate).toISOString().slice(0, 16) : null,
-          social_links: data.socialLinks || [],
-          progress_percentage: data.progressPercentage || 0,
-          contact_email: data.contactEmail || '',
-          newsletter_enabled: data.newsletterEnabled,
-        });
-        setId(data.id);
+        
+        // Check if this is default data (no active maintenance mode)
+        if (data.id === 0) {
+          // Load default form values
+          setFormData({
+            is_active: false,
+            title: data.title,
+            message: data.message,
+            footer_text: data.footerText || '',
+            logo_url: data.logoUrl || '',
+            expected_date: null,
+            social_links: [],
+            progress_percentage: 0,
+            contact_email: '',
+            newsletter_enabled: false,
+          });
+          setId(null);
+        } else {
+          // Load existing data
+          setFormData({
+            is_active: data.isActive,
+            title: data.title,
+            message: data.message,
+            footer_text: data.footerText || '',
+            logo_url: data.logoUrl || '',
+            expected_date: data.expectedDate ? new Date(data.expectedDate).toISOString().slice(0, 16) : null,
+            social_links: data.socialLinks || [],
+            progress_percentage: data.progressPercentage || 0,
+            contact_email: data.contactEmail || '',
+            newsletter_enabled: data.newsletterEnabled,
+          });
+          setId(data.id);
+        }
       } catch (error) {
-        // Only show error for actual API errors, not for expected 404s
-        if (!(error instanceof Error) || !error.message.includes('404')) {
+        // Silently handle 404 (no maintenance mode configured yet - this is normal)
+        if (error instanceof Error && error.message.includes('404')) {
+          console.log('No under construction configuration found (404) - using defaults');
+          // Keep default form values, no error message
+        } else {
+          // Only show error for actual API errors (500, network errors, etc.)
           console.error('Error loading under construction data:', error);
-          setMessage('Fout bij het laden van gegevens');
+          setMessage('Kon maintenance mode instellingen niet laden. Probeer het later opnieuw.');
           setMessageType('error');
         }
       } finally {

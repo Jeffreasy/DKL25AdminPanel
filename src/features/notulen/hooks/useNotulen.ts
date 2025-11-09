@@ -170,6 +170,59 @@ export function useNotulenMutations() {
     }
   }, [])
 
+  const completeActiepunt = useCallback(async (
+    notulenId: string,
+    actieIndex: number,
+    completionData?: { voltooid_opmerking?: string }
+  ): Promise<Notulen | null> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await notulenService.completeActiepunt(notulenId, actieIndex, completionData)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete action item')
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const uncompleteActiepunt = useCallback(async (
+    notulenId: string,
+    actieIndex: number
+  ): Promise<Notulen | null> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await notulenService.uncompleteActiepunt(notulenId, actieIndex)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to uncomplete action item')
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const rollbackNotulen = useCallback(async (
+    id: string,
+    version: number,
+    reason?: string
+  ): Promise<Notulen | null> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await notulenService.rollbackNotulen(id, version, reason)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to rollback notulen')
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   return {
     loading,
     error,
@@ -177,7 +230,10 @@ export function useNotulenMutations() {
     updateNotulen,
     deleteNotulen,
     finalizeNotulen,
-    archiveNotulen
+    archiveNotulen,
+    completeActiepunt,
+    uncompleteActiepunt,
+    rollbackNotulen
   }
 }
 

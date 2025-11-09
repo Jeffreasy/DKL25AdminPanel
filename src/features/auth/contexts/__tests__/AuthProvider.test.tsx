@@ -50,6 +50,10 @@ describe('AuthProvider', () => {
         </AuthProvider>
       )
 
+      // Should start with loading=true
+      expect(screen.getByTestId('loading')).toHaveTextContent('loading')
+
+      // Should transition to not-loading after auth check
       await waitFor(() => {
         expect(screen.getByTestId('loading')).toHaveTextContent('not-loading')
       })
@@ -151,8 +155,8 @@ describe('AuthProvider', () => {
       logoutButton.click()
 
       await waitFor(() => {
-        expect(localStorage.getItem('jwtToken')).toBeNull()
-        expect(localStorage.getItem('refreshToken')).toBeNull()
+        expect(localStorage.getItem('auth_token')).toBeNull()
+        expect(localStorage.getItem('refresh_token')).toBeNull()
         expect(localStorage.getItem('userId')).toBeNull()
       })
 

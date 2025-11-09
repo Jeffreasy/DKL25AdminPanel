@@ -8,6 +8,7 @@ import {
   EnvelopeIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
+  InboxIcon,
 } from '@heroicons/react/24/outline'
 import type { ComponentType } from 'react'
 
@@ -52,6 +53,7 @@ export const menuItems: MenuItemOrGroup[] = [
     ]
   },
   { label: 'Nieuwsbrieven', path: '/newsletters', icon: EnvelopeIcon, permission: 'newsletter:read' },
+  { label: 'Email', path: '/email', icon: InboxIcon, permission: 'email:read' },
   { label: 'Notulen', path: '/notulen', icon: DocumentTextIcon, permission: 'notulen:read' },
   { label: 'Gebruikers', path: '/users', icon: UserGroupIcon, permission: 'user:read' },
   { label: 'Admin', path: '/admin', icon: ShieldCheckIcon, permission: 'admin:access' },

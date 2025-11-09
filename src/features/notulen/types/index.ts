@@ -3,7 +3,7 @@ export type {
   Notulen,
   NotulenCreateRequest,
   NotulenUpdateRequest,
-  NotulenVersion,
+  NotulenVersie,
   AgendaItem,
   Besluit,
   Actiepunt,
@@ -11,3 +11,9 @@ export type {
   NotulenSearchParams,
   NotulenListResponse
 } from '@/types/notulen'
+
+// Import for alias
+import type { NotulenVersie } from '@/types/notulen'
+
+// Alias for backward compatibility
+export type NotulenVersion = NotulenVersie

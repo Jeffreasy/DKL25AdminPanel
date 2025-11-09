@@ -75,6 +75,21 @@ export interface LegacyEmail {
 }
 
 /**
+ * Participant emails response interface
+ * GET /api/participant/emails
+ */
+export interface ParticipantEmailsResponse {
+  participant_emails: string[];
+  system_emails: string[];
+  all_emails: string[];
+  counts: {
+    participants: number;
+    system: number;
+    total: number;
+  };
+}
+
+/**
  * Helper om LegacyEmail naar nieuwe Email interface te converteren
  */
 export function convertLegacyEmail(legacy: LegacyEmail): Email {

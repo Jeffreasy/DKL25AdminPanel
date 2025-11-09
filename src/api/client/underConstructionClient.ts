@@ -16,9 +16,10 @@ class UnderConstructionClient {
     const response = await fetch(url, { ...defaultOptions, ...options });
 
     if (!response.ok) {
-      // For 404 responses, include the status code in the error message
+      // For 404 responses, return null instead of throwing
+      // This prevents console errors for expected "not found" states
       if (response.status === 404) {
-        throw new Error('404');
+        return null;
       }
       const error = await response.json().catch(() => ({ error: 'API Error' }));
       throw new Error(error.error || 'API Error');
@@ -33,17 +34,15 @@ class UnderConstructionClient {
 
   // Public endpoint - no authentication required
   async getActiveUnderConstruction(): Promise<UnderConstructionResponse | null> {
-    try {
-      const data = await this.makeRequest('/api/under-construction/active') as UnderConstruction;
-      return this.mapFromAPI(data);
-    } catch (error) {
-      // Check if it's a 404 (no active under construction) - this is expected
-      if (error instanceof Error && error.message.includes('404')) {
-        return null;
-      }
-      // For other errors, still throw them
-      throw error;
+    const data = await this.makeRequest('/api/under-construction/active') as UnderConstruction | null;
+    
+    // If data is null, no active maintenance mode exists (404 response)
+    // This is normal behavior, not an error
+    if (data === null) {
+      return null;
     }
+    
+    return this.mapFromAPI(data);
   }
 
   // Admin endpoints - require authentication

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { mockUser, mockPhoto, mockAlbum, mockPartner, mockSponsor } from '../utils'
 
-const API_BASE_URL = 'https://api.dekoninklijkeloop.nl'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com'
 
 export const handlers = [
   // Auth endpoints
@@ -25,7 +25,16 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/api/auth/profile`, () => {
-    return HttpResponse.json(mockUser())
+    return HttpResponse.json({
+      ...mockUser(),
+      permissions: [
+        { resource: 'user', action: 'read' },
+        { resource: 'user', action: 'write' }
+      ],
+      roles: [
+        { id: '1', name: 'admin', description: 'Administrator' }
+      ]
+    })
   }),
 
   // Photos endpoints

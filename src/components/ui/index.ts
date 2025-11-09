@@ -9,3 +9,5 @@ export { LoadingGrid } from './LoadingGrid'
 export { Modal, ModalActions } from './Modal'
 export type { ModalProps, ModalActionsProps } from './Modal'
 export type { LoadingGridProps } from './LoadingGrid'
+
+export { UserSelect } from './UserSelect'

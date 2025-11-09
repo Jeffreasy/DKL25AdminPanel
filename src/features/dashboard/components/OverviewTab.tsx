@@ -2,10 +2,13 @@ import { useOutletContext } from 'react-router-dom'
 import type { DashboardContext } from '../../../types/dashboard'
 import { cc } from '../../../styles/shared'
 import { useLiveTotalSteps } from '../../steps/hooks'
+import { useEmailStats } from '../../email/hooks/useEmailStats'
+import { EnvelopeIcon, InboxIcon } from '@heroicons/react/24/outline'
 
 export function OverviewTab() {
   const { stats, contactStats } = useOutletContext<DashboardContext>()
   const { totalSteps, loading: stepsLoading } = useLiveTotalSteps(30000)
+  const { stats: emailStats, loading: emailStatsLoading } = useEmailStats(60000)
   
   if (!stats || !contactStats) {
     return (
@@ -79,6 +82,68 @@ export function OverviewTab() {
               <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Email Statistics - New Card */}
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${cc.hover.card}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Email Inbox</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {emailStatsLoading ? '...' : emailStats.unreadCount}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {emailStatsLoading ? '' : `${emailStats.totalEmails} totaal`}
+              </p>
+            </div>
+            <div className="bg-yellow-100 dark:bg-yellow-900/50 rounded-lg p-3">
+              <EnvelopeIcon className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Email Inbox Details */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-yellow-600 to-yellow-700 dark:from-yellow-500 dark:to-yellow-600">
+          <h3 className="text-lg font-semibold text-white">Email Inboxen</h3>
+          <p className="text-sm text-yellow-100 dark:text-yellow-200 mt-1">Status overzicht van beide email accounts</p>
+        </div>
+        <div className="p-6">
+          <div className={`${cc.grid.threeCol()} gap-6`}>
+            {/* Info Account */}
+            <div className="text-center">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3">
+                <InboxIcon className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {emailStatsLoading ? '...' : emailStats.infoCount}
+              </p>
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Info Account</p>
+            </div>
+
+            {/* Inschrijving Account */}
+            <div className="text-center">
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3">
+                <InboxIcon className="w-10 h-10 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {emailStatsLoading ? '...' : emailStats.inschrijvingCount}
+              </p>
+              <p className="text-sm font-medium text-green-600 dark:text-green-400">Inschrijving Account</p>
+            </div>
+
+            {/* Unread Count */}
+            <div className="text-center">
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3">
+                <EnvelopeIcon className="w-10 h-10 text-red-600 dark:text-red-400" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {emailStatsLoading ? '...' : emailStats.unreadCount}
+              </p>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Ongelezen</p>
             </div>
           </div>
         </div>

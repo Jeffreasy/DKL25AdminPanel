@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react'
-import { authManager } from '../../../api/client/auth'
 import { AuthContext, User } from './AuthContext'
+import { TokenManager } from './TokenManager'
+import { tokenRefreshScheduler } from './TokenRefreshScheduler'
 
 // ✅ CORRECT: Haal base URL op zonder '/api' - die wordt in fetch toegevoegd
 const getBaseURL = (): string => {
   const baseURL = import.meta.env.VITE_API_BASE_URL;
   console.log('🔍 DEBUG: VITE_API_BASE_URL =', baseURL);
   console.log('🔍 DEBUG: All env vars =', import.meta.env);
-  
+
   if (!baseURL) {
     console.warn('⚠️ VITE_API_BASE_URL not set, using fallback');
     return 'https://dklemailservice.onrender.com';
   }
-  
+
   console.log('✅ Using API Base URL:', baseURL);
   return baseURL;
 };
@@ -25,30 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Controleer token expiratie en parse JWT claims
-  const parseTokenClaims = (token: string) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return {
-        exp: payload.exp,
-        email: payload.email,
-        role: payload.role, // Legacy field
-        roles: payload.roles || [], // RBAC roles array
-        rbac_active: payload.rbac_active || false, // RBAC indicator
-        isExpired: payload.exp * 1000 < Date.now()
-      };
-    } catch {
-      return { isExpired: true, roles: [], rbac_active: false };
-    }
-  };
-
-  const isTokenExpired = (token: string) => {
-    return parseTokenClaims(token).isExpired;
-  };
+  // Use TokenManager for token operations
 
   // Automatische token refresh
-  const refreshToken = async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
+  const refreshToken = async (): Promise<string | null> => {
+    const refreshToken = TokenManager.getRefreshToken();
     if (!refreshToken) {
       logout();
       return null;
@@ -63,10 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('jwtToken', data.token);
-        if (data.refresh_token) {
-          localStorage.setItem('refreshToken', data.refresh_token);
-        }
+        TokenManager.setTokens(data.token, data.refresh_token);
         return data.token;
       }
     } catch (error) {
@@ -90,15 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Sla token op in localStorage
-        localStorage.setItem('jwtToken', data.token);
-        // CRITICAL: Update authManager with the new token
-        authManager.setToken(data.token);
+        // Sla tokens op via TokenManager
+        TokenManager.setTokens(data.token, data.refresh_token);
 
-        // Sla refresh token op indien beschikbaar
-        if (data.refresh_token) {
-          localStorage.setItem('refreshToken', data.refresh_token);
-        }
         // Sla user ID op voor API requests
         if (data.user?.id) {
           localStorage.setItem('userId', data.user.id);
@@ -108,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Parse token claims voor RBAC info
-        const claims = parseTokenClaims(data.token);
+        const claims = TokenManager.parseTokenClaims(data.token);
         console.log('🔐 Login - Token claims:', {
           hasLegacyRole: !!claims.role,
           rbacRoles: claims.roles,
@@ -117,90 +90,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Haal gebruikersinfo op inclusief permissies
         await loadUserProfile();
+
+        // Start automatic token refresh scheduler
+        tokenRefreshScheduler.start();
+
         return { success: true };
       } else {
         // Login failed - clear any existing tokens to prevent confusion
-        localStorage.removeItem('jwtToken');
-        localStorage.removeItem('refreshToken');
+        TokenManager.clearTokens();
         setUser(null);
         return { success: false, error: data.error };
       }
     } catch (err) {
       console.error('Login error:', err);
       // Network error - also clear tokens
-      localStorage.removeItem('jwtToken');
-      localStorage.removeItem('refreshToken');
+      TokenManager.clearTokens();
       setUser(null);
       return { success: false, error: 'Netwerk fout' };
     }
   };
 
   const loadUserProfile = async () => {
-    const token = localStorage.getItem('jwtToken');
+    const token = TokenManager.getValidToken();
     if (!token) {
-      throw new Error('No token available');
-    }
-
-    // Check if token is expired
-    if (isTokenExpired(token)) {
-      try {
-        const newToken = await refreshToken();
-        if (!newToken) {
-          throw new Error('Failed to refresh token');
-        }
-        // Update authManager with refreshed token
-        authManager.setToken(newToken);
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        logout();
-        throw refreshError;
-      }
-    } else {
-      // Ensure authManager has the current token
-      authManager.setToken(token);
+      throw new Error('No valid token available');
     }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
         const userData = await response.json();
-        
+
         // Backend returns: { id, email, naam, permissions: [{resource, action}], roles: [{id, name, description}] }
-        // Note: 'rol' field is DEPRECATED and removed from responses as per V1.49
         const permissions = userData.permissions || [];
         const roles = userData.roles || []; // RBAC roles array - PRIMARY source
-
-        // Parse token claims voor backward compatibility check
-        const token = localStorage.getItem('jwtToken');
-        const claims = token ? parseTokenClaims(token) : { roles: [], rbac_active: false };
 
         console.log('🔐 Profile loaded:', {
           permissionsCount: permissions.length,
           rolesCount: roles.length,
-          tokenRoles: claims.roles,
-          rbacActive: claims.rbac_active
+          hasPermissions: permissions.length > 0,
+          hasRoles: roles.length > 0
         });
 
-        // Enhanced permission loading with RBAC support
-        if (!permissions || permissions.length === 0) {
-          console.warn('⚠️ Backend returned no permissions! User will have limited access.');
-          console.warn('This is normal during RBAC migration. Permissions will be loaded from roles.');
+        // Validate permissions structure
+        if (!Array.isArray(permissions)) {
+          console.warn('⚠️ Backend returned invalid permissions format, using empty array');
+        }
 
-          // Try to load permissions from RBAC roles if available
-          if (roles && roles.length > 0) {
-            try {
-              console.log('🔄 Attempting to load permissions from RBAC roles...');
-              // Note: Backend should provide permissions array directly
-              // If not, roles are available for display purposes
-            } catch (error) {
-              console.error('Failed to load permissions from roles:', error);
-            }
-          }
-        } else {
-          console.log('✅ Backend permissions loaded:', permissions.length, 'permissions');
+        // Ensure permissions have correct structure
+        const validPermissions = permissions.filter((perm: unknown) => {
+          if (!perm || typeof perm !== 'object') return false;
+          const p = perm as Record<string, unknown>;
+          return typeof p.resource === 'string' && typeof p.action === 'string';
+        });
+
+        if (validPermissions.length !== permissions.length) {
+          console.warn(`⚠️ Filtered out ${permissions.length - validPermissions.length} invalid permissions`);
         }
 
         // Legacy role field: use first role name for backward compatibility (DEPRECATED)
@@ -212,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userData.email,
           role: legacyRole, // DEPRECATED - only for backward compatibility
           roles, // RBAC roles - PRIMARY source
-          permissions,
+          permissions: validPermissions,
           user_metadata: { full_name: userData.naam || userData.name }
         });
         setLoading(false);
@@ -222,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const newToken = await refreshToken();
           if (newToken) {
-            authManager.setToken(newToken);
+            // TokenManager already updated in refreshToken
           }
           return await loadUserProfile();
         } catch (refreshError) {
@@ -242,9 +190,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    // Clear all tokens
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('refreshToken');
+    // Stop token refresh scheduler
+    tokenRefreshScheduler.stop();
+
+    // Clear all tokens via TokenManager
+    TokenManager.clearTokens();
     localStorage.removeItem('userId');
     setUser(null);
     setLoading(false);
@@ -265,16 +215,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Controleer bij app start of gebruiker ingelogd is
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('jwtToken');
+      const token = TokenManager.getValidToken();
       if (token) {
         // loadUserProfile now handles failures gracefully
         await loadUserProfile();
+        // Start token refresh scheduler after successful auth check
+        tokenRefreshScheduler.start();
       } else {
         setLoading(false);
       }
     };
     checkAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for token refresh events
+  useEffect(() => {
+    const handleTokensRefreshed = () => {
+      console.log('🔄 Tokens refreshed, updating user context if needed');
+      // Optionally update user data if needed
+    };
+
+    const handleLogout = () => {
+      logout();
+    };
+
+    window.addEventListener('tokens-refreshed', handleTokensRefreshed as EventListener);
+    window.addEventListener('auth-logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('tokens-refreshed', handleTokensRefreshed as EventListener);
+      window.removeEventListener('auth-logout', handleLogout);
+    };
   }, []);
 
   return (

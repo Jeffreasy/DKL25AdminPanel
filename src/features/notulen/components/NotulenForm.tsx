@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -12,6 +12,7 @@ import {
 import { useNotulenMutations } from '../hooks'
 import { usePermissions } from '@/hooks'
 import { cc } from '@/styles/shared'
+import { UserSelect } from '@/components/ui'
 import type { Notulen, AgendaItem, Besluit, Actiepunt } from '../types'
 
 interface NotulenFormProps {
@@ -24,17 +25,41 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
   const { hasPermission } = usePermissions()
   const { createNotulen, updateNotulen, loading, error } = useNotulenMutations()
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    titel: string
+    vergadering_datum: string
+    locatie: string
+    voorzitter: string
+    voorzitter_user_id: string // UUID voor voorzitter
+    notulist: string
+    notulist_user_id: string // UUID voor notulist
+    aanwezigen: string[]
+    afwezigen: string[]
+    aanwezigen_gebruikers: string[]
+    afwezigen_gebruikers: string[]
+    aanwezigen_gasten: string[]
+    afwezigen_gasten: string[]
+    agenda_items: AgendaItem[]
+    besluiten: Besluit[]
+    actiepunten: Actiepunt[]
+    notities: string
+  }>({
     titel: notulen?.titel || '',
     vergadering_datum: notulen?.vergadering_datum || format(new Date(), 'yyyy-MM-dd'),
     locatie: notulen?.locatie || '',
     voorzitter: notulen?.voorzitter || '',
+    voorzitter_user_id: '',
     notulist: notulen?.notulist || '',
-    aanwezigen: notulen?.aanwezigen || [],
-    afwezigen: notulen?.afwezigen || [],
-    agenda_items: notulen?.agendaItems || [],
-    besluiten: notulen?.besluitenList || [],
-    actiepunten: notulen?.actiepuntenList || [],
+    notulist_user_id: '',
+    aanwezigen: Array.isArray(notulen?.aanwezigen) ? notulen.aanwezigen : [],
+    afwezigen: Array.isArray(notulen?.afwezigen) ? notulen.afwezigen : [],
+    aanwezigen_gebruikers: Array.isArray(notulen?.aanwezigen_gebruikers) ? notulen.aanwezigen_gebruikers : [],
+    afwezigen_gebruikers: Array.isArray(notulen?.afwezigen_gebruikers) ? notulen.afwezigen_gebruikers : [],
+    aanwezigen_gasten: Array.isArray(notulen?.aanwezigen_gasten) ? notulen.aanwezigen_gasten : [],
+    afwezigen_gasten: Array.isArray(notulen?.afwezigen_gasten) ? notulen.afwezigen_gasten : [],
+    agenda_items: Array.isArray(notulen?.agendaItems) ? notulen.agendaItems : [],
+    besluiten: Array.isArray(notulen?.besluitenList) ? notulen.besluitenList : [],
+    actiepunten: Array.isArray(notulen?.actiepuntenList) ? notulen.actiepuntenList : [],
     notities: notulen?.notities || ''
   })
 
@@ -48,15 +73,23 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
     if (notulen) {
       setFormData({
         titel: notulen.titel,
-        vergadering_datum: notulen.vergadering_datum,
+        vergadering_datum: notulen.vergadering_datum
+          ? format(parseISO(notulen.vergadering_datum), 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
         locatie: notulen.locatie || '',
         voorzitter: notulen.voorzitter || '',
+        voorzitter_user_id: '',
         notulist: notulen.notulist || '',
-        aanwezigen: notulen.aanwezigen,
-        afwezigen: notulen.afwezigen,
-        agenda_items: notulen.agendaItems,
-        besluiten: notulen.besluitenList,
-        actiepunten: notulen.actiepuntenList,
+        notulist_user_id: '',
+        aanwezigen: Array.isArray(notulen.aanwezigen) ? notulen.aanwezigen : [],
+        afwezigen: Array.isArray(notulen.afwezigen) ? notulen.afwezigen : [],
+        aanwezigen_gebruikers: Array.isArray(notulen.aanwezigen_gebruikers) ? notulen.aanwezigen_gebruikers : [],
+        afwezigen_gebruikers: Array.isArray(notulen.afwezigen_gebruikers) ? notulen.afwezigen_gebruikers : [],
+        aanwezigen_gasten: Array.isArray(notulen.aanwezigen_gasten) ? notulen.aanwezigen_gasten : [],
+        afwezigen_gasten: Array.isArray(notulen.afwezigen_gasten) ? notulen.afwezigen_gasten : [],
+        agenda_items: Array.isArray(notulen.agendaItems) ? notulen.agendaItems : [],
+        besluiten: Array.isArray(notulen.besluitenList) ? notulen.besluitenList : [],
+        actiepunten: Array.isArray(notulen.actiepuntenList) ? notulen.actiepuntenList : [],
         notities: notulen.notities || ''
       })
     }
@@ -68,18 +101,56 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
     if (!canEdit) return
 
     try {
-      const submitData = {
-        ...formData,
-        aanwezigen: formData.aanwezigen.filter(name => name.trim()),
-        afwezigen: formData.afwezigen.filter(name => name.trim()),
+      // Ensure arrays are actual arrays (not objects)
+      const aanwezigenGebruikers = Array.isArray(formData.aanwezigen_gebruikers)
+        ? formData.aanwezigen_gebruikers
+        : []
+      
+      const afwezigenGebruikers = Array.isArray(formData.afwezigen_gebruikers)
+        ? formData.afwezigen_gebruikers
+        : []
+
+      const aanwezigenGasten = Array.isArray(formData.aanwezigen_gasten)
+        ? formData.aanwezigen_gasten.filter(name => name.trim())
+        : []
+
+      const afwezigenGasten = Array.isArray(formData.afwezigen_gasten)
+        ? formData.afwezigen_gasten.filter(name => name.trim())
+        : []
+
+      // Combine registered users and guests into legacy arrays for backward compatibility
+      const aanwezigen = [...aanwezigenGasten]
+      const afwezigen = [...afwezigenGasten]
+
+      const baseSubmitData = {
+        aanwezigen,
+        afwezigen,
+        aanwezigen_gebruikers: aanwezigenGebruikers,
+        afwezigen_gebruikers: afwezigenGebruikers,
+        aanwezigen_gasten: aanwezigenGasten,
+        afwezigen_gasten: afwezigenGasten,
         agenda_items: formData.agenda_items.filter(item => item.title.trim()),
         besluiten: formData.besluiten.filter(item => item.besluit.trim()),
         actiepunten: formData.actiepunten.filter(item => item.actie.trim())
       }
 
       if (isEditing && notulen) {
+        // For updates, exclude vergadering_datum as it's not allowed by the API
+        const submitData = {
+          titel: formData.titel,
+          locatie: formData.locatie,
+          voorzitter: formData.voorzitter,
+          notulist: formData.notulist,
+          ...baseSubmitData
+        }
         await updateNotulen(notulen.id, submitData)
       } else {
+        // For create, include vergadering_datum
+        const submitData = {
+          ...formData,
+          vergadering_datum: format(parseISO(formData.vergadering_datum), 'yyyy-MM-dd'),
+          ...baseSubmitData
+        }
         await createNotulen(submitData)
       }
 
@@ -87,12 +158,14 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
       navigate('/notulen')
     } catch (err) {
       console.error('Failed to save notulen:', err)
+      // Error is already handled by the hook and displayed in the UI
+      // The hook sets the error state which shows the error message above the form
     }
   }
 
-  const addAttendee = (type: 'aanwezigen' | 'afwezigen') => {
-    const input = type === 'aanwezigen' ? aanwezigenInput : afwezigenInput
-    const setter = type === 'aanwezigen' ? setAanwezigenInput : setAfwezigenInput
+  const addAttendee = (type: 'aanwezigen_gasten' | 'afwezigen_gasten') => {
+    const input = type === 'aanwezigen_gasten' ? aanwezigenInput : afwezigenInput
+    const setter = type === 'aanwezigen_gasten' ? setAanwezigenInput : setAfwezigenInput
 
     if (input.trim() && !formData[type].includes(input.trim())) {
       setFormData(prev => ({
@@ -103,7 +176,7 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
     }
   }
 
-  const removeAttendee = (type: 'aanwezigen' | 'afwezigen', name: string) => {
+  const removeAttendee = (type: 'aanwezigen_gasten' | 'afwezigen_gasten', name: string) => {
     setFormData(prev => ({
       ...prev,
       [type]: prev[type].filter(n => n !== name)
@@ -164,6 +237,9 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
   }
 
   const updateActiepunt = (index: number, field: keyof Actiepunt, value: string | string[]) => {
+    if (field === 'verantwoordelijke' && typeof value === 'string') {
+      value = value.split(',').map(v => v.trim()).filter(Boolean)
+    }
     setFormData(prev => ({
       ...prev,
       actiepunten: prev.actiepunten.map((item, i) =>
@@ -210,13 +286,7 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
           </div>
         </div>
         {isEditing && notulen && (
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            notulen.status === 'draft'
-              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-              : notulen.status === 'finalized'
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-          }`}>
+          <span className={cc.statusBadge({ status: notulen.status as 'draft' | 'finalized' | 'archived' })}>
             {notulen.status === 'draft' ? 'Concept' :
              notulen.status === 'finalized' ? 'Definitief' : 'Gearchiveerd'}
           </span>
@@ -224,8 +294,8 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+        <div className={cc.alert({ status: 'error' })}>
+          <p>{error}</p>
         </div>
       )}
 
@@ -282,12 +352,22 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
               <label className={cc.form.label()}>
                 Voorzitter
               </label>
+              <UserSelect
+                selectedUsers={formData.voorzitter_user_id ? [formData.voorzitter_user_id] : []}
+                onChange={(userIds) => {
+                  const userId = userIds[0] || ''
+                  setFormData(prev => ({ ...prev, voorzitter_user_id: userId }))
+                }}
+                placeholder="Selecteer voorzitter..."
+                multiple={false}
+              />
+              {/* Fallback: manual input if needed */}
               <input
                 type="text"
                 value={formData.voorzitter}
-                onChange={(e) => setFormData(prev => ({ ...prev, voorzitter: e.target.value }))}
-                className={cc.form.input()}
-                placeholder="Naam voorzitter"
+                onChange={(e) => setFormData(prev => ({ ...prev, voorzitter: e.target.value, voorzitter_user_id: '' }))}
+                className={cc.form.input() + ' mt-2'}
+                placeholder="Of typ handmatig naam voorzitter"
               />
             </div>
 
@@ -295,12 +375,22 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
               <label className={cc.form.label()}>
                 Notulist
               </label>
+              <UserSelect
+                selectedUsers={formData.notulist_user_id ? [formData.notulist_user_id] : []}
+                onChange={(userIds) => {
+                  const userId = userIds[0] || ''
+                  setFormData(prev => ({ ...prev, notulist_user_id: userId }))
+                }}
+                placeholder="Selecteer notulist..."
+                multiple={false}
+              />
+              {/* Fallback: manual input if needed */}
               <input
                 type="text"
                 value={formData.notulist}
-                onChange={(e) => setFormData(prev => ({ ...prev, notulist: e.target.value }))}
-                className={cc.form.input()}
-                placeholder="Naam notulist"
+                onChange={(e) => setFormData(prev => ({ ...prev, notulist: e.target.value, notulist_user_id: '' }))}
+                className={cc.form.input() + ' mt-2'}
+                placeholder="Of typ handmatig naam notulist"
               />
             </div>
           </div>
@@ -308,91 +398,143 @@ export function NotulenForm({ notulen, onSuccess }: NotulenFormProps) {
 
         {/* Attendees */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <UserGroupIcon className="w-5 h-5" />
-            Aanwezigen en Afwezigen
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <UserGroupIcon className="w-5 h-5" />
+              Aanwezigen en Afwezigen
+            </h2>
+            {isEditing && (notulen.aanwezigen?.length || 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    aanwezigen: [],
+                    afwezigen: [],
+                    aanwezigen_gebruikers: [],
+                    afwezigen_gebruikers: [],
+                    aanwezigen_gasten: [],
+                    afwezigen_gasten: []
+                  }))
+                }}
+                className={cc.button.base({ color: 'secondary', size: 'sm' })}
+              >
+                <XMarkIcon className="w-4 h-4 mr-2" />
+                Reset Deelnemers
+              </button>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Aanwezigen */}
-            <div>
-              <label className={cc.form.label()}>
-                Aanwezigen
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={aanwezigenInput}
-                  onChange={(e) => setAanwezigenInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAttendee('aanwezigen'))}
-                  className={cc.form.input()}
-                  placeholder="Naam toevoegen"
+          <div className="space-y-6">
+            {/* Registered Users */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className={cc.form.label()}>
+                  Aanwezige Gebruikers
+                </label>
+                <UserSelect
+                  selectedUsers={formData.aanwezigen_gebruikers}
+                  onChange={(userIds) => setFormData(prev => ({ ...prev, aanwezigen_gebruikers: userIds }))}
+                  placeholder="Selecteer aanwezige gebruikers..."
+                  multiple={true}
                 />
-                <button
-                  type="button"
-                  onClick={() => addAttendee('aanwezigen')}
-                  className={cc.button.icon({ color: 'primary' })}
-                >
-                  <PlusIcon className="w-4 h-4" />
-                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.aanwezigen.map((name, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
-                  >
-                    {name}
-                    <button
-                      type="button"
-                      onClick={() => removeAttendee('aanwezigen', name)}
-                      className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
-                    >
-                      <XMarkIcon className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
+
+              <div>
+                <label className={cc.form.label()}>
+                  Afwezige Gebruikers
+                </label>
+                <UserSelect
+                  selectedUsers={formData.afwezigen_gebruikers}
+                  onChange={(userIds) => setFormData(prev => ({ ...prev, afwezigen_gebruikers: userIds }))}
+                  placeholder="Selecteer afwezige gebruikers..."
+                  multiple={true}
+                />
               </div>
             </div>
 
-            {/* Afwezigen */}
-            <div>
-              <label className={cc.form.label()}>
-                Afwezigen
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={afwezigenInput}
-                  onChange={(e) => setAfwezigenInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAttendee('afwezigen'))}
-                  className={cc.form.input()}
-                  placeholder="Naam toevoegen"
-                />
-                <button
-                  type="button"
-                  onClick={() => addAttendee('afwezigen')}
-                  className={cc.button.icon({ color: 'primary' })}
-                >
-                  <PlusIcon className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.afwezigen.map((name, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm"
+            {/* Guest Attendees (Legacy) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Aanwezigen */}
+              <div>
+                <label className={cc.form.label()}>
+                  Aanwezige Gasten
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={aanwezigenInput}
+                    onChange={(e) => setAanwezigenInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAttendee('aanwezigen_gasten'))}
+                    className={cc.form.input()}
+                    placeholder="Naam gast toevoegen"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addAttendee('aanwezigen_gasten')}
+                    className={cc.button.icon({ color: 'primary' })}
                   >
-                    {name}
-                    <button
-                      type="button"
-                      onClick={() => removeAttendee('afwezigen', name)}
-                      className="hover:bg-red-200 dark:hover:bg-red-800 rounded-full p-0.5"
+                    <PlusIcon className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {formData.aanwezigen_gasten.map((name, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
                     >
-                      <XMarkIcon className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeAttendee('aanwezigen_gasten', name)}
+                        className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+                      >
+                        <XMarkIcon className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Afwezigen */}
+              <div>
+                <label className={cc.form.label()}>
+                  Afwezige Gasten
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={afwezigenInput}
+                    onChange={(e) => setAfwezigenInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAttendee('afwezigen_gasten'))}
+                    className={cc.form.input()}
+                    placeholder="Naam gast toevoegen"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addAttendee('afwezigen_gasten')}
+                    className={cc.button.icon({ color: 'primary' })}
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {formData.afwezigen_gasten.map((name, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeAttendee('afwezigen_gasten', name)}
+                        className="hover:bg-red-200 dark:hover:bg-red-800 rounded-full p-0.5"
+                      >
+                        <XMarkIcon className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -1,12 +1,49 @@
 import { apiConfig, emailConfig } from '../../config/api.config'
-import type { AutoResponse, Email, PaginatedEmailResponse, EmailFetchResponse } from './types'
+import type { AutoResponse, Email, PaginatedEmailResponse, EmailFetchResponse, ParticipantEmailsResponse } from './types'
 import type { Aanmelding } from '../aanmeldingen/types'
+
+// Email types for different SMTP configurations
+export type EmailType = 'contact' | 'aanmelding' | 'newsletter' | 'wfc_order'
+
+// SMTP configuration types
+export interface SMTPConfig {
+  host: string
+  port: number
+  username: string
+  password: string
+  from: string
+  ssl?: boolean
+}
+
+// Email batching types
+export interface EmailMessage {
+  to: string
+  subject: string
+  body: string
+  type: EmailType
+}
+
+// Rate limiting types
+export interface RateLimitInfo {
+  allowed: boolean
+  remaining: number
+  resetTime: number
+}
+
+// Email processing types
+export interface EmailProcessingResult {
+  success: boolean
+  message: string
+  processed: number
+  failed: number
+}
+
 
 // Helper to get JWT token from localStorage
 const getAuthToken = (): string | null => {
   try {
-    // Match AuthProvider's token storage key
-    const token = localStorage.getItem('jwtToken')
+    // Match apiClient's token storage key
+    const token = localStorage.getItem('auth_token')
     return token
   } catch {
     return null
@@ -95,8 +132,8 @@ export async function sendConfirmationEmail(aanmelding: Aanmelding): Promise<voi
       ondersteuning: aanmelding.ondersteuning,
       bijzonderheden: aanmelding.bijzonderheden || ''
     }
-    
-    const headers = getAuthHeaders()
+
+    const headers = getAuthHeaders(true)
     const response = await fetch(`${apiConfig.emailURL}/api/email/send-confirmation`, {
       method: 'POST',
       headers,
@@ -343,20 +380,16 @@ export const adminEmailService = {
     limit: number = 10,
     offset: number = 0
   ): Promise<PaginatedEmailResponse> {
-    console.log(`[getAllEmails] Fetching emails, limit=${limit}, offset=${offset}`)
     try {
       const url = `${apiConfig.emailURL}/api/mail?limit=${limit}&offset=${offset}`
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(url, { headers })
-      
-      console.log(`[getAllEmails] Response status: ${response.status}`)
 
       if (!response.ok) {
         throw new Error(`Error fetching emails: ${response.statusText}`)
       }
       
       const data = await response.json()
-      console.log('[getAllEmails] Raw data received:', data)
       
       // Valideer response structuur
       if (!data || typeof data !== 'object' || !Array.isArray(data.emails) || typeof data.totalCount !== 'number') {
@@ -366,7 +399,6 @@ export const adminEmailService = {
 
       // Map emails naar frontend interface
       const emails = data.emails.map(mapIncomingEmailToEmail)
-      console.log('[getAllEmails] Mapped emails:', emails)
 
       return {
         emails,
@@ -388,20 +420,16 @@ export const adminEmailService = {
     limit: number = 50,
     offset: number = 0
   ): Promise<PaginatedEmailResponse> {
-    console.log(`[getEmailsByAccount] Fetching for ${account}, limit=${limit}, offset=${offset}`)
     try {
       const url = `${apiConfig.emailURL}/api/mail/account/${account}?limit=${limit}&offset=${offset}`
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(url, { headers })
-      
-      console.log(`[getEmailsByAccount] Response status: ${response.status}`)
 
       if (!response.ok) {
         throw new Error(`Error fetching emails: ${response.statusText}`)
       }
       
       const data = await response.json()
-      console.log('[getEmailsByAccount] Raw data received:', data)
       
       // Valideer response structuur
       if (!data || typeof data !== 'object' || !Array.isArray(data.emails) || typeof data.totalCount !== 'number') {
@@ -411,7 +439,6 @@ export const adminEmailService = {
 
       // Map emails naar frontend interface
       const emails = data.emails.map(mapIncomingEmailToEmail)
-      console.log('[getEmailsByAccount] Mapped emails:', emails)
 
       return {
         emails,
@@ -430,7 +457,7 @@ export const adminEmailService = {
    */
   async getEmailDetails(id: string): Promise<Email | null> {
     try {
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}`, { headers })
       
       if (!response.ok) {
@@ -454,7 +481,7 @@ export const adminEmailService = {
    */
   async markAsRead(id: string): Promise<{ success: boolean }> {
     try {
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}/processed`, {
         method: 'PUT',
         headers
@@ -478,7 +505,7 @@ export const adminEmailService = {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(`${apiConfig.emailURL}/api/mail/unprocessed`, { headers })
       
       if (!response.ok) {
@@ -500,7 +527,7 @@ export const adminEmailService = {
    */
   async deleteEmail(id: string): Promise<{ success: boolean }> {
     try {
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(`${apiConfig.emailURL}/api/mail/${id}`, {
         method: 'DELETE',
         headers
@@ -530,7 +557,7 @@ export const adminEmailService = {
    */
   async fetchNewEmails(): Promise<EmailFetchResponse> {
     try {
-      const headers = getAuthHeaders()
+      const headers = getAuthHeaders(true)
       const response = await fetch(`${apiConfig.emailURL}/api/mail/fetch`, {
         method: 'POST',
         headers
@@ -558,38 +585,93 @@ export const adminEmailService = {
   },
 
   /**
-   * Haal unieke emailadressen op van aanmeldingen via Go backend
-   * GET /api/aanmeldingen/emails
+   * Haal unieke emailadressen op van emails in de inboxen (info en inschrijving)
+   * GET /api/mail (en filter unieke sender emails eruit)
+   * Fallback naar participant emails als er geen inbox emails zijn
+   * @deprecated Gebruik getParticipantEmails voor uitgebreide response
    */
   async fetchAanmeldingenEmails(): Promise<string[]> {
     try {
+      // Haal emails op uit beide inboxen om sender emails te verzamelen
+      const [infoEmails, inschrijvingEmails] = await Promise.all([
+        this.getEmailsByAccount('info', 100, 0),
+        this.getEmailsByAccount('inschrijving', 100, 0)
+      ])
+
+      // Verzamel alle unieke sender emails
+      const allEmails = [
+        ...infoEmails.emails.map(email => email.sender),
+        ...inschrijvingEmails.emails.map(email => email.sender)
+      ]
+
+      // Filter geldige emails en verwijder duplicaten
+      const uniqueEmails = allEmails
+        .filter((email): email is string => !!email && email.trim() !== '' && email.includes('@'))
+        .filter((email, index, arr) => arr.indexOf(email) === index) // unieke emails
+
+      // Als er geen emails zijn uit de inboxen, gebruik participant emails als fallback
+      if (uniqueEmails.length === 0) {
+        const participantResult = await this.getParticipantEmails()
+        return participantResult.all_emails || []
+      }
+
+      return uniqueEmails
+    } catch (error) {
+      console.error('Failed in fetchAanmeldingenEmails:', error)
+      // Fallback naar participant emails bij error
+      try {
+        const participantResult = await this.getParticipantEmails()
+        return participantResult.all_emails || []
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        return []
+      }
+    }
+  },
+
+  /**
+   * Haal uitgebreide email informatie op van deelnemers en systeem emails
+   * GET /api/participant/emails
+   * Retourneert participant_emails, system_emails, all_emails en counts
+   */
+  async getParticipantEmails(): Promise<ParticipantEmailsResponse> {
+    try {
       const headers = getAuthHeaders(true)
-      const response = await fetch(`${apiConfig.emailURL}/api/aanmeldingen/emails`, { headers })
+      const response = await fetch(`${apiConfig.emailURL}/api/participant/emails`, { headers })
 
       if (!response.ok) {
-        console.error('Error fetching aanmeldingen emails')
-        return []
+        const errorText = await response.text().catch(() => 'Failed to get error details')
+        let errorMessage = `Error fetching participant emails: ${response.statusText}`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
-      
-      // Verwacht array van strings
-      if (Array.isArray(data)) {
-        return data.filter((email): email is string => !!email && email.trim() !== '')
-      }
-      
-      // Alternatief: array van objecten met email veld
-      if (data.emails && Array.isArray(data.emails)) {
-        const emailObjects = data.emails as Array<{ email?: string }>
-        return emailObjects
-          .map(item => item.email)
-          .filter((email): email is string => !!email && email.trim() !== '')
+
+      // Valideer response structuur
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from participant emails API')
       }
 
-      return []
+      // Zorg ervoor dat alle velden aanwezig zijn met defaults
+      const result: ParticipantEmailsResponse = {
+        participant_emails: Array.isArray(data.participant_emails) ? data.participant_emails : [],
+        system_emails: Array.isArray(data.system_emails) ? data.system_emails : [],
+        all_emails: Array.isArray(data.all_emails) ? data.all_emails : [],
+        counts: {
+          participants: typeof data.counts?.participants === 'number' ? data.counts.participants : 0,
+          system: typeof data.counts?.system === 'number' ? data.counts.system : 0,
+          total: typeof data.counts?.total === 'number' ? data.counts.total : 0
+        }
+      }
+
+      return result
     } catch (error) {
-      console.error('Failed in fetchAanmeldingenEmails:', error)
-      return []
+      console.error('Failed to fetch participant emails:', error)
+      throw error
     }
   },
 

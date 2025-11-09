@@ -8,7 +8,6 @@ interface APIConfig {
   wsURL: string;
   emailURL: string;
   emailApiKey: string;
-  supabaseURL: string;
   timeout: number;
   environment: 'development' | 'production';
 }
@@ -22,8 +21,9 @@ const getAPIBaseURL = (): string => {
     return import.meta.env.VITE_API_BASE_URL;
   }
   
-  // Fallback naar productie als geen env var beschikbaar
-  return 'https://dklemailservice.onrender.com/api';
+  // Correcte productie URL volgens backend documentatie
+  // Backend API draait op: https://api.dklemailservice.com
+  return 'https://api.dklemailservice.com';
 };
 
 /**
@@ -34,8 +34,12 @@ const getWSURL = (): string => {
     return import.meta.env.VITE_WS_URL;
   }
   
-  // Fallback naar productie WebSocket
-  return 'wss://dklemailservice.onrender.com/api/chat/ws';
+  // Converteer HTTP(S) base URL naar WS(S)
+  const baseURL = getAPIBaseURL();
+  const isSecure = baseURL.startsWith('https');
+  const protocol = isSecure ? 'wss' : 'ws';
+  const url = baseURL.replace(/^https?:\/\//, '');
+  return `${protocol}://${url}`;
 };
 
 /**
@@ -56,17 +60,6 @@ const getEmailApiKey = (): string => {
   return import.meta.env.VITE_EMAIL_API_KEY || '';
 };
 
-/**
- * Haal Supabase API URL uit environment variabelen
- */
-const getSupabaseURL = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  
-  // Fallback naar standaard Supabase URL
-  return '';
-};
 
 /**
  * Bepaal huidige environment
@@ -92,7 +85,6 @@ export const apiConfig: APIConfig = {
   wsURL: getWSURL(),
   emailURL: getEmailURL(),
   emailApiKey: getEmailApiKey(),
-  supabaseURL: getSupabaseURL(),
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
   environment: getEnvironment(),
 };
@@ -112,7 +104,6 @@ if (isDevelopment()) {
   console.log('WebSocket URL:', apiConfig.wsURL);
   console.log('Email URL:', apiConfig.emailURL);
   console.log('Email API Key:', apiConfig.emailApiKey ? '***' + apiConfig.emailApiKey.slice(-4) : 'Not set');
-  console.log('Supabase URL:', apiConfig.supabaseURL);
   console.log('Timeout:', apiConfig.timeout + 'ms');
   console.log('Environment:', apiConfig.environment);
   console.groupEnd();

@@ -76,6 +76,41 @@ interface Notulen {
 }
 ```
 
+#### NotulenResponse (Meeting Minutes with Resolved Names)
+```typescript
+interface NotulenResponse {
+  id: string;                    // UUID (auto-generated)
+  titel: string;                 // Meeting title (required, 3-255 chars)
+  vergadering_datum: string;     // Meeting date (ISO format, required)
+  locatie?: string;              // Optional location
+  voorzitter?: string;           // Optional chairperson
+  notulist?: string;             // Optional note taker
+  aanwezigen: string[];          // Array of attendees (PostgreSQL TEXT[])
+  afwezigen: string[];           // Array of absentees (PostgreSQL TEXT[])
+  agenda_items: {                // Agenda items (JSONB wrapper)
+    items: AgendaItem[]
+  };
+  besluiten: {                   // Decisions (JSONB wrapper)
+    besluiten: Besluit[]
+  };
+  actiepunten: {                 // Action items (JSONB wrapper)
+    acties: Actiepunt[]
+  };
+  notities?: string;             // Optional notes
+  status: 'draft' | 'finalized' | 'archived'; // Default: 'draft'
+  versie: number;                // Version number (auto-incremented)
+  created_by: string;            // UUID of creator (required)
+  created_by_name?: string;      // Resolved name: "Joyce Thielen"
+  created_at: string;            // ISO timestamp (auto-generated)
+  updated_at: string;            // ISO timestamp (auto-updated)
+  updated_by?: string;           // UUID of last updater
+  updated_by_name?: string;      // Resolved name: "Jeffrey"
+  finalized_at?: string;         // ISO timestamp (set when finalized)
+  finalized_by?: string;         // UUID of finalizer (set when finalized)
+  finalized_by_name?: string;    // Resolved name: "SuperAdmin"
+}
+```
+
 #### NotulenVersie (Version History)
 ```typescript
 interface NotulenVersie {
@@ -116,8 +151,12 @@ interface NotulenCreateRequest {
   locatie?: string;
   voorzitter?: string;
   notulist?: string;
-  aanwezigen?: string[];
-  afwezigen?: string[];
+  aanwezigen?: string[];      // Combined array for backward compatibility
+  afwezigen?: string[];       // Combined array for backward compatibility
+  aanwezigen_gebruikers?: string[]; // UUIDs for registered users
+  afwezigen_gebruikers?: string[];  // UUIDs for registered users
+  aanwezigen_gasten?: string[];     // Names for guest attendees
+  afwezigen_gasten?: string[];      // Names for guest absentees
   agenda_items?: AgendaItem[];
   besluiten?: Besluit[];
   actiepunten?: Actiepunt[];
@@ -234,7 +273,7 @@ Get a specific meeting minutes by ID
 
 **Response:**
 ```typescript
-Notulen // Single notulen object
+NotulenResponse // Single notulen object with resolved user names
 ```
 
 #### POST /api/notulen
@@ -432,6 +471,48 @@ The API returns JSONB fields in a structured format. The backend stores these as
 - `aanwezigen` and `afwezigen` are string arrays
 - `verantwoordelijke` in action items can be either a string or string array
 - All JSONB arrays are properly structured objects
+
+### Attendee Management
+
+The API supports flexible attendee management with separate handling for registered users and guest attendees:
+
+#### Registered Users vs Guests
+- **Registered Users**: Identified by UUIDs in `aanwezigen_gebruikers`/`afwezigen_gebruikers`
+  - Backend resolves UUIDs to display names in `*_name` fields
+  - User permissions and roles are maintained
+- **Guest Attendees**: Simple name strings in `aanwezigen_gasten`/`afwezigen_gasten`
+  - No user accounts required
+  - Manually entered names
+
+#### Combined Arrays (Legacy Support)
+- `aanwezigen` and `afwezigen` arrays combine both registered users and guests
+- Frontend should populate these for backward compatibility
+- Backend may resolve user names from UUIDs into these arrays
+
+#### Frontend Implementation
+```typescript
+// Example form submission structure
+const submitData = {
+  aanwezigen: [...guestNames], // Combined for legacy support
+  afwezigen: [...guestAbsentees], // Combined for legacy support
+  aanwezigen_gebruikers: userIds, // UUIDs for registered users
+  afwezigen_gebruikers: absentUserIds, // UUIDs for registered users
+  aanwezigen_gasten: guestNames, // Separate guest names
+  afwezigen_gasten: guestAbsentees, // Separate guest absentees
+}
+```
+
+#### Response Format
+```typescript
+interface NotulenResponse {
+  // ... other fields
+  aanwezigen: string[]; // Combined array with resolved names
+  afwezigen: string[];  // Combined array with resolved names
+  created_by_name?: string; // Resolved creator name
+  updated_by_name?: string; // Resolved updater name
+  finalized_by_name?: string; // Resolved finalizer name
+}
+```
 
 ## Error Handling
 

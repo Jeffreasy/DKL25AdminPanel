@@ -24,25 +24,45 @@ class NotulenClient {
   private transformToApiRequest(request: NotulenCreateRequest | NotulenUpdateRequest) {
     const transformed: Record<string, unknown> = {
       ...request,
-      vergadering_datum: (request as Record<string, unknown>).vergadering_datum || (request as Record<string, unknown>).vergaderingDatum,
     }
 
-    if (request.agenda_items) {
-      transformed.agenda_items = { items: request.agenda_items }
+    // Handle JSONB fields - always send flat arrays as per document specification
+    if (request.agenda_items && request.agenda_items.length > 0) {
+      transformed.agenda_items = request.agenda_items
+    } else {
+      delete transformed.agenda_items
     }
-    if (request.besluiten) {
-      transformed.besluiten = { besluiten: request.besluiten }
+
+    if (request.besluiten && request.besluiten.length > 0) {
+      transformed.besluiten = request.besluiten
+    } else {
+      delete transformed.besluiten
     }
-    if (request.actiepunten) {
+
+    if (request.actiepunten && request.actiepunten.length > 0) {
       // Strip completion tracking fields for API requests - these are managed via separate endpoints
-      transformed.actiepunten = {
-        acties: request.actiepunten.map((actie) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { voltooid, voltooid_door, voltooid_op, voltooid_opmerking, ...cleanActie } = actie
-          return cleanActie
-        })
-      }
+      const cleanActiepunten = request.actiepunten.map((actie) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { voltooid, voltooid_door, voltooid_op, voltooid_opmerking, ...cleanActie } = actie
+        return cleanActie
+      })
+
+      transformed.actiepunten = cleanActiepunten
+    } else {
+      delete transformed.actiepunten
     }
+
+    // Remove metadata fields that are managed by backend
+    delete transformed.created_by
+    delete transformed.created_by_name
+    delete transformed.updated_by_name
+    delete transformed.finalized_by
+    delete transformed.finalized_by_name
+    delete transformed.versie
+    delete transformed.status
+    delete transformed.created_at
+    delete transformed.updated_at
+    delete transformed.finalized_at
 
     return transformed
   }
@@ -53,14 +73,21 @@ class NotulenClient {
       vergaderingDatum: notulen.vergadering_datum, // Add camelCase for backward compatibility
       aanwezigen: Array.isArray(notulen.aanwezigen) ? notulen.aanwezigen : [], // Ensure it's an array
       afwezigen: Array.isArray(notulen.afwezigen) ? notulen.afwezigen : [], // Ensure it's an array
-      agendaItems: (notulen.agenda_items as Record<string, unknown>)?.items || [], // Extract from wrapper
-      besluitenList: (notulen.besluiten as Record<string, unknown>)?.besluiten || [], // Extract from wrapper
-      actiepuntenList: (notulen.actiepunten as Record<string, unknown>)?.acties || [], // Extract from wrapper
+      // Flat arrays as per document specification - no wrapper extraction needed
+      agendaItems: Array.isArray(notulen.agenda_items) ? notulen.agenda_items : [], // Direct access to flat array
+      besluitenList: Array.isArray(notulen.besluiten) ? notulen.besluiten : [], // Direct access to flat array
+      actiepuntenList: Array.isArray(notulen.actiepunten) ? notulen.actiepunten : [], // Direct access to flat array
       createdAt: notulen.created_at,
       updatedAt: notulen.updated_at,
       finalizedAt: notulen.finalized_at,
-      finalizedBy: notulen.finalized_by
+      finalizedBy: notulen.finalized_by,
+      // Handle resolved user names
+      created_by_name: notulen.created_by_name,
+      updated_by: notulen.updated_by,
+      updated_by_name: notulen.updated_by_name,
+      finalized_by_name: notulen.finalized_by_name
     }
+
     return transformed as unknown as Notulen
   }
 
@@ -117,7 +144,18 @@ class NotulenClient {
   async getNotulenById(id: string, format?: 'markdown'): Promise<Notulen> {
     const params = format ? `?format=${format}` : ''
     const response = await apiClient.get(`/notulen/${id}${params}`)
+
+    // For markdown format, return the raw text response
+    if (format === 'markdown') {
+      return response.data as unknown as Notulen
+    }
+
     return this.transformFromApiResponse(response.data)
+  }
+
+  async exportNotulenAsMarkdown(id: string): Promise<string> {
+    const response = await apiClient.get(`/notulen/${id}?format=markdown`)
+    return response.data as string
   }
 
   async createNotulen(request: NotulenCreateRequest): Promise<Notulen> {
@@ -128,22 +166,34 @@ class NotulenClient {
 
   async updateNotulen(id: string, request: NotulenUpdateRequest): Promise<Notulen> {
     const apiRequest = this.transformToApiRequest(request)
-    const response = await apiClient.put(`/notulen/${id}`, apiRequest)
-    return this.transformFromApiResponse(response.data)
+    console.log('=== UPDATE REQUEST DEBUG ===')
+    console.log('Request ID:', id)
+    console.log('Original request:', request)
+    console.log('Transformed request:', apiRequest)
+    console.log('Fields being sent:', Object.keys(apiRequest))
+    console.log('===========================')
+    
+    try {
+      const response = await apiClient.put(`/notulen/${id}`, apiRequest)
+      return this.transformFromApiResponse(response.data)
+    } catch (error) {
+      console.error('Update failed:', (error as { response?: { data?: unknown }; message?: string })?.response?.data || (error as { message?: string })?.message)
+      throw error
+    }
   }
 
   async deleteNotulen(id: string): Promise<void> {
     await apiClient.delete(`/notulen/${id}`)
   }
 
-  async finalizeNotulen(id: string, request: NotulenFinalizeRequest = {}): Promise<Notulen> {
+  async finalizeNotulen(id: string, request: NotulenFinalizeRequest = {}): Promise<{ success: boolean; message: string }> {
     const response = await apiClient.post(`/notulen/${id}/finalize`, request)
-    return this.transformFromApiResponse(response.data)
+    return response.data
   }
 
-  async archiveNotulen(id: string): Promise<Notulen> {
+  async archiveNotulen(id: string): Promise<{ success: boolean; message: string }> {
     const response = await apiClient.post(`/notulen/${id}/archive`)
-    return this.transformFromApiResponse(response.data)
+    return response.data
   }
 
   async getNotulenVersions(id: string): Promise<{ versions: NotulenVersie[] }> {
@@ -152,9 +202,9 @@ class NotulenClient {
       versions: response.data.versions.map((v: Record<string, unknown>) => ({
         ...v,
         vergaderingDatum: v.vergadering_datum,
-        agendaItems: (v.agenda_items as Record<string, unknown>)?.items || [],
-        besluiten: (v.besluiten as Record<string, unknown>)?.besluiten || [],
-        actiepunten: (v.actiepunten as Record<string, unknown>)?.acties || [],
+        agendaItems: Array.isArray(v.agenda_items) ? v.agenda_items : [], // Direct access to flat array
+        besluiten: Array.isArray(v.besluiten) ? v.besluiten : [], // Direct access to flat array
+        actiepunten: Array.isArray(v.actiepunten) ? v.actiepunten : [], // Direct access to flat array
         gewijzigdDoor: v.gewijzigd_door,
         gewijzigdOp: v.gewijzigd_op,
         wijzigingReden: v.wijziging_reden
@@ -168,9 +218,9 @@ class NotulenClient {
     return {
       ...versie,
       vergaderingDatum: versie.vergadering_datum,
-      agendaItems: versie.agenda_items?.items || [],
-      besluiten: versie.besluiten?.besluiten || [],
-      actiepunten: versie.actiepunten?.acties || [],
+      agendaItems: Array.isArray(versie.agenda_items) ? versie.agenda_items : [], // Direct access to flat array
+      besluiten: Array.isArray(versie.besluiten) ? versie.besluiten : [], // Direct access to flat array
+      actiepunten: Array.isArray(versie.actiepunten) ? versie.actiepunten : [], // Direct access to flat array
       gewijzigdDoor: versie.gewijzigd_door,
       gewijzigdOp: versie.gewijzigd_op,
       wijzigingReden: versie.wijziging_reden
@@ -190,6 +240,11 @@ class NotulenClient {
 
   async uncompleteActiepunt(notulenId: string, actieIndex: number): Promise<Notulen> {
     const response = await apiClient.post(`/notulen/${notulenId}/actiepunten/${actieIndex}/uncomplete`)
+    return this.transformFromApiResponse(response.data)
+  }
+
+  async rollbackNotulen(id: string, version: number, reason?: string): Promise<Notulen> {
+    const response = await apiClient.post(`/notulen/${id}/rollback/${version}`, { wijziging_reden: reason })
     return this.transformFromApiResponse(response.data)
   }
 }

@@ -41,4 +41,4 @@ export interface BaseItem {
 }
 
 // Re-export everything
-export type { PartnerRow, PartnerTier } 
+export type { PartnerRow, PartnerTier, Database }

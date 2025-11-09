@@ -23,12 +23,12 @@ const AdminPermissionsPage = lazy(() => import('./pages/AdminPermissionsPage').t
 const StepsAdminPage = lazy(() => import('./pages/StepsAdminPage').then(m => ({ default: m.StepsAdminPage })))
 const AanmeldingenTab = lazy(() => import('./features/aanmeldingen/components/AanmeldingenTab').then(m => ({ default: m.AanmeldingenTab })))
 const ContactTab = lazy(() => import('./features/contact/components/ContactTab').then(m => ({ default: m.ContactTab })))
-const InboxTab = lazy(() => import('./features/email/components/InboxTab').then(m => ({ default: m.InboxTab })))
 const NotulenManagementPage = lazy(() => import('./pages/NotulenManagementPage').then(m => ({ default: m.NotulenManagementPage })))
 const NotulenDetailPage = lazy(() => import('./pages/NotulenDetailPage').then(m => ({ default: m.NotulenDetailPage })))
 const NotulenFormPage = lazy(() => import('./pages/NotulenFormPage').then(m => ({ default: m.NotulenFormPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage').then(m => ({ default: m.AccessDeniedPage })))
+const EmailManagementPage = lazy(() => import('./pages/EmailManagementPage'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -65,11 +65,6 @@ export function App() {
               <ContactTab />
             </Suspense>
           } />
-          <Route path="inbox" element={
-            <Suspense fallback={<PageLoader />}>
-              <InboxTab />
-            </Suspense>
-          } />
           <Route path="users" element={
             <Suspense fallback={<PageLoader />}>
               <UserManagementPage />
@@ -86,11 +81,6 @@ export function App() {
           <Route path="contact" element={
             <Suspense fallback={<PageLoader />}>
               <ContactTab />
-            </Suspense>
-          } />
-          <Route path="inbox" element={
-            <Suspense fallback={<PageLoader />}>
-              <InboxTab />
             </Suspense>
           } />
           <Route path="users" element={
@@ -183,6 +173,11 @@ export function App() {
         <Route path="/notulen/:id/bewerken" element={
           <Suspense fallback={<PageLoader />}>
             <NotulenFormPage />
+          </Suspense>
+        } />
+        <Route path="/email" element={
+          <Suspense fallback={<PageLoader />}>
+            <EmailManagementPage />
           </Suspense>
         } />
         <Route path="*" element={

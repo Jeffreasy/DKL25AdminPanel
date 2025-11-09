@@ -66,7 +66,6 @@ export default function EmailInbox({ account = 'info' }: Props) {
     setError(null)
     setSelectedEmailId(null)
     setSelectedEmail(null)
-    console.log(`[EmailInbox] loadEmails called for page ${page}`);
     try {
       const offset = (page - 1) * EMAILS_PER_PAGE;
       const { emails: fetchedEmails, totalCount: fetchedTotalCount } = await adminEmailService.getEmailsByAccount(
@@ -74,11 +73,9 @@ export default function EmailInbox({ account = 'info' }: Props) {
         EMAILS_PER_PAGE,
         offset
       );
-      console.log('[EmailInbox] Data received from service:', { fetchedEmails, fetchedTotalCount });
       setEmails(fetchedEmails)
       setTotalEmails(fetchedTotalCount);
       setCurrentPage(page);
-      console.log('[EmailInbox] State updated. Emails count:', fetchedEmails.length, 'Total count:', fetchedTotalCount);
     } catch (err) {
       console.error('[EmailInbox] Error fetching emails:', err)
       setError('Fout bij het ophalen van e-mails. Probeer het later opnieuw.')
@@ -86,7 +83,6 @@ export default function EmailInbox({ account = 'info' }: Props) {
       setEmails([]);
     } finally {
       setIsLoading(false)
-      console.log('[EmailInbox] isLoading set to false');
     }
   }
 
@@ -158,7 +154,11 @@ export default function EmailInbox({ account = 'info' }: Props) {
 
   useEffect(() => {
     loadEmails(1)
-    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccount, refreshTrigger])
+
+  // Load suggestion emails only once on mount
+  useEffect(() => {
     const fetchInitialData = async () => {
         try {
             const emails = await adminEmailService.fetchAanmeldingenEmails();
@@ -168,9 +168,7 @@ export default function EmailInbox({ account = 'info' }: Props) {
         }
     };
     fetchInitialData();
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccount, refreshTrigger])
+  }, []) // Empty deps - only run on mount
 
   useEffect(() => {
     if (selectedEmailId) {

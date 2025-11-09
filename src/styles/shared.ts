@@ -122,10 +122,23 @@ export const cc = {
         blue: 'bg-blue-100 text-blue-800 dark:bg-blue-800/50 dark:text-blue-300',
         orange: 'bg-orange-100 text-orange-800 dark:bg-orange-800/50 dark:text-orange-300',
         red: 'bg-red-100 text-red-800 dark:bg-red-800/50 dark:text-red-300',
+        yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       },
     },
     defaultVariants: {
       color: 'gray',
+    },
+  }),
+
+  // Status badge utility for notulen status
+  statusBadge: tv({
+    base: 'inline-flex items-center px-3 py-1 text-sm font-medium rounded-full',
+    variants: {
+      status: {
+        draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+        finalized: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+        archived: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      },
     },
   }),
 
@@ -142,6 +155,23 @@ export const cc = {
     },
     defaultVariants: {
       status: 'info',
+    },
+  }),
+
+  // Loading skeleton styles
+  skeleton: tv({
+    base: 'animate-pulse bg-gray-200 dark:bg-gray-700 rounded',
+    variants: {
+      variant: {
+        card: 'h-32',
+        text: 'h-4',
+        title: 'h-6',
+        avatar: 'w-10 h-10 rounded-full',
+        button: 'h-8 w-20',
+      },
+    },
+    defaultVariants: {
+      variant: 'text',
     },
   }),
 

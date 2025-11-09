@@ -199,6 +199,10 @@ describe('ProtectedRoute', () => {
         hasPermission: vi.fn(),
         hasAnyPermission: vi.fn(),
         hasAllPermissions: vi.fn(),
+        hasRole: vi.fn(),
+        hasAnyRole: vi.fn(),
+        isAdmin: vi.fn(),
+        isStaff: vi.fn(),
         permissions: [],
       })
 

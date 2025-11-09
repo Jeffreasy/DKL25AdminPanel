@@ -32,9 +32,10 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
     }
   }
 
-  const getStatusColor = (status: Aanmelding['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'nieuw': return 'orange'
+      case 'beantwoord': return 'yellow' // Use yellow instead of purple since purple isn't supported
       case 'in_behandeling': return 'blue'
       case 'behandeld': return 'green'
       case 'geannuleerd': return 'red'
@@ -42,9 +43,10 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
     }
   }
 
-  const getStatusLabel = (status: Aanmelding['status']) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case 'nieuw': return 'Nieuw'
+      case 'beantwoord': return 'Beantwoord'
       case 'in_behandeling': return 'In behandeling'
       case 'behandeld': return 'Behandeld'
       case 'geannuleerd': return 'Geannuleerd'
@@ -184,11 +186,12 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
                 </label>
                 <select
                   value={registration.status}
-                  onChange={(e) => handleStatusUpdate(e.target.value as Aanmelding['status'])}
+                  onChange={(e) => handleStatusUpdate(e.target.value)}
                   disabled={isUpdating}
                   className={cc.form.select({ className: 'text-sm' })}
                 >
                   <option value="nieuw">Nieuw</option>
+                  <option value="beantwoord">Beantwoord</option>
                   <option value="in_behandeling">In behandeling</option>
                   <option value="behandeld">Behandeld</option>
                   <option value="geannuleerd">Geannuleerd</option>
@@ -210,7 +213,7 @@ export function RegistrationItem({ registration, onStatusUpdate, canWrite = fals
               {registration.afstand}
             </span>
           </div>
-          {canWrite && registration.status === 'nieuw' && (
+          {canWrite && (registration.status === 'nieuw' || registration.status === 'beantwoord') && (
             <button
               onClick={() => handleStatusUpdate('in_behandeling')}
               disabled={isUpdating}

@@ -5,10 +5,12 @@ export const usePermissions = () => {
   const { user } = useContext(AuthContext);
 
   const permissions = useMemo(() => {
-    if (!user?.permissions) return new Set();
+    if (!user?.permissions || !Array.isArray(user.permissions)) return new Set();
 
     return new Set(
-      user.permissions.map(p => `${p.resource}:${p.action}`)
+      user.permissions
+        .filter(p => p && typeof p.resource === 'string' && typeof p.action === 'string')
+        .map(p => `${p.resource}:${p.action}`)
     );
   }, [user?.permissions]);
 
@@ -30,10 +32,26 @@ export const usePermissions = () => {
     });
   };
 
+  const hasRole = (roleName: string) => {
+    if (!user?.roles || !Array.isArray(user.roles)) return false;
+    return user.roles.some(role => role.name === roleName);
+  };
+
+  const hasAnyRole = (...roleNames: string[]) => {
+    return roleNames.some(roleName => hasRole(roleName));
+  };
+
+  const isAdmin = () => hasRole('admin');
+  const isStaff = () => hasRole('staff') || hasRole('admin');
+
   return {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    hasRole,
+    hasAnyRole,
+    isAdmin,
+    isStaff,
     permissions: Array.from(permissions)
   };
 };

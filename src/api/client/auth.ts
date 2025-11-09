@@ -1,3 +1,5 @@
+import { TokenManager } from '../../features/auth/contexts/TokenManager';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://dklemailservice.onrender.com';
 
 interface ApiError extends Error {
@@ -5,37 +7,60 @@ interface ApiError extends Error {
   code?: string;
 }
 
+/**
+ * @deprecated FULLY DEPRECATED - DO NOT USE
+ *
+ * This class is deprecated and will be removed in v3.0.0
+ *
+ * **Migration Path:**
+ * - Replace with `TokenManager` for token operations
+ * - Use `AuthProvider` context via `useAuth()` hook for auth state
+ * - Use modern API clients from `/src/api/client/` for API calls
+ *
+ * **Example Migration:**
+ * ```typescript
+ * // OLD (❌ Don't use)
+ * import { authManager } from '@/api/client/auth';
+ * authManager.login(email, password);
+ *
+ * // NEW (✅ Use this)
+ * import { useAuth } from '@/features/auth/hooks/useAuth';
+ * const { login } = useAuth();
+ * await login(email, password);
+ * ```
+ *
+ * @see TokenManager - For token storage/validation
+ * @see AuthProvider - For authentication context
+ * @see useAuth - For React hook usage
+ */
 class AuthManager {
-  private token: string | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor() {
-    // Migration: Check for old jwtToken key and migrate to auth_token
-    const oldToken = localStorage.getItem('jwtToken');
-    if (oldToken && !localStorage.getItem('auth_token')) {
-      localStorage.setItem('auth_token', oldToken);
-      localStorage.removeItem('jwtToken');
-      console.log('✅ Migrated token from jwtToken to auth_token');
-    }
+    console.warn(
+      '⚠️ DEPRECATION WARNING: authManager is deprecated and will be removed in v3.0.0\n' +
+      'Please migrate to TokenManager + AuthProvider.\n' +
+      'See docs/TOKEN_MANAGEMENT.md for migration guide.'
+    );
     
-    this.token = localStorage.getItem('auth_token');
-    if (this.token) {
+    // Migration is now handled by TokenManager
+    if (TokenManager.getTokens().token) {
       this.scheduleRefresh();
     }
   }
 
   async login(email: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email,
-          wachtwoord: password
+          password  // Correct field name according to backend docs
         }),
-        credentials: 'include' // Include cookies for session management
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -44,19 +69,24 @@ class AuthManager {
       }
 
       const data = await response.json();
-      // Backend sets cookie automatically, but also returns token
-      if (data.token) {
-        this.setToken(data.token);
+      // Backend response format: { success: true, data: { access_token, refresh_token, user, expires_in } }
+      if (data.success && data.data) {
+        TokenManager.setTokens(data.data.access_token, data.data.refresh_token);
+        this.scheduleRefresh();
+        return { success: true, token: data.data.access_token };
       }
-      return { success: true, token: data.token };
-    } catch {
-      return { success: false, error: 'Login failed' };
+      throw new Error('Invalid response format');
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Login failed'
+      };
     }
   }
 
   setToken(token: string) {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
+    // For backward compatibility, delegate to TokenManager
+    TokenManager.setTokens(token);
     this.scheduleRefresh();
   }
 
@@ -68,31 +98,61 @@ class AuthManager {
 
   private async refreshToken() {
     try {
-      // For now, we'll logout if token needs refresh
-      // In a full implementation, you'd have a refresh endpoint
-      this.logout();
-    } catch {
+      const refreshToken = TokenManager.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        TokenManager.setTokens(data.data.access_token, data.data.refresh_token);
+        this.scheduleRefresh();
+      } else {
+        throw new Error('Invalid refresh response');
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
       this.logout();
     }
   }
 
   async logout() {
     try {
-      // Call backend logout endpoint if token exists
-      if (this.token) {
+      const token = TokenManager.getValidToken();
+      const refreshToken = TokenManager.getRefreshToken();
+      
+      if (token && refreshToken) {
         await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${this.token}`,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            refresh_token: refreshToken
+          }),
           credentials: 'include',
         }).catch(() => {
           // Ignore logout endpoint errors - we still want to clear local state
         });
       }
     } finally {
-      this.token = null;
-      localStorage.removeItem('auth_token');
+      TokenManager.clearTokens();
       if (this.refreshTimer) clearTimeout(this.refreshTimer);
       window.location.href = '/login';
     }
@@ -100,14 +160,15 @@ class AuthManager {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
-      if (!this.token) {
+      const token = TokenManager.getValidToken();
+      if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${API_BASE}/api/users/password`, {
+      const response = await fetch(`${API_BASE}/api/auth/reset-password`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         credentials: 'include',
@@ -125,7 +186,8 @@ class AuthManager {
         throw new Error(error.error || 'Wachtwoord wijzigen mislukt');
       }
 
-      return { success: true };
+      const data = await response.json();
+      return { success: data.success || true };
     } catch (error) {
       return {
         success: false,
@@ -135,15 +197,16 @@ class AuthManager {
   }
 
   getToken(): string | null {
-    return this.token;
+    return TokenManager.getValidToken();
   }
 
   isAuthenticated(): boolean {
-    return !!this.token;
+    return !!TokenManager.getValidToken();
   }
 
   async makeAuthenticatedRequest(endpoint: string, options: RequestInit = {}): Promise<unknown> {
-    if (!this.token) {
+    const token = TokenManager.getValidToken();
+    if (!token) {
       throw new Error('Not authenticated');
     }
 
@@ -151,7 +214,7 @@ class AuthManager {
 
     // Merge headers properly to avoid overwriting Authorization header
     const mergedHeaders = {
-      'Authorization': `Bearer ${this.token}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };

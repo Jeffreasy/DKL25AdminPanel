@@ -31,19 +31,40 @@ export class NotulenService {
   }
 
   async finalizeNotulen(id: string, reason?: string): Promise<Notulen> {
-    return notulenClient.finalizeNotulen(id, reason)
+    // Finalize returns success message, so we need to refetch the notulen
+    await notulenClient.finalizeNotulen(id, reason ? { wijziging_reden: reason } : {})
+    return notulenClient.getNotulenById(id)
   }
 
   async archiveNotulen(id: string): Promise<Notulen> {
-    return notulenClient.archiveNotulen(id)
+    // Archive returns success message, so we need to refetch the notulen
+    await notulenClient.archiveNotulen(id)
+    return notulenClient.getNotulenById(id)
   }
 
   async getNotulenVersions(id: string): Promise<NotulenVersion[]> {
-    return notulenClient.getNotulenVersions(id)
+    const result = await notulenClient.getNotulenVersions(id)
+    return result.versions
   }
 
   async getNotulenVersion(id: string, version: number): Promise<NotulenVersion> {
     return notulenClient.getNotulenVersion(id, version)
+  }
+
+  async completeActiepunt(
+    notulenId: string,
+    actieIndex: number,
+    completionData?: { voltooid_opmerking?: string }
+  ): Promise<Notulen> {
+    return notulenClient.completeActiepunt(notulenId, actieIndex, completionData)
+  }
+
+  async uncompleteActiepunt(notulenId: string, actieIndex: number): Promise<Notulen> {
+    return notulenClient.uncompleteActiepunt(notulenId, actieIndex)
+  }
+
+  async rollbackNotulen(id: string, version: number, reason?: string): Promise<Notulen> {
+    return notulenClient.rollbackNotulen(id, version, reason)
   }
 }
 

@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from "../features/auth"
-import { authManager } from '../api/client/auth'
+import { userClient } from '../api/client'
 import { StepsTracker } from '../features/steps'
 import { usePermissions } from '../hooks/usePermissions'
 import {
@@ -164,9 +164,9 @@ export function ProfilePage() {
       setError(null)
       setSuccess(null)
       
-      // Implement password change with backend API
+      // Implement password change with modern userClient
       if (_data.newPassword && _data.newPassword.trim() !== '') {
-        const result = await authManager.changePassword(_data.currentPassword, _data.newPassword)
+        const result = await userClient.changePassword(_data.currentPassword, _data.newPassword)
         
         if (result.success) {
           setSuccess('Wachtwoord succesvol gewijzigd!')

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -7,30 +7,94 @@ import {
   PencilIcon,
   ArchiveBoxIcon,
   CheckCircleIcon,
-  ClockIcon,
   UserGroupIcon,
   DocumentTextIcon,
-  ExclamationTriangleIcon,
-  EyeIcon,
-  ChevronDownIcon,
-  ChevronRightIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { useNotulenById, useNotulenMutations, useNotulenVersions } from '../hooks'
+import { useNotulenById, useNotulenMutations } from '../hooks'
 import { usePermissions } from '@/hooks'
 import { cc } from '@/styles/shared'
-import type { AgendaItem, Besluit, Actiepunt } from '../types'
+import { VersionHistory } from './VersionHistory'
+import { VersionDetailModal } from './VersionDetailModal'
+import { VersionComparison } from './VersionComparison'
+import { userClient } from '@/api/client'
+import type { AgendaItem, Besluit, Actiepunt, NotulenVersion } from '../types'
 
 export function NotulenDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { hasPermission } = usePermissions()
   const { notulen, loading, error, refetch } = useNotulenById(id)
-  const { finalizeNotulen, archiveNotulen, loading: actionLoading } = useNotulenMutations()
-  const { versions } = useNotulenVersions(id)
+  const { finalizeNotulen, archiveNotulen, completeActiepunt, uncompleteActiepunt, rollbackNotulen, loading: actionLoading } = useNotulenMutations()
 
-  const [showVersions, setShowVersions] = useState(false)
   const [finalizationReason, setFinalizationReason] = useState('')
   const [showFinalizeDialog, setShowFinalizeDialog] = useState(false)
+  const [selectedVersion, setSelectedVersion] = useState<NotulenVersion | null>(null)
+  const [showVersionModal, setShowVersionModal] = useState(false)
+  const [showComparisonModal, setShowComparisonModal] = useState(false)
+  const [comparisonVersions, setComparisonVersions] = useState<{ v1: NotulenVersion; v2: NotulenVersion } | null>(null)
+  const [resolvedAanwezigen, setResolvedAanwezigen] = useState<string[]>([])
+  const [resolvedAfwezigen, setResolvedAfwezigen] = useState<string[]>([])
+
+  // Resolve user UUIDs to names
+  useEffect(() => {
+    const resolveUsers = async () => {
+      if (!notulen) return
+
+      const aanwezigenNames: string[] = []
+      const afwezigenNames: string[] = []
+
+      // Check if we have NEW UUID-based data
+      const hasNewAanwezigenData = (notulen.aanwezigen_gebruikers?.length || 0) > 0 || (notulen.aanwezigen_gasten?.length || 0) > 0
+      const hasNewAfwezigenData = (notulen.afwezigen_gebruikers?.length || 0) > 0 || (notulen.afwezigen_gasten?.length || 0) > 0
+
+      // AANWEZIGEN: Prioritize new UUID-based data
+      if (hasNewAanwezigenData) {
+        // Fetch registered user names from UUIDs
+        if (notulen.aanwezigen_gebruikers && notulen.aanwezigen_gebruikers.length > 0) {
+          try {
+            const userPromises = notulen.aanwezigen_gebruikers.map(id => userClient.getUserById(id))
+            const users = await Promise.all(userPromises)
+            aanwezigenNames.push(...users.filter(Boolean).map(u => u.naam))
+          } catch (error) {
+            console.error('Failed to resolve aanwezigen_gebruikers:', error)
+          }
+        }
+        // Add guest names
+        if (notulen.aanwezigen_gasten) {
+          aanwezigenNames.push(...notulen.aanwezigen_gasten)
+        }
+        setResolvedAanwezigen(aanwezigenNames)
+      } else {
+        // Fallback to legacy aanwezigen array (old data)
+        setResolvedAanwezigen(notulen.aanwezigen || [])
+      }
+
+      // AFWEZIGEN: Prioritize new UUID-based data
+      if (hasNewAfwezigenData) {
+        // Fetch registered user names from UUIDs
+        if (notulen.afwezigen_gebruikers && notulen.afwezigen_gebruikers.length > 0) {
+          try {
+            const userPromises = notulen.afwezigen_gebruikers.map(id => userClient.getUserById(id))
+            const users = await Promise.all(userPromises)
+            afwezigenNames.push(...users.filter(Boolean).map(u => u.naam))
+          } catch (error) {
+            console.error('Failed to resolve afwezigen_gebruikers:', error)
+          }
+        }
+        // Add guest names
+        if (notulen.afwezigen_gasten) {
+          afwezigenNames.push(...notulen.afwezigen_gasten)
+        }
+        setResolvedAfwezigen(afwezigenNames)
+      } else {
+        // Fallback to legacy afwezigen array (old data)
+        setResolvedAfwezigen(notulen.afwezigen || [])
+      }
+    }
+
+    resolveUsers()
+  }, [notulen])
 
   const handleFinalize = async () => {
     if (!notulen || !id) return
@@ -53,15 +117,6 @@ export function NotulenDetail() {
       refetch()
     } catch (err) {
       console.error('Failed to archive notulen:', err)
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'finalized': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'archived': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     }
   }
 
@@ -128,7 +183,7 @@ export function NotulenDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(notulen.status)}`}>
+          <span className={cc.statusBadge({ status: notulen.status as 'draft' | 'finalized' | 'archived' })}>
             {getStatusText(notulen.status)}
           </span>
 
@@ -217,10 +272,12 @@ export function NotulenDetail() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Aanwezigen ({notulen.aanwezigen.length})</h3>
-            {notulen.aanwezigen.length > 0 ? (
+            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+              Aanwezigen ({resolvedAanwezigen.length})
+            </h3>
+            {resolvedAanwezigen.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {notulen.aanwezigen.map((name, index) => (
+                {resolvedAanwezigen.map((name, index) => (
                   <span
                     key={index}
                     className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
@@ -235,10 +292,12 @@ export function NotulenDetail() {
           </div>
 
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Afwezigen ({notulen.afwezigen.length})</h3>
-            {notulen.afwezigen.length > 0 ? (
+            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+              Afwezigen ({resolvedAfwezigen.length})
+            </h3>
+            {resolvedAfwezigen.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {notulen.afwezigen.map((name, index) => (
+                {resolvedAfwezigen.map((name, index) => (
                   <span
                     key={index}
                     className="inline-flex items-center px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm"
@@ -255,7 +314,7 @@ export function NotulenDetail() {
       </div>
 
       {/* Agenda Items */}
-      {notulen.agendaItems.length > 0 && (
+      {(notulen.agendaItems?.length || 0) > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <DocumentTextIcon className="w-5 h-5" />
@@ -263,7 +322,7 @@ export function NotulenDetail() {
           </h2>
 
           <div className="space-y-4">
-            {notulen.agendaItems.map((item: AgendaItem, index: number) => (
+            {notulen.agendaItems?.map((item: AgendaItem, index: number) => (
               <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-medium">
@@ -283,7 +342,7 @@ export function NotulenDetail() {
       )}
 
       {/* Besluiten */}
-      {notulen.besluitenList.length > 0 && (
+      {(notulen.besluitenList?.length || 0) > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <CheckCircleIcon className="w-5 h-5" />
@@ -291,7 +350,7 @@ export function NotulenDetail() {
           </h2>
 
           <div className="space-y-4">
-            {notulen.besluitenList.map((besluit: Besluit, index: number) => (
+            {notulen.besluitenList?.map((besluit: Besluit, index: number) => (
               <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full flex items-center justify-center text-sm font-medium">
@@ -308,15 +367,15 @@ export function NotulenDetail() {
       )}
 
       {/* Actiepunten */}
-      {notulen.actiepuntenList.length > 0 && (
+      {(notulen.actiepuntenList?.length || 0) > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <CheckCircleIcon className="w-5 h-5" />
-            Actiepunten ({notulen.actiepuntenList.filter(a => a.voltooid).length}/{notulen.actiepuntenList.length} voltooid)
+            Actiepunten ({notulen.actiepuntenList?.filter(a => a.voltooid).length || 0}/{notulen.actiepuntenList?.length || 0} voltooid)
           </h2>
 
           <div className="space-y-4">
-            {notulen.actiepuntenList.map((actie: Actiepunt, index: number) => (
+            {notulen.actiepuntenList?.map((actie: Actiepunt, index: number) => (
               <div key={index} className={`border rounded-lg p-4 transition-all ${
                 actie.voltooid
                   ? 'border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
@@ -327,9 +386,23 @@ export function NotulenDetail() {
                     <input
                       type="checkbox"
                       checked={actie.voltooid || false}
-                      onChange={() => {/* TODO: Implement completion toggle */}}
+                      onChange={async () => {
+                        if (!id || !hasPermission('notulen', 'write') || notulen.status === 'archived') return
+
+                        try {
+                          if (actie.voltooid) {
+                            await uncompleteActiepunt(id, index)
+                          } else {
+                            // For now, complete without comment. Could be extended to show a dialog
+                            await completeActiepunt(id, index, {})
+                          }
+                          refetch()
+                        } catch (err) {
+                          console.error('Failed to toggle action item completion:', err)
+                        }
+                      }}
                       disabled={!hasPermission('notulen', 'write') || notulen.status === 'archived'}
-                      className="w-5 h-5 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      className={cc.form.input()}
                     />
                   </div>
                   <div className="flex-1">
@@ -380,48 +453,23 @@ export function NotulenDetail() {
       )}
 
       {/* Version History */}
-      {versions.length > 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <button
-            onClick={() => setShowVersions(!showVersions)}
-            className="w-full flex items-center justify-between text-lg font-semibold text-gray-900 dark:text-white mb-4"
-          >
-            <span className="flex items-center gap-2">
-              <ClockIcon className="w-5 h-5" />
-              Versiegeschiedenis ({versions.length} versies)
-            </span>
-            {showVersions ? <ChevronDownIcon className="w-5 h-5" /> : <ChevronRightIcon className="w-5 h-5" />}
-          </button>
-
-          {showVersions && (
-            <div className="space-y-3">
-              {versions.map((version) => (
-                <div key={version.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(version.status)}`}>
-                      {getStatusText(version.status)}
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Versie {version.versie}
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {format(new Date(version.gewijzigd_op), 'PPp', { locale: nl })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {version.gewijzigd_door}
-                    </span>
-                    <button className={cc.button.icon({ color: 'secondary', size: 'sm' })}>
-                      <EyeIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <VersionHistory
+        notulenId={id!}
+        currentVersion={notulen.versie}
+        onViewVersion={(version) => {
+          setSelectedVersion(version)
+          setShowVersionModal(true)
+        }}
+        onRollback={async (version) => {
+          if (!id) return
+          try {
+            await rollbackNotulen(id, version.versie, `Teruggedraaid naar versie ${version.versie}`)
+            refetch()
+          } catch (err) {
+            console.error('Failed to rollback:', err)
+          }
+        }}
+      />
 
       {/* Finalize Dialog */}
       {showFinalizeDialog && (
@@ -464,6 +512,29 @@ export function NotulenDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Version Detail Modal */}
+      <VersionDetailModal
+        version={selectedVersion}
+        isOpen={showVersionModal}
+        onClose={() => {
+          setShowVersionModal(false)
+          setSelectedVersion(null)
+        }}
+      />
+
+      {/* Version Comparison Modal */}
+      {comparisonVersions && (
+        <VersionComparison
+          version1={comparisonVersions.v1}
+          version2={comparisonVersions.v2}
+          isOpen={showComparisonModal}
+          onClose={() => {
+            setShowComparisonModal(false)
+            setComparisonVersions(null)
+          }}
+        />
       )}
     </div>
   )

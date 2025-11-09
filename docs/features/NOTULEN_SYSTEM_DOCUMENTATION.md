@@ -11,6 +11,7 @@ Het notulen systeem biedt een complete oplossing voor het beheren van vergaderno
 ### 🎯 Belangrijkste Features
 
 - **Versiebeheer**: Automatische versie snapshots bij elke wijziging
+- **Frontend Version History**: Complete versiegeschiedenis UI met vergelijking en rollback
 - **RBAC Integratie**: Gedetailleerde permissies voor verschillende gebruikersrollen
 - **Gestructureerde Data**: JSONB opslag voor agenda items, besluiten en actiepunten
 - **Full-text Search**: Ondersteuning voor zoeken in Nederlandse tekst
@@ -296,6 +297,380 @@ WHERE user_id = $1 AND resource = 'notulen' AND action = $2;
 **Beschrijving**: Haal specifieke versie van notulen op
 
 **Response**: NotulenVersie object
+
+### POST /api/notulen/{id}/rollback/{version}
+**Beschrijving**: Draai notulen terug naar een specifieke versie
+
+**Request Body** (optional):
+```json
+{
+  "reden": "Rollback reden"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Notulen rolled back successfully",
+  "new_version": 5
+}
+```
+
+---
+
+## 🎨 Frontend Version History System
+
+Het frontend versiegeschiedenis systeem biedt een complete UI voor het beheren en bekijken van versiegeschiedenis van notulen.
+
+### 📋 Componenten Overzicht
+
+#### VersionHistory Component
+**Locatie**: `src/features/notulen/components/VersionHistory.tsx`
+
+**Functionaliteit**:
+- Toont lijst van alle versies van een notulen document
+- Toont versie metadata (nummer, datum, gebruiker, reden)
+- Biedt samenvatting van inhoud (aantal aanwezigen, agenda items, besluiten, actiepunten)
+- Permission-based rollback functionaliteit
+- Expandable interface voor gedetailleerde informatie
+
+**Props**:
+```typescript
+interface VersionHistoryProps {
+  notulenId: string
+  currentVersion: number
+  onViewVersion: (version: NotulenVersion) => void
+  onRollback: (version: NotulenVersion) => Promise<void>
+}
+```
+
+**Gebruik**:
+```tsx
+<VersionHistory
+  notulenId={notulenId}
+  currentVersion={notulen.versie}
+  onViewVersion={(version) => setSelectedVersion(version)}
+  onRollback={async (version) => {
+    await rollbackMutation.mutateAsync({
+      id: notulenId,
+      version: version.versie,
+      reden: `Teruggedraaid naar versie ${version.versie}`
+    })
+  }}
+/>
+```
+
+#### VersionDetailModal Component
+**Locatie**: `src/features/notulen/components/VersionDetailModal.tsx`
+
+**Functionaliteit**:
+- Toont complete versie van notulen in read-only modus
+- Vergelijkt automatisch met huidige versie (indien beschikbaar)
+- Toont versie metadata en wijzigingsreden
+- Responsive design met scrollbare content
+- Alle notulen data: aanwezigen, agenda, besluiten, actiepunten, notities
+
+**Props**:
+```typescript
+interface VersionDetailModalProps {
+  version: NotulenVersion | null
+  isOpen: boolean
+  onClose: () => void
+}
+```
+
+#### VersionComparison Component
+**Locatie**: `src/features/notulen/components/VersionComparison.tsx`
+
+**Functionaliteit**:
+- Side-by-side vergelijking van twee versies
+- Tabbed interface voor verschillende secties (overzicht, agenda, besluiten, actiepunten, notities)
+- Visuele indicatoren voor toegevoegde/verwijderde/gewijzigde content
+- Gedetailleerde diff logica voor arrays en tekst
+- Metadata vergelijking tussen versies
+
+**Props**:
+```typescript
+interface VersionComparisonProps {
+  version1: NotulenVersion
+  version2: NotulenVersion
+  isOpen: boolean
+  onClose: () => void
+}
+```
+
+### 🔧 API Client Uitbreidingen
+
+#### NotulenClient Updates
+**Locatie**: `src/api/client/notulenClient.ts`
+
+**Nieuwe Methodes**:
+```typescript
+// Get version history
+getNotulenVersions(notulenId: string): Promise<NotulenVersion[]>
+
+// Get specific version
+getNotulenVersion(notulenId: string, version: number): Promise<NotulenVersion>
+
+// Rollback to version
+rollbackNotulen(notulenId: string, version: number, reden?: string): Promise<void>
+```
+
+**Implementatie**:
+```typescript
+export const getNotulenVersions = async (notulenId: string): Promise<NotulenVersion[]> => {
+  const response = await apiClient.get(`/notulen/${notulenId}/versions`)
+  return response.data.versions
+}
+
+export const getNotulenVersion = async (notulenId: string, version: number): Promise<NotulenVersion> => {
+  const response = await apiClient.get(`/notulen/${notulenId}/versions/${version}`)
+  return response.data
+}
+
+export const rollbackNotulen = async (notulenId: string, version: number, reden?: string): Promise<void> => {
+  await apiClient.post(`/notulen/${notulenId}/rollback/${version}`, { reden })
+}
+```
+
+### 🎣 React Hooks
+
+#### useNotulenVersions Hook
+**Locatie**: `src/features/notulen/hooks/useNotulenVersions.ts`
+
+**Functionaliteit**:
+- Fetch versiegeschiedenis voor specifieke notulen
+- Loading states en error handling
+- Automatische refetch na rollback operaties
+
+**Implementatie**:
+```typescript
+export const useNotulenVersions = (notulenId: string) => {
+  return useQuery({
+    queryKey: ['notulen', notulenId, 'versions'],
+    queryFn: () => getNotulenVersions(notulenId),
+    enabled: !!notulenId
+  })
+}
+```
+
+#### useNotulenMutations Hook Updates
+**Locatie**: `src/features/notulen/hooks/useNotulenMutations.ts`
+
+**Nieuwe Mutatie**:
+```typescript
+export const useNotulenMutations = () => {
+  // ... bestaande mutations
+
+  const rollbackMutation = useMutation({
+    mutationFn: ({ id, version, reden }: { id: string; version: number; reden?: string }) =>
+      rollbackNotulen(id, version, reden),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notulen'] })
+    }
+  })
+
+  return {
+    // ... bestaande mutations
+    rollbackNotulen: rollbackMutation.mutateAsync,
+    isLoading: rollbackMutation.isPending
+  }
+}
+```
+
+### 🎨 UI/UX Features
+
+#### Version History Interface
+- **Expandable Cards**: Elke versie kan uitgeklapt worden voor details
+- **Status Indicators**: Visuele status indicatoren (draft/finalized/archived)
+- **User Tracking**: Toont wie de versie heeft gemaakt en wanneer
+- **Content Summary**: Samenvatting van aantal items per categorie
+- **Rollback Actions**: Permission-based rollback knoppen met confirmatie
+
+#### Version Detail View
+- **Read-only Display**: Alle notulen data in overzichtelijke layout
+- **Version Metadata**: Gewijzigd door, datum, reden
+- **Structured Content**: Proper formatting voor agenda items, besluiten, actiepunten
+- **Responsive Design**: Werkt op alle schermgroottes
+
+#### Version Comparison
+- **Tabbed Navigation**: Separate tabs voor verschillende content types
+- **Visual Diff**: Kleurcodes voor toegevoegd (groen), verwijderd (rood), gewijzigd (geel)
+- **Smart Comparison**: Handelt arrays, objecten en tekst verschillend
+- **Metadata Diff**: Vergelijkt basis informatie tussen versies
+
+### 🔐 Permission Integration
+
+#### Version Operations Permissions
+```typescript
+// Check rollback permission
+const canRollback = usePermissions().hasPermission('notulen', 'write')
+
+// Only show rollback button if user has permission
+{canRollback && version.versie !== currentVersion && (
+  <button onClick={() => handleRollback(version)}>
+    Terugrollen naar versie {version.versie}
+  </button>
+)}
+```
+
+### 📱 Responsive Design
+
+#### Mobile Optimization
+- **Collapsible Sections**: Version history items kunnen ingeklapt worden op mobile
+- **Touch-friendly**: Buttons en interacties geoptimaliseerd voor touch
+- **Readable Text**: Adequate font sizes en spacing voor mobile devices
+- **Modal Sizing**: Version modals aangepast voor kleine schermen
+
+#### Desktop Experience
+- **Multi-column Layout**: Gebruik van beschikbare ruimte voor side-by-side views
+- **Keyboard Navigation**: Tab navigation en keyboard shortcuts
+- **Hover States**: Visual feedback bij mouse interactions
+
+### 🧪 Testing Strategy
+
+#### Component Tests
+```typescript
+// VersionHistory.test.tsx
+describe('VersionHistory', () => {
+  it('should display version list', async () => {
+    render(<VersionHistory notulenId="test-id" currentVersion={3} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Versie 3')).toBeInTheDocument()
+      expect(screen.getByText('Versie 2')).toBeInTheDocument()
+    })
+  })
+
+  it('should handle rollback with permission', async () => {
+    // Mock permissions and API
+    render(<VersionHistory notulenId="test-id" currentVersion={3} />)
+
+    const rollbackButton = screen.getByRole('button', { name: /terugrollen/i })
+    fireEvent.click(rollbackButton)
+
+    // Assert rollback API called
+    await waitFor(() => {
+      expect(mockRollback).toHaveBeenCalledWith('test-id', 2)
+    })
+  })
+})
+```
+
+#### Integration Tests
+```typescript
+// Version workflow test
+describe('Version Workflow', () => {
+  it('should create version on update', async () => {
+    // Create notulen
+    const notulen = await createTestNotulen()
+
+    // Update notulen
+    await updateNotulen(notulen.id, { titel: 'Updated Title' })
+
+    // Check version created
+    const versions = await getNotulenVersions(notulen.id)
+    expect(versions).toHaveLength(2)
+    expect(versions[0].versie).toBe(2)
+  })
+
+  it('should rollback successfully', async () => {
+    // Setup versions
+    const notulen = await createVersionedNotulen()
+
+    // Rollback to version 1
+    await rollbackNotulen(notulen.id, 1, 'Test rollback')
+
+    // Verify current version is 1
+    const updated = await getNotulen(notulen.id)
+    expect(updated.versie).toBe(3) // New version created
+    expect(updated.titel).toBe('Original Title')
+  })
+})
+```
+
+### 📊 Performance Considerations
+
+#### Optimization Strategies
+- **Lazy Loading**: Version details worden pas geladen bij request
+- **Caching**: React Query caching voor versie data
+- **Pagination**: Version history pagination voor grote datasets
+- **Debouncing**: Search en filter operaties worden gedebounced
+
+#### Memory Management
+- **Component Cleanup**: Proper cleanup van event listeners en timers
+- **Large Dataset Handling**: Virtual scrolling voor lange version lists
+- **Image Optimization**: Lazy loading voor eventuele images in notities
+
+### 🚨 Error Handling
+
+#### Version Loading Errors
+```typescript
+const { data: versions, error, isLoading } = useNotulenVersions(notulenId)
+
+if (error) {
+  return (
+    <div className="text-red-600">
+      Fout bij laden versiegeschiedenis: {error.message}
+      <button onClick={() => refetch()}>Opnieuw proberen</button>
+    </div>
+  )
+}
+```
+
+#### Rollback Error Handling
+```typescript
+const handleRollback = async (version: NotulenVersion) => {
+  try {
+    await rollbackMutation.mutateAsync({
+      id: notulenId,
+      version: version.versie,
+      reden: `Teruggedraaid naar versie ${version.versie}`
+    })
+    toast.success('Notulen succesvol teruggedraaid')
+  } catch (error) {
+    toast.error('Fout bij terugrollen: ' + error.message)
+  }
+}
+```
+
+### 🔄 Workflow Management
+
+#### Version Creation Triggers
+- Automatische versie bij elke update van notulen
+- Versie snapshots bij finalisatie
+- Manual versie creation via API
+
+#### Rollback Workflow
+1. **Permission Check**: Controleer of gebruiker rollback permissie heeft
+2. **Confirmation**: Toon bevestigingsdialog met versie details
+3. **API Call**: Voer rollback uit via API
+4. **UI Update**: Refresh versiegeschiedenis en huidige notulen
+5. **Notification**: Toon succes/error bericht
+
+### 📚 Best Practices
+
+#### ✅ Frontend Version History DO's
+
+- ✅ Gebruik React Query voor caching en state management
+- ✅ Implementeer proper loading states voor alle async operaties
+- ✅ Gebruik TypeScript interfaces voor type safety
+- ✅ Test alle user interactions en edge cases
+- ✅ Implementeer proper error boundaries
+- ✅ Gebruik consistent design system
+- ✅ Optimize voor performance met lazy loading
+- ✅ Documenteer alle component props en gedrag
+
+#### ❌ Frontend Version History DON'Ts
+
+- ❌ Load alle versie details tegelijkertijd
+- ❌ Blokkeer UI tijdens lange operaties
+- ❌ Gebruik direct DOM manipulatie
+- ❌ Hardcode styling values
+- ❌ Skip permission checks in UI
+- ❌ Ignore accessibility (ARIA labels, keyboard navigation)
+- ❌ Forget to handle network errors gracefully
 
 ---
 
@@ -663,5 +1038,5 @@ Voor vragen over het notulen systeem:
 ---
 
 **Laatst Bijgewerkt**: November 2025
-**Versie**: 1.0
+**Versie**: 2.0 (Frontend Version History)
 **Status**: Production Ready ✅

@@ -21,20 +21,7 @@ export interface Actiepunt {
   voltooid_opmerking?: string     // Optional notes about completion
 }
 
-// JSONB wrapper structures as returned by API
-export interface AgendaItemsWrapper {
-  items: AgendaItem[]
-}
-
-export interface BesluitenWrapper {
-  besluiten: Besluit[]
-}
-
-export interface ActiepuntenWrapper {
-  acties: Actiepunt[]
-}
-
-// Main Notulen interface matching API response
+// Main Notulen interface matching API response - flat structure as per document
 export interface Notulen {
   id: string
   titel: string
@@ -43,23 +30,31 @@ export interface Notulen {
   locatie?: string
   voorzitter?: string
   notulist?: string
-  aanwezigen: string[]
-  afwezigen: string[]
-  agenda_items: AgendaItemsWrapper
-  agendaItems: AgendaItem[] // Extracted from wrapper for UI use
-  besluiten: BesluitenWrapper
-  besluitenList: Besluit[] // Extracted from wrapper for UI use
-  actiepunten: ActiepuntenWrapper
-  actiepuntenList: Actiepunt[] // Extracted from wrapper for UI use
+  aanwezigen?: string[] // Legacy field - combined names
+  afwezigen?: string[]  // Legacy field - combined names
+  aanwezigen_gebruikers?: string[] // UUIDs of registered users
+  afwezigen_gebruikers?: string[]  // UUIDs of registered users
+  aanwezigen_gasten?: string[]     // Names of non-registered guests
+  afwezigen_gasten?: string[]      // Names of non-registered guests
+  agenda_items?: AgendaItem[]
+  agendaItems?: AgendaItem[] // Extracted for UI use (backward compatibility)
+  besluiten?: Besluit[]
+  besluitenList?: Besluit[] // Extracted for UI use (backward compatibility)
+  actiepunten?: Actiepunt[]
+  actiepuntenList?: Actiepunt[] // Extracted for UI use (backward compatibility)
   notities?: string
   status: 'draft' | 'finalized' | 'archived'
   versie: number
   created_by: string
+  created_by_name?: string // Resolved user name: "Joyce Thielen"
   createdAt?: string // Backward compatibility
   created_at: string
   updated_at: string
+  updated_by?: string // UUID of last updater
+  updated_by_name?: string // Resolved name: "Jeffrey"
   finalized_at?: string
   finalized_by?: string
+  finalized_by_name?: string // Resolved name: "SuperAdmin"
 }
 
 // Version history interface
@@ -72,11 +67,15 @@ export interface NotulenVersie {
   locatie?: string
   voorzitter?: string
   notulist?: string
-  aanwezigen: string[]
-  afwezigen: string[]
-  agenda_items: AgendaItemsWrapper
-  besluiten: BesluitenWrapper
-  actiepunten: ActiepuntenWrapper
+  aanwezigen?: string[]
+  afwezigen?: string[]
+  aanwezigen_gebruikers?: string[]
+  afwezigen_gebruikers?: string[]
+  aanwezigen_gasten?: string[]
+  afwezigen_gasten?: string[]
+  agenda_items?: AgendaItem[]
+  besluiten?: Besluit[]
+  actiepunten?: Actiepunt[]
   notities?: string
   status: string
   gewijzigd_door: string
@@ -91,8 +90,12 @@ export interface NotulenCreateRequest {
   locatie?: string
   voorzitter?: string
   notulist?: string
-  aanwezigen?: string[]
-  afwezigen?: string[]
+  aanwezigen?: string[] // Legacy field
+  afwezigen?: string[]  // Legacy field
+  aanwezigen_gebruikers?: string[] // UUIDs for registered users
+  afwezigen_gebruikers?: string[]  // UUIDs for registered users
+  aanwezigen_gasten?: string[]     // Names for guest attendees
+  afwezigen_gasten?: string[]      // Names for guest absentees
   agenda_items?: AgendaItem[]
   besluiten?: Besluit[]
   actiepunten?: Actiepunt[]
@@ -106,6 +109,10 @@ export interface NotulenUpdateRequest {
   notulist?: string
   aanwezigen?: string[]
   afwezigen?: string[]
+  aanwezigen_gebruikers?: string[] // UUIDs for registered users
+  afwezigen_gebruikers?: string[]  // UUIDs for registered users
+  aanwezigen_gasten?: string[]     // Names for guest attendees
+  afwezigen_gasten?: string[]      // Names for guest absentees
   agenda_items?: AgendaItem[]
   besluiten?: Besluit[]
   actiepunten?: Actiepunt[]

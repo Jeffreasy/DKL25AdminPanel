@@ -1,3 +1,6 @@
 export * from './NotulenList'
 export * from './NotulenForm'
 export * from './NotulenDetail'
+export * from './VersionHistory'
+export * from './VersionDetailModal'
+export * from './VersionComparison'

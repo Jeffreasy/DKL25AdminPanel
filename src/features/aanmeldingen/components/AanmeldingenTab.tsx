@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { DashboardContext } from '../../../types/dashboard'
-import type { Aanmelding } from '../types'
+// Types are used in the component via useOutletContext
 import { usePermissions } from '../../../hooks/usePermissions'
 import { RegistrationItem } from './RegistrationItem'
 import { cc } from '../../../styles/shared'
@@ -10,28 +10,32 @@ export function AanmeldingenTab() {
   const { stats, aanmeldingen, handleUpdate } = useOutletContext<DashboardContext>()
   const { hasPermission } = usePermissions()
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | Aanmelding['status']>('all')
-  const [filterRole, setFilterRole] = useState<'all' | Aanmelding['rol']>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | string>('all')
+  const [filterRole, setFilterRole] = useState<'all' | string>('all')
 
-  const canReadAanmeldingen = hasPermission('aanmelding', 'read')
-  const canWriteAanmeldingen = hasPermission('aanmelding', 'write')
+  const canReadAanmeldingen = hasPermission('registration', 'read')
+  const canWriteAanmeldingen = hasPermission('registration', 'write')
 
   // Filter aanmeldingen
   const filteredAanmeldingen = aanmeldingen.filter(aanmelding => {
-    const matchesSearch = 
+    const matchesSearch =
       aanmelding.naam.toLowerCase().includes(searchQuery.toLowerCase()) ||
       aanmelding.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       aanmelding.telefoon?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = filterStatus === 'all' || aanmelding.status === filterStatus;
     const matchesRole = filterRole === 'all' || aanmelding.rol === filterRole;
-    
+
     return matchesSearch && matchesStatus && matchesRole;
   });
+
+  // For now, keep the existing structure but prepare for new data model
+  // TODO: Update to use ParticipantRegistration[] when backend is fully migrated
 
   // Calculate additional stats
   const statusStats = {
     nieuw: aanmeldingen.filter(a => a.status === 'nieuw').length,
+    beantwoord: aanmeldingen.filter(a => a.status === 'beantwoord').length,
     in_behandeling: aanmeldingen.filter(a => a.status === 'in_behandeling').length,
     behandeld: aanmeldingen.filter(a => a.status === 'behandeld').length,
     geannuleerd: aanmeldingen.filter(a => a.status === 'geannuleerd').length,
@@ -93,18 +97,32 @@ export function AanmeldingenTab() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">In behandeling</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.in_behandeling}</p>
-            </div>
-            <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-2">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
+           <div className="flex items-center justify-between">
+             <div>
+               <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Beantwoord</p>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.beantwoord}</p>
+             </div>
+             <div className="bg-purple-100 dark:bg-purple-900/50 rounded-lg p-2">
+               <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+               </svg>
+             </div>
+           </div>
+         </div>
+
+         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+           <div className="flex items-center justify-between">
+             <div>
+               <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">In behandeling</p>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.in_behandeling}</p>
+             </div>
+             <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-2">
+               <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+             </div>
+           </div>
+         </div>
 
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -164,22 +182,23 @@ export function AanmeldingenTab() {
             <div className="flex gap-2">
               <select
                 value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value as 'all' | Aanmelding['rol'])}
+                onChange={(e) => setFilterRole(e.target.value)}
                 className={cc.form.select({ className: 'text-sm' })}
               >
                 <option value="all">Alle Rollen</option>
-                <option value="Deelnemer">Deelnemer</option>
-                <option value="Begeleider">Begeleider</option>
-                <option value="Vrijwilliger">Vrijwilliger</option>
+                <option value="deelnemer">Deelnemer</option>
+                <option value="begeleider">Begeleider</option>
+                <option value="vrijwilliger">Vrijwilliger</option>
               </select>
 
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as 'all' | Aanmelding['status'])}
+                onChange={(e) => setFilterStatus(e.target.value)}
                 className={cc.form.select({ className: 'text-sm' })}
               >
                 <option value="all">Alle Status</option>
                 <option value="nieuw">Nieuw</option>
+                <option value="beantwoord">Beantwoord</option>
                 <option value="in_behandeling">In behandeling</option>
                 <option value="behandeld">Behandeld</option>
                 <option value="geannuleerd">Geannuleerd</option>

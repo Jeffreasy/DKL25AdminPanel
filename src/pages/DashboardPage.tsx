@@ -60,21 +60,21 @@ export function DashboardPage() {
 
   const loadStats = useCallback(async () => {
     try {
+      // For now, use legacy API until backend is fully migrated
       const { data, error } = await fetchAanmeldingen(100, 0)
       if (error) throw error
 
       const newStats: DashboardStats = {
         totaal: data.length,
         rollen: {
-          Deelnemer: data.filter(i => i.rol === 'Deelnemer').length,
-          Begeleider: data.filter(i => i.rol === 'Begeleider').length,
-          Vrijwilliger: data.filter(i => i.rol === 'Vrijwilliger').length
+          deelnemer: data.filter(i => i.rol === 'deelnemer').length,
+          begeleider: data.filter(i => i.rol === 'begeleider').length,
+          vrijwilliger: data.filter(i => i.rol === 'vrijwilliger').length
         },
         afstanden: {
-          '2.5 KM': data.filter(i => i.afstand === '2.5 KM').length,
-          '6 KM': data.filter(i => i.afstand === '6 KM').length,
-          '10 KM': data.filter(i => i.afstand === '10 KM').length,
-          '15 KM': data.filter(i => i.afstand === '15 KM').length
+          '5km': data.filter(i => i.afstand === '5km').length,
+          '10km': data.filter(i => i.afstand === '10km').length,
+          '15km': data.filter(i => i.afstand === '15km').length
         },
         ondersteuning: {
           Ja: data.filter(i => i.ondersteuning === 'Ja').length,
